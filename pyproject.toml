@@ -53,3 +53,11 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["robotsix_agent_comm"]
+branch = true
+relative_files = true
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
