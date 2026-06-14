@@ -62,3 +62,10 @@ def test_malformed_json_raises() -> None:
 def test_missing_fields_raise() -> None:
     with pytest.raises(ValidationError):
         deserialize('{"type": "request"}')
+
+
+def test_deserialize_rejects_non_dict_json() -> None:
+    with pytest.raises(ValidationError):
+        deserialize("[1, 2, 3]")
+    with pytest.raises(ValidationError):
+        deserialize('"a string"')
