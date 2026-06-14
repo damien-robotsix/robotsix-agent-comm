@@ -27,6 +27,8 @@ dev = [
     "ruff",
     "mypy",
     "pytest",
+    "pytest-cov",
+    "pre-commit",
 ]
 docs = [
     "mkdocs",
