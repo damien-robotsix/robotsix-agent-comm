@@ -19,6 +19,7 @@ nav:
   - Publishing:
       - PyPI publishing standards: publishing/index.md
       - Pre-publication checklist: publishing/checklist.md
+      - Releasing to PyPI: publishing/releasing.md
   - Decisions:
       - 1. Stdlib-first, minimal dependencies: decisions/0001-stdlib-first.md
       - 2. Transport architecture: decisions/0002-transport-architecture.md
