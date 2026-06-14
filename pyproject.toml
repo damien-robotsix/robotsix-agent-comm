@@ -28,6 +28,11 @@ dev = [
     "mypy",
     "pytest",
 ]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/robotsix_agent_comm"]

@@ -1,7 +1,6 @@
 # API reference
 
-This section will document the public API of `robotsix-agent-comm`.
+Reference for the public API of `robotsix-agent-comm`, generated from the
+`robotsix_agent_comm.protocol` package.
 
-The package currently exposes only its version. API surface arrives with
-the messaging protocol and transport layer in later phases. This page is
-a placeholder for that reference.
+::: robotsix_agent_comm.protocol
