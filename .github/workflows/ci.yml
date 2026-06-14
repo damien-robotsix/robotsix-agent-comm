@@ -10,3 +10,5 @@ jobs:
     with:
       python-version: "3.12"
       install-extras: ""
+      cov-package: "robotsix_agent_comm"
+      coverage-threshold: "0"
