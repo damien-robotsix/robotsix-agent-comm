@@ -179,6 +179,13 @@ The decisions behind this architecture are recorded as ADRs:
 - [ADR 0004 — Delivery semantics](../decisions/0004-delivery-semantics.md):
   at-most-once delivery, per-endpoint FIFO ordering, and a no-retry
   baseline failure policy.
+- [ADR 0005 — HTTP+JSON network transport](../decisions/0005-http-json-transport.md):
+  a stdlib HTTP+JSON transport implementing the ADR 0002 interface for
+  distributed agents.
+
+The concrete network transport that implements the ADR 0002 interface is
+described in its own design note:
+[Transport — HTTP+JSON network implementation](transport.md).
 
 ### Stdlib-first adherence
 
