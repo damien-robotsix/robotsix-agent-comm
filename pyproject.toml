@@ -50,6 +50,12 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 
+[tool.deptry]
+# The package's own modules are first-party — the example scripts under
+# examples/ import robotsix_agent_comm, which deptry otherwise reports as a
+# transitive dependency (DEP003).
+known_first_party = ["robotsix_agent_comm"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error"]

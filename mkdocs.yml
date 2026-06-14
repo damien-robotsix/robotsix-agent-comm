@@ -21,3 +21,4 @@ nav:
       - 2. Transport architecture: decisions/0002-transport-architecture.md
       - 3. Addressing and routing: decisions/0003-addressing-and-routing.md
       - 4. Delivery semantics: decisions/0004-delivery-semantics.md
+      - 5. HTTP+JSON transport: decisions/0005-http-json-transport.md

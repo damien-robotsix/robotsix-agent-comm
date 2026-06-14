@@ -1,0 +1,204 @@
+"""High-level synchronous agent client.
+
+:class:`Agent` composes the Phase-4 ``protocol`` and Phase-5 ``transport``
+public APIs into a few-line developer surface: register an agent, send
+request-response and fire-and-forget messages, and receive inbound messages
+either via callbacks or a pull queue. The shared in-memory :class:`Registry`
+is injected so multiple in-process agents discover one another (the
+single-host topology Phase 5 ships); networked/shared registries remain out
+of scope.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import queue
+from collections.abc import Callable
+from typing import Any
+
+from ..protocol import (
+    Error,
+    Message,
+    Metadata,
+    Notification,
+    Request,
+)
+from ..transport import (
+    AgentNotFoundError,
+    DeliveryError,
+    Endpoint,
+    Registry,
+    RetryPolicy,
+    Router,
+    TransportClient,
+    TransportServer,
+    TransportTimeoutError,
+)
+
+RequestHandler = Callable[[Request], Message | None]
+"""Callback handling an inbound :class:`Request`; may return a reply."""
+
+NotificationHandler = Callable[[Notification], None]
+"""Callback handling an inbound :class:`Notification`; returns nothing."""
+
+
+class Agent:
+    """A communication client bound to a single ``agent_id``.
+
+    The agent owns a :class:`TransportClient` and a :class:`Router`, and on
+    :meth:`start` spins up a :class:`TransportServer` registered with the
+    shared :class:`Registry`. Transport errors propagate to callers; retries
+    are handled inside the router's :class:`RetryPolicy`.
+    """
+
+    def __init__(
+        self,
+        agent_id: str,
+        registry: Registry,
+        *,
+        host: str = "127.0.0.1",
+        port: int = 0,
+        retry_policy: RetryPolicy | None = None,
+        timeout: float = 5.0,
+    ) -> None:
+        self.agent_id = agent_id
+        self._registry = registry
+        self._host = host
+        self._port = port
+        self._timeout = timeout
+        if retry_policy is None:
+            retry_policy = RetryPolicy(max_attempts=3, base_delay=0.1, max_delay=2.0)
+        self._client = TransportClient()
+        self._router = Router(registry, self._client, retry_policy, timeout=timeout)
+        self._server: TransportServer | None = None
+        self._request_handler: RequestHandler | None = None
+        self._notification_handler: NotificationHandler | None = None
+        self._inbox: queue.Queue[Message] = queue.Queue()
+
+    # -- receiving (callbacks) --------------------------------------------
+
+    def on_request(self, handler: RequestHandler) -> RequestHandler:
+        """Register ``handler`` for inbound requests; returns ``handler``."""
+        self._request_handler = handler
+        return handler
+
+    def on_notification(self, handler: NotificationHandler) -> NotificationHandler:
+        """Register ``handler`` for inbound notifications; returns it."""
+        self._notification_handler = handler
+        return handler
+
+    def _handle(self, message: Message) -> Message | None:
+        """Dispatch ``message`` to a callback and enqueue it for pull use."""
+        self._inbox.put(message)
+        if isinstance(message, Request):
+            if self._request_handler is not None:
+                return self._request_handler(message)
+            return Error.to(
+                message,
+                code="no_handler",
+                message=f"agent {self.agent_id!r} has no request handler",
+                sender=self.agent_id,
+            )
+        if isinstance(message, Notification):
+            if self._notification_handler is not None:
+                self._notification_handler(message)
+            return None
+        return None
+
+    # -- receiving (pull) -------------------------------------------------
+
+    def receive_message(self, timeout: float | None = None) -> Message:
+        """Return the next inbound message from the internal queue.
+
+        Blocks until a message arrives or ``timeout`` seconds elapse.
+
+        Raises:
+            TransportTimeoutError: if no message arrives within ``timeout``.
+        """
+        try:
+            return self._inbox.get(timeout=timeout)
+        except queue.Empty as exc:
+            raise TransportTimeoutError(
+                f"no message received within {timeout}s"
+            ) from exc
+
+    # -- lifecycle --------------------------------------------------------
+
+    def start(self) -> None:
+        """Start the listener and register this agent's endpoint."""
+        if self._server is not None:
+            return
+        server = TransportServer(self._handle, host=self._host, port=self._port)
+        server.start()
+        self._server = server
+        self._registry.register(
+            Endpoint(agent_id=self.agent_id, host=server.host, port=server.port)
+        )
+
+    def stop(self) -> None:
+        """Unregister this agent and stop the listener."""
+        if self._server is None:
+            return
+        with contextlib.suppress(AgentNotFoundError):
+            self._registry.unregister(self.agent_id)
+        self._server.stop()
+        self._server = None
+
+    def close(self) -> None:
+        """Alias for :meth:`stop`."""
+        self.stop()
+
+    def __enter__(self) -> Agent:
+        self.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.stop()
+
+    # -- sending ----------------------------------------------------------
+
+    def send_request(
+        self,
+        recipient: str,
+        body: dict[str, Any] | None = None,
+        *,
+        timeout: float | None = None,
+        **extra: Any,
+    ) -> Message:
+        """Send a request to ``recipient`` and return the correlated reply.
+
+        Raises:
+            AgentNotFoundError: if ``recipient`` is not registered.
+            DeliveryError: if delivery fails or no reply is returned.
+            TransportTimeoutError: if the request exceeds its timeout.
+        """
+        request = Request(
+            metadata=Metadata.create(
+                sender=self.agent_id, recipient=recipient, **extra
+            ),
+            body=dict(body) if body is not None else {},
+        )
+        reply = self._router.route(request, timeout=timeout)
+        if reply is None:
+            raise DeliveryError(f"no reply received from {recipient!r}")
+        return reply
+
+    def send_notification(
+        self,
+        recipient: str,
+        body: dict[str, Any] | None = None,
+        **extra: Any,
+    ) -> None:
+        """Send a fire-and-forget notification to ``recipient``.
+
+        Raises:
+            AgentNotFoundError: if ``recipient`` is not registered.
+            DeliveryError: if delivery fails after retries.
+        """
+        notification = Notification(
+            metadata=Metadata.create(
+                sender=self.agent_id, recipient=recipient, **extra
+            ),
+            body=dict(body) if body is not None else {},
+        )
+        self._router.route(notification)
