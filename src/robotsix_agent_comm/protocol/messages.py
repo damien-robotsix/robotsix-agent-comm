@@ -86,6 +86,25 @@ class Request(Message):
     correlation_id: str | None = field(default=None, init=False)
 
 
+def _build_reply_metadata(
+    request: Message, sender: str | None, **extra: Any
+) -> Metadata:
+    """Build reply metadata for ``request`` with swapped sender/recipient.
+
+    The reply's sender defaults to the request's recipient (falling back to
+    the request's sender when the recipient is ``None``) unless ``sender`` is
+    explicitly provided; the recipient is always the request's sender.
+    """
+    reply_sender = sender if sender is not None else request.metadata.recipient
+    if reply_sender is None:
+        reply_sender = request.metadata.sender
+    return Metadata.create(
+        sender=reply_sender,
+        recipient=request.metadata.sender,
+        **extra,
+    )
+
+
 @dataclass(kw_only=True)
 class Response(Message):
     """A response answering a previously received :class:`Request`."""
@@ -111,14 +130,7 @@ class Response(Message):
         The response's ``correlation_id`` is set to the request's
         ``message_id`` and the sender/recipient are swapped.
         """
-        reply_sender = sender if sender is not None else request.metadata.recipient
-        if reply_sender is None:
-            reply_sender = request.metadata.sender
-        metadata = Metadata.create(
-            sender=reply_sender,
-            recipient=request.metadata.sender,
-            **extra,
-        )
+        metadata = _build_reply_metadata(request, sender, **extra)
         return cls(
             metadata=metadata,
             body=dict(body) if body is not None else {},
@@ -148,13 +160,7 @@ class Error(Message):
         **details: Any,
     ) -> Error:
         """Build an error correlated to ``request`` with swapped routing."""
-        reply_sender = sender if sender is not None else request.metadata.recipient
-        if reply_sender is None:
-            reply_sender = request.metadata.sender
-        metadata = Metadata.create(
-            sender=reply_sender,
-            recipient=request.metadata.sender,
-        )
+        metadata = _build_reply_metadata(request, sender)
         return cls(
             metadata=metadata,
             body=error_body(code, message, **details),
