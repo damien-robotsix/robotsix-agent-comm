@@ -9,12 +9,16 @@ permissions:
 
 jobs:
   ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
     permissions:
       contents: read
       security-events: write
     uses: damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@main
     with:
-      python-version: "3.12"
+      python-version: ${{ matrix.python-version }}
       install-extras: ""
       cov-package: "robotsix_agent_comm"
       coverage-threshold: "85"
