@@ -69,7 +69,7 @@ def from_dict(data: dict[str, Any]) -> Message:
         "message_id": data["message_id"],
         "metadata": metadata,
         "protocol_version": data["protocol_version"],
-        "body": dict(data.get("body", {})),
+        "body": dict(data["body"]),
     }
     if message_type in (MessageType.RESPONSE, MessageType.ERROR):
         kwargs["correlation_id"] = data.get("correlation_id")
