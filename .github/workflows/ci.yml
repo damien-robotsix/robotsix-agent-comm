@@ -18,3 +18,4 @@ jobs:
       install-extras: ""
       cov-package: "robotsix_agent_comm"
       coverage-threshold: "0"
+      mypy-advisory: false
