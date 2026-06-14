@@ -27,6 +27,7 @@ dev = [
     "ruff",
     "mypy",
     "pytest",
+    "pre-commit",
 ]
 
 [tool.hatch.build.targets.wheel]
