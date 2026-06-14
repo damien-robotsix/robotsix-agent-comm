@@ -61,7 +61,7 @@ def from_dict(data: dict[str, Any]) -> Message:
     metadata = Metadata(
         sender=raw_metadata["sender"],
         recipient=raw_metadata.get("recipient"),
-        timestamp=raw_metadata.get("timestamp", ""),
+        timestamp=raw_metadata["timestamp"],
         extra=dict(raw_metadata.get("extra", {})),
     )
     cls = _TYPE_TO_CLASS[message_type]
