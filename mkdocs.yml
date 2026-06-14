@@ -16,6 +16,9 @@ nav:
   - Design: design/index.md
   - API reference: api/index.md
   - Tutorials: tutorials/index.md
+  - Publishing:
+      - PyPI publishing standards: publishing/index.md
+      - Pre-publication checklist: publishing/checklist.md
   - Decisions:
       - 1. Stdlib-first, minimal dependencies: decisions/0001-stdlib-first.md
       - 2. Transport architecture: decisions/0002-transport-architecture.md

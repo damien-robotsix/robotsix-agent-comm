@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "robotsix-agent-comm"
+name = "package_name"
 version = "0.1.0"
-description = "Agent communication system for the robotsix ecosystem"
+description = "Package description"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -37,12 +37,11 @@ docs = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/robotsix_agent_comm"]
+packages = ["src/package_name"]
 
 [tool.ruff]
 target-version = "py312"
 line-length = 88
-extend-exclude = ["templates"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -50,20 +49,13 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-exclude = ["^templates/"]
-
-[tool.deptry]
-# The package's own modules are first-party — the example scripts under
-# examples/ import robotsix_agent_comm, which deptry otherwise reports as a
-# transitive dependency (DEP003).
-known_first_party = ["robotsix_agent_comm"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error"]
 
 [tool.coverage.run]
-source = ["robotsix_agent_comm"]
+source = ["package_name"]
 branch = true
 relative_files = true
 
