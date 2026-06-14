@@ -45,3 +45,11 @@ Architecture Decision Records (ADRs) live under
 [`docs/decisions/`](docs/decisions/). This repository follows a
 stdlib-first / minimal-dependency philosophy — see
 [`docs/decisions/0001-stdlib-first.md`](docs/decisions/0001-stdlib-first.md).
+
+## Maintaining published packages
+
+Once a package is published to PyPI, its ongoing lifecycle — versioning
+and release cadence, breaking changes and deprecations, security
+response, and retiring a package — follows the
+[package maintenance procedures](docs/publishing/maintenance.md)
+runbook.
