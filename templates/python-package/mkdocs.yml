@@ -1,0 +1,15 @@
+site_name: package_name
+site_description: Package description
+
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+
+nav:
+  - Home: index.md
