@@ -125,6 +125,11 @@ GitHub Actions secret and pass it to the publish action:
 This repository ships with Trusted Publishing wired and does **not**
 store any token in the workflow YAML.
 
+For the ongoing lifecycle *after* a release — versioning policy,
+breaking changes and deprecations, security response, and retiring a
+package — see the
+[package maintenance procedures](maintenance.md).
+
 ## Future work
 
 The inline `publish.yml` is self-contained (mirrored into

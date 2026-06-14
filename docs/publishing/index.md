@@ -12,6 +12,11 @@ each section cites the matching artifact in this repository.
 Use the companion [pre-publication checklist](checklist.md) as the
 verifiable gate a maintainer ticks through before publishing a repo.
 
+Once a package is published, its ongoing lifecycle (versioning policy,
+breaking changes/deprecations, security response, and retiring a
+package) lives in the
+[package maintenance procedures](maintenance.md) runbook.
+
 ## Project structure & layout
 
 Published packages MUST use the `src/` layout: the importable package
