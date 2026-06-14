@@ -32,3 +32,10 @@ publishing a repository to PyPI. Every box MUST be checked.
       publishes on `vX.Y.Z` tags via Trusted Publishing (OIDC, no stored
       secret), with a TestPyPI dry-run path, a tag/version guard, and a
       CHANGELOG-driven GitHub Release.
+- [ ] **Initial release executed & verified** — the release has been
+      published to PyPI and verified per
+      [`releasing.md` › Post-publish verification](releasing.md#post-publish-verification):
+      the project page is live/indexed, a clean-venv `pip install` plus
+      import smoke check succeeds, and the `vX.Y.Z` git tag and
+      auto-generated GitHub Release are present. (Operator / network
+      step.)
