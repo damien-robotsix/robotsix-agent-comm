@@ -1,0 +1,17 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  docs:
+    uses: damien-robotsix/robotsix-mill/.github/workflows/python-docs.yml@main
+    with:
+      python-version: "3.12"
