@@ -1,0 +1,21 @@
+name: Audit
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Weekly scan so newly-disclosed CVEs are caught even without commits.
+    - cron: "0 6 * * 1"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Scan dependencies for vulnerabilities
+        run: uv run --frozen --with pip-audit pip-audit --desc
