@@ -73,6 +73,28 @@ def test_error_to_copies_correlation_and_builds_body() -> None:
     assert err.body == {"code": "E_BAD", "message": "boom", "detail": 42}
 
 
+def test_response_to_with_no_recipient() -> None:
+    req = Request(
+        metadata=Metadata.create(sender="alice"),
+        body={"action": "ping"},
+    )
+    resp = Response.to(req, body={"pong": True})
+    assert resp.metadata.sender == "alice"
+    assert resp.metadata.recipient == "alice"
+    assert resp.correlation_id == req.message_id
+
+
+def test_error_to_with_no_recipient() -> None:
+    req = Request(
+        metadata=Metadata.create(sender="alice"),
+        body={"action": "ping"},
+    )
+    err = Error.to(req, code="E_X", message="boom")
+    assert err.metadata.sender == "alice"
+    assert err.metadata.recipient == "alice"
+    assert err.correlation_id == req.message_id
+
+
 def test_unsolicited_error_allows_no_correlation() -> None:
     err = Error(
         metadata=Metadata.create(sender="watchdog"),
