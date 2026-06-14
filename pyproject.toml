@@ -57,6 +57,10 @@ exclude = ["^templates/"]
 # examples/ import robotsix_agent_comm, which deptry otherwise reports as a
 # transitive dependency (DEP003).
 known_first_party = ["robotsix_agent_comm"]
+# templates/ is scaffold content for OTHER packages (placeholder package_name
+# imports), not part of this repo's dependency graph — exclude it from deptry
+# as it already is from ruff.
+extend_exclude = ["templates"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
