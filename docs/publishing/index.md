@@ -128,6 +128,20 @@ testpaths = ["tests"]
 filterwarnings = ["error"]
 ```
 
+## Automated release pipeline
+
+Published packages MUST ship a tag-triggered automated release pipeline
+that builds, validates, and publishes to PyPI on `vX.Y.Z` tags using
+**PyPI Trusted Publishing (OIDC)** — no PyPI token is stored as a
+secret. The workflow MUST also offer a `workflow_dispatch` TestPyPI
+dry-run path, enforce the version single-source-of-truth via a
+tag/version guard, and cut a CHANGELOG-driven GitHub Release. The full
+maintainer procedure lives in [Releasing to PyPI](releasing.md).
+
+Reference: this repo's [`.github/workflows/publish.yml`](../../.github/workflows/publish.yml)
+publishes on `v*` tags via Trusted Publishing with a TestPyPI dry-run
+path, mirrored into the template skeleton.
+
 ## Getting started from the template
 
 New packages SHOULD start from the copy-and-rename skeleton under

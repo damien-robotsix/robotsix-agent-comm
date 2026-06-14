@@ -28,3 +28,7 @@ publishing a repository to PyPI. Every box MUST be checked.
 - [ ] **Test coverage / CI** — CI is green on push/PR running ruff (lint
       + format check), mypy `strict`, and pytest with branch coverage at
       or above the 85% threshold, with `filterwarnings = ["error"]`.
+- [ ] **Automated release pipeline** — `.github/workflows/publish.yml`
+      publishes on `vX.Y.Z` tags via Trusted Publishing (OIDC, no stored
+      secret), with a TestPyPI dry-run path, a tag/version guard, and a
+      CHANGELOG-driven GitHub Release.
