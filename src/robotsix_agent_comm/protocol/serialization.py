@@ -14,7 +14,6 @@ import json
 from typing import Any
 
 from .messages import (
-    PROTOCOL_VERSION,
     Error,
     Message,
     MessageType,
@@ -69,7 +68,7 @@ def from_dict(data: dict[str, Any]) -> Message:
     kwargs: dict[str, Any] = {
         "message_id": data["message_id"],
         "metadata": metadata,
-        "protocol_version": data.get("protocol_version", PROTOCOL_VERSION),
+        "protocol_version": data["protocol_version"],
         "body": dict(data.get("body", {})),
     }
     if message_type in (MessageType.RESPONSE, MessageType.ERROR):
