@@ -12,6 +12,7 @@ environment management, and targets Python 3.12+.
 git clone https://github.com/robotsix/robotsix-agent-comm.git
 cd robotsix-agent-comm
 uv sync
+uv run pre-commit install
 ```
 
 The lockfile (`uv.lock`) is committed to the repository, and CI installs
@@ -21,16 +22,29 @@ result. **Never hand-edit `uv.lock`.**
 
 ## Checks
 
-Run the full set of checks locally before opening a pull request:
+The recommended way to run checks is through **pre-commit**, which
+mirrors the hooks that CI enforces (ruff, mypy, bandit, detect-secrets,
+vulture, and basic file checks):
 
 ```bash
-uv run ruff check .         # lint
-uv run ruff format --check .  # formatting
-uv run mypy .               # static type checking (strict)
-uv run pytest               # tests
+uv run pre-commit run --all-files
 ```
 
-`uv run ruff format .` rewrites files to the canonical format.
+If you prefer to run checks individually:
+
+```bash
+uv run ruff check .              # lint
+uv run ruff format --check .     # formatting
+uv run mypy .                    # static type checking (strict)
+uv run pytest                    # tests
+```
+
+To automatically apply fixes and formatting:
+
+```bash
+uv run ruff check --fix .        # auto-fix lint issues
+uv run ruff format .             # rewrite files to canonical format
+```
 
 ## Branches and pull requests
 
