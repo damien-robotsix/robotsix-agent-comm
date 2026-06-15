@@ -49,12 +49,12 @@ extend-exclude = ["templates"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.ruff.lint.per-file-ignores]
-"vulture_whitelist.py" = ["B018"]
+"vulture_whitelist.py" = ["B018", "F821"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
-exclude = ["^templates/"]
+exclude = ["^templates/", "^vulture_whitelist\\.py$"]
 
 [tool.deptry]
 # The package's own modules are first-party — the example scripts under

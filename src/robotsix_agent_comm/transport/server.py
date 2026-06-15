@@ -76,7 +76,7 @@ class _MessageRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+    def log_message(self, _format: str, *_args: object) -> None:
         """Silence the default stderr request logging."""
 
 
