@@ -17,3 +17,6 @@ build/
 # coverage data
 .coverage
 .coverage.*
+
+# mkdocs build output
+site/
