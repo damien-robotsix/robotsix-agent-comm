@@ -1,6 +1,9 @@
 # API reference
 
-Reference for the public API of `robotsix-agent-comm`, generated from the
-`robotsix_agent_comm.protocol` package.
+Reference for the public API of `robotsix-agent-comm`.
 
 ::: robotsix_agent_comm.protocol
+
+::: robotsix_agent_comm.transport
+
+::: robotsix_agent_comm.sdk
