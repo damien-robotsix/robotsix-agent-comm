@@ -9,13 +9,27 @@ permissions:
 
 jobs:
   ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
     permissions:
       contents: read
       security-events: write
     uses: damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@main
     with:
-      python-version: "3.12"
+      python-version: ${{ matrix.python-version }}
       install-extras: ""
       cov-package: "package_name"
       coverage-threshold: "85"
       mypy-advisory: false
+
+  vulture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install vulture
+      - run: vulture src/ vulture_whitelist.py
