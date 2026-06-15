@@ -67,6 +67,7 @@ known_first_party = ["robotsix_agent_comm"]
 extend_exclude = ["templates"]
 
 [tool.pytest.ini_options]
+strict = true
 testpaths = ["tests"]
 filterwarnings = ["error"]
 
