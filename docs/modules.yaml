@@ -1,0 +1,55 @@
+# Canonical Module Taxonomy for robotsix-agent-comm
+#
+# This file is the single source of truth for "what modules exist and
+# where their files live."
+#
+# Schema: bundled with the robotsix-modules package (see
+# https://github.com/damien-robotsix/robotsix-modules).
+# Validation: pre-commit hook `validate-module-taxonomy` + CI step
+
+modules:
+  - id: protocol
+    description: >-
+      Message protocol layer for agent communication. Defines message types
+      (Request, Response, Notification, Error), serialization/deserialization,
+      and validation. The layer is stdlib-only and free of network/transport
+      concerns.
+    paths:
+      - src/robotsix_agent_comm/__init__.py
+      - src/robotsix_agent_comm/protocol/*.py
+      - tests/__init__.py
+      - tests/test_smoke.py
+      - tests/protocol/*.py
+    dependencies: []
+
+  - id: transport
+    description: >-
+      Network transport layer for agent communication. HTTP+JSON-over-stdlib
+      transport (ADR 0005) implementing the abstract transport interface
+      (ADR 0002): Endpoint descriptors, in-memory Registry, TransportServer /
+      TransportClient wire pair, RetryPolicy with exponential backoff, and
+      Router that resolves recipients and delivers with retry + timeout.
+      Consumes the protocol package.
+    paths:
+      - src/robotsix_agent_comm/transport/*.py
+      - tests/transport/*.py
+    dependencies:
+      - protocol
+
+  - id: sdk
+    description: >-
+      High-level agent communication SDK. Composes the protocol and transport
+      public APIs into a single synchronous Agent client so a developer can
+      register, send, and receive messages in a few lines. The layer is
+      stdlib-only and consumes the lower layers unchanged. Includes usage
+      examples.
+    paths:
+      - src/robotsix_agent_comm/sdk/*.py
+      - tests/sdk/*.py
+      - examples/error_handling.py
+      - examples/notification_listener.py
+      - examples/request_response.py
+      - examples/README.md
+    dependencies:
+      - protocol
+      - transport
