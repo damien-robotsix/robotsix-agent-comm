@@ -8,6 +8,22 @@
 # Validation: pre-commit hook `validate-module-taxonomy` + CI step
 
 modules:
+  - id: package-root
+    description: >-
+      Package-level init, type marker, and smoke test shared by all
+      sub-packages.  Not a real module — groups infra-level files that
+      don't belong to any single module.
+    paths:
+      - src/robotsix_agent_comm/__init__.py
+      - src/robotsix_agent_comm/py.typed
+      - tests/__init__.py
+      - tests/test_smoke.py
+    dependencies:
+      - protocol
+      - transport
+      - sdk
+      - chat
+
   - id: protocol
     description: >-
       Message protocol layer for agent communication. Defines message types
@@ -15,10 +31,7 @@ modules:
       and validation. The layer is stdlib-only and free of network/transport
       concerns.
     paths:
-      - src/robotsix_agent_comm/__init__.py
       - src/robotsix_agent_comm/protocol/*.py
-      - tests/__init__.py
-      - tests/test_smoke.py
       - tests/protocol/*.py
     dependencies: []
 
