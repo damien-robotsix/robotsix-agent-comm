@@ -18,6 +18,14 @@ from starlette.routing import Route
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# SSE wire-format constants — single source of truth for tests and consumers.
+# ---------------------------------------------------------------------------
+
+SSE_DONE_SENTINEL = "[DONE]"
+SSE_ERROR_SENTINEL = "[ERROR]"
+SSE_CONTENT_TYPE = "text/event-stream"
+
 
 class ChatAgent(Protocol):
     """Structural interface for an agent that streams LLM responses.
@@ -71,17 +79,17 @@ async def chat_endpoint(
         try:
             async for token in agent.stream(message):
                 yield f"data: {token}\n\n".encode()
-            yield b"data: [DONE]\n\n"
+            yield f"data: {SSE_DONE_SENTINEL}\n\n".encode()
         except asyncio.CancelledError:
             logger.debug("SSE stream cancelled (client disconnect)")
         except Exception as exc:
             logger.exception("Agent stream error")
-            yield f"data: [ERROR] {exc}\n\n".encode()
+            yield f"data: {SSE_ERROR_SENTINEL} {exc}\n\n".encode()
 
     return StreamingResponse(
         sse_stream(),
-        media_type="text/event-stream",
-        headers={"Content-Type": "text/event-stream"},
+        media_type=SSE_CONTENT_TYPE,
+        headers={"Content-Type": SSE_CONTENT_TYPE},
     )
 
 
