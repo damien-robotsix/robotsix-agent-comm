@@ -30,6 +30,7 @@ dev = [
     "pytest-cov",
     "pre-commit",
     "vulture",
+    "trustme",
 ]
 docs = [
     "mkdocs",

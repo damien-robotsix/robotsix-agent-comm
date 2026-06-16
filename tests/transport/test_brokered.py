@@ -425,8 +425,9 @@ class TestNetworkedBrokerTransportHttps:
             transport = NetworkedBrokerTransport("secure.local", 443, scheme="https")
             transport.send(request, _endpoint(), timeout=5.0)
 
-        mock_https.assert_called_once_with("secure.local", 443, timeout=5.0)
-
+        mock_https.assert_called_once_with(
+            "secure.local", 443, timeout=5.0, context=None
+        )
 
 # ===================================================================
 # BrokeredRegistry — register()
@@ -783,8 +784,9 @@ class TestBrokeredRegistryErrors:
             registry = BrokeredRegistry("secure.local", 443, scheme="https")
             registry.list_agents()
 
-        mock_https.assert_called_once_with("secure.local", 443, timeout=5.0)
-
+        mock_https.assert_called_once_with(
+            "secure.local", 443, timeout=5.0, context=None
+        )
 
 # ===================================================================
 # create_transport_pair()
@@ -834,3 +836,171 @@ class TestCreateTransportPair:
 
         assert reg.broker_url == "https://h:1"  # type: ignore[union-attr]
         assert transport.broker_url == "https://h:1"  # type: ignore[attr-defined]
+
+
+# ===================================================================
+# Client auth header tests (child 4)
+# ===================================================================
+
+
+class TestNetworkedBrokerTransportAuthHeader:
+    """Verify ``agent_token`` is sent as a bearer Authorization header."""
+
+    def test_send_includes_authorization_header(self) -> None:
+        request = _request_msg("agent-a")
+        reply = Response.to(request, body={"echo": "pong"})
+        fake_resp = _FakeHTTPResponse(200, serialize(reply).encode("utf-8"))
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            transport = NetworkedBrokerTransport(
+                "localhost", 8000, agent_token="my-token"
+            )
+            transport.send(request, _endpoint("agent-a"), timeout=5.0)
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, _body, headers = fake_conn._request_args
+        assert headers["Authorization"] == "Bearer my-token"
+        assert headers["Content-Type"] == "application/json"
+
+    def test_send_no_authorization_header_when_token_is_none(self) -> None:
+        request = _request_msg("agent-a")
+        reply = Response.to(request, body={"echo": "pong"})
+        fake_resp = _FakeHTTPResponse(200, serialize(reply).encode("utf-8"))
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            transport = NetworkedBrokerTransport("localhost", 8000)
+            transport.send(request, _endpoint("agent-a"), timeout=5.0)
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, _body, headers = fake_conn._request_args
+        assert "Authorization" not in headers
+        assert headers["Content-Type"] == "application/json"
+
+    def test_health_check_includes_authorization_header(self) -> None:
+        fake_resp = _FakeHTTPResponse(200)
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            transport = NetworkedBrokerTransport(
+                "localhost", 8000, agent_token="health-token"
+            )
+            transport.health_check(_endpoint(), timeout=2.0)
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, _body, headers = fake_conn._request_args
+        assert headers["Authorization"] == "Bearer health-token"
+
+    def test_health_check_no_authorization_header_when_token_is_none(self) -> None:
+        fake_resp = _FakeHTTPResponse(200)
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            transport = NetworkedBrokerTransport("localhost", 8000)
+            transport.health_check(_endpoint(), timeout=2.0)
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, _body, headers = fake_conn._request_args
+        assert "Authorization" not in headers
+
+
+class TestBrokeredRegistryAuthHeader:
+    """Verify ``agent_token`` is sent on all registry API calls."""
+
+    def test_register_includes_authorization_header(self) -> None:
+        fake_resp = _FakeHTTPResponse(201)
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            registry = BrokeredRegistry("broker.local", 7000, agent_token="reg-tok")
+            registry.register(_endpoint("agent-x"))
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, _body, headers = fake_conn._request_args
+        assert headers["Authorization"] == "Bearer reg-tok"
+        assert headers["Content-Type"] == "application/json"
+
+    def test_unregister_includes_authorization_header(self) -> None:
+        fake_resp = _FakeHTTPResponse(204)
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            registry = BrokeredRegistry("localhost", 8000, agent_token="del-tok")
+            registry.unregister("worker-7")
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, body, headers = fake_conn._request_args
+        assert headers["Authorization"] == "Bearer del-tok"
+        assert body is None
+        assert "Content-Type" not in headers
+
+    def test_lookup_includes_authorization_header(self) -> None:
+        agents_payload = {"agents": [{"agent_id": "a", "host": "h", "port": 1}]}
+        fake_resp = _FakeHTTPResponse(200, json.dumps(agents_payload).encode("utf-8"))
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            registry = BrokeredRegistry("localhost", 8000, agent_token="lookup-tok")
+            registry.lookup("a")
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, _body, headers = fake_conn._request_args
+        assert headers["Authorization"] == "Bearer lookup-tok"
+
+    def test_list_agents_includes_authorization_header(self) -> None:
+        fake_resp = _FakeHTTPResponse(200, json.dumps({"agents": []}).encode("utf-8"))
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            registry = BrokeredRegistry("localhost", 8000, agent_token="list-tok")
+            registry.list_agents()
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, _body, headers = fake_conn._request_args
+        assert headers["Authorization"] == "Bearer list-tok"
+
+    def test_no_authorization_header_when_token_is_none(self) -> None:
+        fake_resp = _FakeHTTPResponse(201)
+
+        with _patch_http(response=fake_resp) as mock_conn_cls:
+            registry = BrokeredRegistry("localhost", 8000)
+            registry.register(_endpoint("agent-x"))
+
+        fake_conn = mock_conn_cls.return_value
+        _method, _path, _body, headers = fake_conn._request_args
+        assert "Authorization" not in headers
+
+
+class TestCreateTransportPairWithToken:
+    """``create_transport_pair`` forwards ``broker_token`` and
+    ``broker_ssl_context`` to the brokered pair."""
+
+    def test_brokered_mode_passes_token(self) -> None:
+        reg, transport = create_transport_pair(
+            "brokered",
+            broker_host="h",
+            broker_port=1,
+            broker_token="shared-token",
+        )
+
+        assert isinstance(reg, BrokeredRegistry)
+        assert isinstance(transport, NetworkedBrokerTransport)
+        assert reg._agent_token == "shared-token"  # type: ignore[attr-defined]
+        assert transport._agent_token == "shared-token"  # type: ignore[attr-defined]
+
+    def test_brokered_mode_passes_ssl_context(self) -> None:
+        import ssl
+
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        reg, transport = create_transport_pair(
+            "brokered",
+            broker_host="h",
+            broker_port=1,
+            broker_ssl_context=ctx,
+        )
+
+        assert isinstance(reg, BrokeredRegistry)
+        assert isinstance(transport, NetworkedBrokerTransport)
+        assert reg._ssl_context is ctx  # type: ignore[attr-defined]
+        assert transport._ssl_context is ctx  # type: ignore[attr-defined]
+
+    def test_brokered_mode_defaults_token_and_ssl(self) -> None:
+        reg, transport = create_transport_pair("brokered")
+
+        assert isinstance(reg, BrokeredRegistry)
+        assert isinstance(transport, NetworkedBrokerTransport)
+        assert reg._agent_token is None  # type: ignore[attr-defined]
+        assert reg._ssl_context is None  # type: ignore[attr-defined]

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import ssl
 import time
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -49,9 +50,17 @@ def _json_request(
     broker: BrokerServer,
     path: str,
     body: dict[str, object] | list[object] | str | None = None,
+    *,
+    headers: dict[str, str] | None = None,
+    ssl_context: ssl.SSLContext | None = None,
 ) -> tuple[int, Any]:
     """Make a raw HTTP request to the broker, return (status, parsed_body)."""
-    conn = http.client.HTTPConnection(broker.host, broker.port, timeout=5.0)
+    if ssl_context is not None:
+        conn = http.client.HTTPSConnection(
+            broker.host, broker.port, timeout=5.0, context=ssl_context
+        )
+    else:
+        conn = http.client.HTTPConnection(broker.host, broker.port, timeout=5.0)
     try:
         if isinstance(body, str):
             payload = body.encode("utf-8")
@@ -60,11 +69,17 @@ def _json_request(
         else:
             payload = None
 
+        req_headers: dict[str, str] = {}
+        if payload:
+            req_headers["Content-Type"] = "application/json"
+        if headers:
+            req_headers.update(headers)
+
         conn.request(
             method,
             path,
             body=payload,
-            headers={"Content-Type": "application/json"} if payload else {},
+            headers=req_headers,
         )
         resp = conn.getresponse()
         data = resp.read().decode("utf-8")
@@ -492,3 +507,336 @@ class TestBrokerTTLEviction:
             assert len(body["agents"]) == 1
         finally:
             broker.stop()
+
+
+# ---------------------------------------------------------------------------
+# TLS integration tests (child 4)
+# ---------------------------------------------------------------------------
+
+try:
+    import trustme  # noqa: F401
+
+    _HAS_TRUSTME = True
+except ImportError:
+    _HAS_TRUSTME = False
+
+
+@pytest.fixture
+def broker_tls() -> Iterator[tuple[BrokerServer, ssl.SSLContext]]:
+    """Yield ``(BrokerServer, client_ssl_context)`` using a self-signed cert."""
+    if not _HAS_TRUSTME:
+        pytest.skip("trustme not installed")
+
+    ca = trustme.CA()
+    server_cert = ca.issue_cert("127.0.0.1")
+
+    server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_cert.configure_cert(server_ctx)
+
+    client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ca.configure_trust(client_ctx)
+
+    broker = BrokerServer(host="127.0.0.1", port=0, ssl_context=server_ctx)
+    broker.start()
+    try:
+        yield broker, client_ctx
+    finally:
+        broker.stop()
+
+
+class TestBrokerTLSIntegration:
+    """Integration tests for TLS transport encryption."""
+
+    def test_health_over_tls(
+        self, broker_tls: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = broker_tls
+        status, body = _json_request(
+            "GET", broker, "/health", ssl_context=client_ctx
+        )
+        assert status == 200
+        assert body == {"status": "ok"}
+
+    def test_register_and_discover_over_tls(
+        self, broker_tls: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = broker_tls
+        status, body = _json_request(
+            "POST",
+            broker,
+            "/agents",
+            {"agent_id": "tls-agent", "host": "127.0.0.1", "port": 9000},
+            ssl_context=client_ctx,
+        )
+        assert status == 201
+
+        status, body = _json_request(
+            "GET", broker, "/agents", ssl_context=client_ctx
+        )
+        assert status == 200
+        assert len(body["agents"]) == 1
+        assert body["agents"][0]["agent_id"] == "tls-agent"
+
+    def test_send_over_tls(
+        self,
+        broker_tls: tuple[BrokerServer, ssl.SSLContext],
+        agent_server: tuple[TransportServer, list[Message]],
+    ) -> None:
+        broker, client_ctx = broker_tls
+        agent_srv, received = agent_server
+
+        _json_request(
+            "POST",
+            broker,
+            "/agents",
+            {
+                "agent_id": "agent-b",
+                "host": agent_srv.host,
+                "port": agent_srv.port,
+            },
+            ssl_context=client_ctx,
+        )
+
+        request = Request(
+            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
+            body={"action": "ping"},
+        )
+        status, body = _json_request(
+            "POST", broker, "/messages", serialize(request), ssl_context=client_ctx
+        )
+        assert status == 200
+        reply = deserialize(json.dumps(body))
+        assert isinstance(reply, Response)
+
+    def test_full_lifecycle_over_tls(
+        self,
+        broker_tls: tuple[BrokerServer, ssl.SSLContext],
+        agent_server: tuple[TransportServer, list[Message]],
+    ) -> None:
+        broker, client_ctx = broker_tls
+        agent_srv, _ = agent_server
+
+        # Register.
+        status, _ = _json_request(
+            "POST",
+            broker,
+            "/agents",
+            {
+                "agent_id": "agent-full",
+                "host": agent_srv.host,
+                "port": agent_srv.port,
+            },
+            ssl_context=client_ctx,
+        )
+        assert status == 201
+
+        # Discover.
+        status, body = _json_request(
+            "GET", broker, "/agents", ssl_context=client_ctx
+        )
+        assert status == 200
+        assert len(body["agents"]) == 1
+
+        # Send.
+        request = Request(
+            metadata=Metadata.create(sender="caller", recipient="agent-full"),
+            body={"action": "hello"},
+        )
+        status, body = _json_request(
+            "POST", broker, "/messages", serialize(request), ssl_context=client_ctx
+        )
+        assert status == 200
+
+        # Deregister.
+        status, _ = _json_request(
+            "DELETE", broker, "/agents/agent-full", ssl_context=client_ctx
+        )
+        assert status == 204
+
+        # Gone from discovery.
+        status, body = _json_request(
+            "GET", broker, "/agents", ssl_context=client_ctx
+        )
+        assert status == 200
+        assert body["agents"] == []
+
+
+# ---------------------------------------------------------------------------
+# Auth integration tests (child 4)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def broker_with_auth() -> Iterator[BrokerServer]:
+    """Yield a broker with auth enabled (two agents, each with a token)."""
+    server = BrokerServer(
+        host="127.0.0.1",
+        port=0,
+        agent_tokens={"agent-a": "tok-a", "agent-b": "tok-b"},
+    )
+    server.start()
+    try:
+        yield server
+    finally:
+        server.stop()
+
+
+class TestBrokerAuthIntegration:
+    """Integration tests for bearer-token authentication."""
+
+    def test_health_without_token_returns_401(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request("GET", broker_with_auth, "/health")
+        assert status == 401
+        assert "Authorization" in body["error"]
+
+    def test_agents_without_token_returns_401(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request("GET", broker_with_auth, "/agents")
+        assert status == 401
+
+    def test_register_without_token_returns_401(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request(
+            "POST",
+            broker_with_auth,
+            "/agents",
+            {"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000},
+        )
+        assert status == 401
+
+    def test_deregister_without_token_returns_401(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request("DELETE", broker_with_auth, "/agents/agent-a")
+        assert status == 401
+
+    def test_messages_without_token_returns_401(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        request = Request(
+            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
+            body={"action": "ping"},
+        )
+        status, body = _json_request(
+            "POST", broker_with_auth, "/messages", serialize(request)
+        )
+        assert status == 401
+
+    def test_health_with_valid_token(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request(
+            "GET",
+            broker_with_auth,
+            "/health",
+            headers={"Authorization": "Bearer tok-a"},
+        )
+        assert status == 200
+
+    def test_agents_with_valid_token(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request(
+            "GET",
+            broker_with_auth,
+            "/agents",
+            headers={"Authorization": "Bearer tok-a"},
+        )
+        assert status == 200
+
+    def test_register_same_agent_id_as_token(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request(
+            "POST",
+            broker_with_auth,
+            "/agents",
+            {"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000},
+            headers={"Authorization": "Bearer tok-a"},
+        )
+        assert status == 201
+
+    def test_register_different_agent_id_returns_403(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request(
+            "POST",
+            broker_with_auth,
+            "/agents",
+            {"agent_id": "agent-b", "host": "127.0.0.1", "port": 9000},
+            headers={"Authorization": "Bearer tok-a"},
+        )
+        assert status == 403
+        assert "agent_id does not match token" in body["error"]
+
+    def test_deregister_same_agent_id_as_token(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        # Register first.
+        _json_request(
+            "POST",
+            broker_with_auth,
+            "/agents",
+            {"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000},
+            headers={"Authorization": "Bearer tok-a"},
+        )
+        # Deregister.
+        status, body = _json_request(
+            "DELETE",
+            broker_with_auth,
+            "/agents/agent-a",
+            headers={"Authorization": "Bearer tok-a"},
+        )
+        assert status == 204
+
+    def test_deregister_different_agent_id_returns_403(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        status, body = _json_request(
+            "DELETE",
+            broker_with_auth,
+            "/agents/agent-b",
+            headers={"Authorization": "Bearer tok-a"},
+        )
+        assert status == 403
+        assert "agent_id does not match token" in body["error"]
+
+    def test_send_with_valid_token(
+        self,
+        broker_with_auth: BrokerServer,
+        agent_server: tuple[TransportServer, list[Message]],
+    ) -> None:
+        agent_srv, received = agent_server
+
+        # Register agent-b with its own token.
+        _json_request(
+            "POST",
+            broker_with_auth,
+            "/agents",
+            {
+                "agent_id": "agent-b",
+                "host": agent_srv.host,
+                "port": agent_srv.port,
+            },
+            headers={"Authorization": "Bearer tok-b"},
+        )
+
+        # Send as agent-a (any valid token can send).
+        request = Request(
+            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
+            body={"action": "ping"},
+        )
+        status, body = _json_request(
+            "POST",
+            broker_with_auth,
+            "/messages",
+            serialize(request),
+            headers={"Authorization": "Bearer tok-a"},
+        )
+        assert status == 200
+        reply = deserialize(json.dumps(body))
+        assert isinstance(reply, Response)
