@@ -16,6 +16,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
+from robotsix_agent_comm.config import Settings
+from robotsix_agent_comm.llm import Agent
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -144,17 +147,52 @@ def run_server(
     uvicorn.run(app, host=host, port=port)
 
 
-def run_server_from_config(agent: ChatAgent) -> None:
-    """Start the chat SSE server using ``Settings.from_env()`` for host/port.
+class LLMChatAgent:
+    """Adapter that wraps ``llm.Agent`` to satisfy the :class:`ChatAgent` protocol."""
 
-    Reads ``SERVER_HOST``, ``SERVER_PORT``, and ``LOG_LEVEL`` from the
-    environment (with ``.env`` support), configures Python logging, and
-    then delegates to :func:`run_server`.
+    def __init__(self, agent: Agent) -> None:
+        self._agent = agent
+
+    async def stream(self, message: str) -> AsyncIterator[str]:
+        async for token in self._agent.run(message):
+            yield token
+
+
+def create_agent_from_settings(
+    instruction: str, settings: Settings | None = None
+) -> LLMChatAgent:
+    """Build an :class:`LLMChatAgent` wired from *settings*.
+
+    When *settings* is ``None``, ``Settings.from_env()`` is called to
+    load configuration from the environment / ``.env`` file.
     """
-    from robotsix_agent_comm.config import Settings
+    if settings is None:
+        settings = Settings.from_env()
 
+    agent = Agent(
+        instruction=instruction,
+        api_key=settings.llm_api_key,
+        model=settings.llm_model,
+        base_url=settings.llm_base_url,
+    )
+    return LLMChatAgent(agent)
+
+
+def run_server_from_config(agent: ChatAgent | None = None) -> None:
+    """Start the chat SSE server using ``Settings.from_env()`` for configuration.
+
+    Reads ``SERVER_HOST``, ``SERVER_PORT``, ``LOG_LEVEL``, and LLM
+    settings (``LLM_API_KEY``, ``LLM_MODEL``, ``LLM_BASE_URL``) from the
+    environment (with ``.env`` support), configures Python logging, builds
+    a default :class:`LLMChatAgent` when *agent* is ``None``, and then
+    delegates to :func:`run_server`.
+    """
     settings = Settings.from_env()
     logging.basicConfig(
         level=getattr(logging, settings.log_level.upper(), logging.INFO)
     )
+    if agent is None:
+        agent = create_agent_from_settings(
+            instruction="You are a helpful assistant.", settings=settings
+        )
     run_server(agent, host=settings.server_host, port=settings.server_port)
