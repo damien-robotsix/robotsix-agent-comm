@@ -351,10 +351,8 @@ class TestEndToEndSecured:
             results: list[dict[str, Any]] = []
             deadline = time.monotonic() + 20
             while len(results) < 2 and time.monotonic() < deadline:
-                try:
+                with contextlib.suppress(Exception):
                     results.append(result_queue.get(timeout=1.0))
-                except Exception:
-                    pass
 
             assert len(results) == 2, (
                 f"Expected 2 results, got {len(results)}: {results}"
