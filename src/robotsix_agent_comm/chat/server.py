@@ -25,9 +25,15 @@ logger = logging.getLogger(__name__)
 # SSE wire-format constants — single source of truth for tests and consumers.
 # ---------------------------------------------------------------------------
 
-SSE_DONE_SENTINEL = "[DONE]"
-SSE_ERROR_SENTINEL = "[ERROR]"
 SSE_CONTENT_TYPE = "text/event-stream"
+SSE_TOKEN_TYPE = "token"
+SSE_DONE_TYPE = "done"
+SSE_ERROR_TYPE = "error"
+
+
+def _sse_frame(payload: object) -> bytes:
+    """Return an SSE ``data:`` frame with a JSON-serialised *payload*."""
+    return f"data: {json.dumps(payload)}\n\n".encode()
 
 
 class ChatAgent(Protocol):
@@ -81,13 +87,13 @@ async def chat_endpoint(
     async def sse_stream() -> AsyncIterator[bytes]:
         try:
             async for token in agent.stream(message):
-                yield f"data: {token}\n\n".encode()
-            yield f"data: {SSE_DONE_SENTINEL}\n\n".encode()
+                yield _sse_frame({"type": SSE_TOKEN_TYPE, "content": token})
+            yield _sse_frame({"type": SSE_DONE_TYPE})
         except asyncio.CancelledError:
             logger.debug("SSE stream cancelled (client disconnect)")
         except Exception as exc:
             logger.exception("Agent stream error")
-            yield f"data: {SSE_ERROR_SENTINEL} {exc}\n\n".encode()
+            yield _sse_frame({"type": SSE_ERROR_TYPE, "message": str(exc)})
 
     return StreamingResponse(
         sse_stream(),
