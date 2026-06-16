@@ -1,0 +1,13 @@
+"""Chat SSE server — HTTP + Server-Sent Events bridge for human-to-agent chat.
+
+Exposes an LLM agent (represented by the :class:`ChatAgent` protocol) via
+``POST /chat`` (SSE stream) and ``GET /health`` (liveness probe). Built on
+Starlette so it can be tested with ``httpx.ASGITransport`` without binding a
+real port.
+"""
+
+from __future__ import annotations
+
+from .server import ChatAgent, create_app, run_server
+
+__all__ = ["ChatAgent", "create_app", "run_server"]
