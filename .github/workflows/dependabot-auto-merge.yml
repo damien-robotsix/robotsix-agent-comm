@@ -1,0 +1,36 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+
+      - name: Skip major version bump
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        run: |
+          echo "::notice::Major version bump — skipping auto-merge"
+
+      - name: Auto-approve and enable auto-merge
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "Update type: ${{ steps.metadata.outputs.update-type }}"
+          echo "Auto-merging PR #${PR_NUMBER}"
+          gh pr review "${PR_NUMBER}" --approve
+          gh pr merge "${PR_NUMBER}" --auto --squash || \
+            echo "::notice::Auto-merge may already be enabled"
