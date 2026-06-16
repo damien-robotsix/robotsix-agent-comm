@@ -27,3 +27,4 @@ nav:
       - 3. Addressing and routing: decisions/0003-addressing-and-routing.md
       - 4. Delivery semantics: decisions/0004-delivery-semantics.md
       - 5. HTTP+JSON transport: decisions/0005-http-json-transport.md
+      - 6. Broker-server architecture, security model, and deployment: decisions/0006-broker-server-architecture.md
