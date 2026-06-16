@@ -1,16 +1,17 @@
 # robotsix-agent-comm
 
 **Agent communication stack for the robotsix ecosystem** — a Python library
-providing a typed message protocol, an HTTP+JSON network transport, a
-high-level agent SDK, and a chat SSE server.
+providing a typed message protocol, an HTTP+JSON network transport, and a
+high-level agent SDK.
 
 `robotsix-agent-comm` lets you build distributed agent systems in pure Python:
-define message schemas, register agents with an in-memory registry, send
-request-response and fire-and-forget messages with retry and timeout, and
-expose an LLM agent to human users via a Server-Sent Events chat endpoint.
-Zero mandatory dependencies beyond the Python standard library for the
-protocol, transport, and SDK layers; the chat server adds Starlette and
-uvicorn.
+define message schemas, register agents with an in-memory registry, and send
+request-response and fire-and-forget messages with retry and timeout. The
+entire stack uses **only the Python standard library** — zero mandatory
+runtime dependencies.
+
+> Looking for the browser + SSE chat server that used to live here? It moved
+> to its own project, [`robotsix-chat`](https://github.com/damien-robotsix/robotsix-chat).
 
 ## Quick start
 
@@ -19,57 +20,6 @@ git clone https://github.com/robotsix/robotsix-agent-comm.git
 cd robotsix-agent-comm
 uv sync
 ```
-
-### Hello-world chat server
-
-Create a file `server.py`:
-
-```python
-from collections.abc import AsyncIterator
-
-from robotsix_agent_comm.chat import run_server
-
-
-class EchoAgent:
-    """A minimal agent that echoes every message back token by token."""
-
-    async def stream(self, message: str) -> AsyncIterator[str]:
-        for word in message.split():
-            yield f"{word} "
-
-
-if __name__ == "__main__":
-    run_server(EchoAgent(), host="127.0.0.1", port=8000)
-```
-
-Start it:
-
-```bash
-uv run python server.py
-```
-
-Then chat with it via `curl`:
-
-```bash
-curl -N -X POST http://127.0.0.1:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello agent world"}'
-```
-
-The server streams tokens back as Server-Sent Events:
-
-```
-data: Hello
-
-data: agent
-
-data: world
-
-data: [DONE]
-```
-
-(If you don't have `curl -N`, omit `-N` — the stream still arrives but may
-buffer.)
 
 ## Agent SDK
 
@@ -122,7 +72,6 @@ More examples live under [`examples/`](examples/):
 | `robotsix_agent_comm.protocol` | Typed message definitions (`Request`, `Response`, `Notification`, `Error`), serialization, and validation — stdlib-only. |
 | `robotsix_agent_comm.transport` | HTTP+JSON transport layer: `Registry`, `TransportServer`/`TransportClient`, `RetryPolicy`, and `Router` — also stdlib-only. |
 | `robotsix_agent_comm.sdk` | High-level `Agent` client combining protocol + transport into a synchronous request-response and pub-sub API. |
-| `robotsix_agent_comm.chat` | Starlette-based SSE chat server (`create_app`, `run_server`) plus the `ChatAgent` protocol for human-to-agent chat. |
 
 ## Configuration
 
@@ -157,14 +106,6 @@ Everything is configured through constructor parameters.
 | `base_delay` | `float` | *(required)* | Initial backoff delay in seconds. |
 | `max_delay` | `float` | *(required)* | Maximum backoff delay (capped). |
 | `backoff_factor` | `float` | `2.0` | Multiplier applied after each attempt. |
-
-### `run_server`
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `agent` | `ChatAgent` | *(required)* | Object whose `stream(message)` yields SSE tokens. |
-| `host` | `str` | `"127.0.0.1"` | Host address for the uvicorn server. |
-| `port` | `int` | `8000` | Port for the uvicorn server. |
 
 ## Development
 

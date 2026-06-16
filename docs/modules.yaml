@@ -22,7 +22,6 @@ modules:
       - protocol
       - transport
       - sdk
-      - chat
 
   - id: protocol
     description: >-
@@ -67,15 +66,3 @@ modules:
     dependencies:
       - protocol
       - transport
-
-  - id: chat
-    description: >-
-      HTTP + Server-Sent Events (SSE) bridge for human-to-agent chat.
-      Exposes an LLM agent via POST /chat (SSE stream) and GET /health
-      (liveness probe). Built on Starlette (external dependency).
-      Provides the ChatAgent protocol, create_app factory, and run_server
-      entry point.
-    paths:
-      - src/robotsix_agent_comm/chat/*.py
-      - tests/chat/*.py
-    dependencies: []
