@@ -961,13 +961,13 @@ class TestBrokerAuditLogging:
     def test_audit_log_writes_json_lines(self) -> None:
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode="r+", delete=False, suffix=".jsonl") as tf:
+        with tempfile.NamedTemporaryFile(
+            mode="r+", delete=False, suffix=".jsonl"
+        ) as tf:
             log_path = tf.name
 
         try:
-            broker = BrokerServer(
-                host="127.0.0.1", port=0, audit_log_path=log_path
-            )
+            broker = BrokerServer(host="127.0.0.1", port=0, audit_log_path=log_path)
             broker.start()
             try:
                 # Register.
@@ -1003,7 +1003,7 @@ class TestBrokerAuditLogging:
                 broker.stop()
 
             # Read the log file.
-            with open(log_path, "r", encoding="utf-8") as f:
+            with open(log_path, encoding="utf-8") as f:
                 lines = [line.strip() for line in f if line.strip()]
 
             assert len(lines) >= 3, f"Expected at least 3 audit lines, got {len(lines)}"

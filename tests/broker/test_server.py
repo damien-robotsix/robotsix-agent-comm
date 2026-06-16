@@ -1381,9 +1381,9 @@ class TestInputValidation:
         )
         handler.do_POST()
         handler.send_response.assert_called_once_with(400)
-        assert "path must be a string starting with '/'" in _body_written(handler)[
-            "error"
-        ]
+        assert (
+            "path must be a string starting with '/'" in _body_written(handler)["error"]
+        )
 
     def test_path_not_string_returns_400(self) -> None:
         handler = _make_handler()
@@ -1400,9 +1400,9 @@ class TestInputValidation:
         )
         handler.do_POST()
         handler.send_response.assert_called_once_with(400)
-        assert "path must be a string starting with '/'" in _body_written(handler)[
-            "error"
-        ]
+        assert (
+            "path must be a string starting with '/'" in _body_written(handler)["error"]
+        )
 
     def test_capabilities_not_dict_returns_400(self) -> None:
         handler = _make_handler()
@@ -1452,9 +1452,10 @@ class TestInputValidation:
         )
         handler.do_POST()
         handler.send_response.assert_called_once_with(400)
-        assert "ttl_seconds must be a non-negative integer" in _body_written(handler)[
-            "error"
-        ]
+        assert (
+            "ttl_seconds must be a non-negative integer"
+            in _body_written(handler)["error"]
+        )
 
     def test_ttl_seconds_float_returns_400(self) -> None:
         handler = _make_handler()
@@ -1471,9 +1472,10 @@ class TestInputValidation:
         )
         handler.do_POST()
         handler.send_response.assert_called_once_with(400)
-        assert "ttl_seconds must be a non-negative integer" in _body_written(handler)[
-            "error"
-        ]
+        assert (
+            "ttl_seconds must be a non-negative integer"
+            in _body_written(handler)["error"]
+        )
 
     def test_agent_id_too_long_returns_400(self) -> None:
         handler = _make_handler()
@@ -1555,9 +1557,7 @@ class TestRateLimiting:
         # Exhaust agent-a.
         body_a = json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000})
         for _ in range(5):
-            headers_a = _auth_headers(
-                token="tok-a", body_bytes=body_a.encode("utf-8")
-            )
+            headers_a = _auth_headers(token="tok-a", body_bytes=body_a.encode("utf-8"))
             h = _make_handler(server=server_obj, headers=headers_a)
             h.rfile.read.return_value = body_a.encode("utf-8")
             h.do_POST()
@@ -1589,12 +1589,10 @@ class TestRateLimiting:
 
         # Make many rapid requests to exhaust the bucket.
         shared_server = handler.server
-        last_handler = None
         for _ in range(10):
             h = _make_handler(rate_limit_per_second=1.0, server=shared_server)
             _set_body(h, body)
             h.do_POST()
-            last_handler = h
 
         # At least one handler should have sent a Retry-After header.
         # Check via the send_header mock.
@@ -1681,9 +1679,7 @@ class TestAuditLogging:
             body={"action": "ping"},
         )
         raw = serialize(request)
-        h = _make_handler(
-            path="/messages", server=server, _audit_logger=mock_logger
-        )
+        h = _make_handler(path="/messages", server=server, _audit_logger=mock_logger)
         _set_body(h, raw)
         h.do_POST()
 

@@ -69,7 +69,7 @@ class _AuditLogger:
         self._file: TextIO | None = None
         self._lock = threading.Lock()
         if path is not None:
-            self._file = open(path, "a", encoding="utf-8")
+            self._file = open(path, "a", encoding="utf-8")  # noqa: SIM115
 
     def log(
         self,
@@ -281,9 +281,9 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         if bucket.consume():
             return True
 
-        body = json.dumps(
-            {"error": "rate limit exceeded", "retry_after": 1.0}
-        ).encode("utf-8")
+        body = json.dumps({"error": "rate limit exceeded", "retry_after": 1.0}).encode(
+            "utf-8"
+        )
         self.send_response(429)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -541,17 +541,16 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
 
         # -- ttl_seconds validation (before registration so we can reject) --
         ttl_val = data.get("ttl_seconds")
-        if "ttl_seconds" in data:
-            if not isinstance(ttl_val, int) or ttl_val < 0:
-                self._write_error(400, "ttl_seconds must be a non-negative integer")
-                server._audit_logger.log(
-                    "register",
-                    agent_id,
-                    path="/agents",
-                    status=400,
-                    detail="invalid ttl_seconds",
-                )
-                return
+        if "ttl_seconds" in data and (not isinstance(ttl_val, int) or ttl_val < 0):
+            self._write_error(400, "ttl_seconds must be a non-negative integer")
+            server._audit_logger.log(
+                "register",
+                agent_id,
+                path="/agents",
+                status=400,
+                detail="invalid ttl_seconds",
+            )
+            return
 
         # Determine whether this is a new registration or an update.
         try:
@@ -569,6 +568,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         with server.heartbeat_lock:
             server.last_heartbeat[agent_id] = time.monotonic()
             if "ttl_seconds" in data:
+                assert isinstance(ttl_val, int)  # validated above
                 server.ttl_seconds[agent_id] = ttl_val
             elif is_new:
                 server.ttl_seconds[agent_id] = server.default_ttl_seconds
