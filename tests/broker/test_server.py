@@ -985,9 +985,7 @@ class TestAuthInvalidToken:
 
     def test_post_agents_invalid_token(self) -> None:
         server = _make_server_with_tokens(self.TOKENS)
-        body = json.dumps(
-            {"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000}
-        )
+        body = json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000})
         headers = _auth_headers(token="bad-token", body_bytes=body.encode("utf-8"))
         handler = _make_handler(server=server, headers=headers)
         handler.rfile.read.return_value = body.encode("utf-8")
@@ -998,9 +996,7 @@ class TestAuthInvalidToken:
     def test_delete_agents_invalid_token(self) -> None:
         server = _make_server_with_tokens(self.TOKENS)
         headers = _auth_headers(token="bad-token")
-        handler = _make_handler(
-            path="/agents/agent-a", server=server, headers=headers
-        )
+        handler = _make_handler(path="/agents/agent-a", server=server, headers=headers)
         handler.do_DELETE()
         handler.send_response.assert_called_once_with(401)
         assert "invalid token" in _body_written(handler)["error"]
@@ -1048,9 +1044,7 @@ class TestAuthValidToken:
 
     def test_post_agents_valid_token(self) -> None:
         server = _make_server_with_tokens(self.TOKENS)
-        body = json.dumps(
-            {"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000}
-        )
+        body = json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000})
         headers = _auth_headers(token="tok-a", body_bytes=body.encode("utf-8"))
         handler = _make_handler(server=server, headers=headers)
         handler.rfile.read.return_value = body.encode("utf-8")
@@ -1061,9 +1055,7 @@ class TestAuthValidToken:
     def test_delete_agents_valid_token(self) -> None:
         server = _make_server_with_tokens(self.TOKENS)
         # Register agent-a with its own token first.
-        body = json.dumps(
-            {"agent_id": "agent-a", "host": "127.0.0.1", "port": 8000}
-        )
+        body = json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 8000})
         headers_reg = _auth_headers(token="tok-a", body_bytes=body.encode("utf-8"))
         handler_reg = _make_handler(server=server, headers=headers_reg)
         handler_reg.rfile.read.return_value = body.encode("utf-8")
@@ -1116,9 +1108,7 @@ class TestAuthRegisterIdMismatch:
 
     def test_token_for_a_registering_b(self) -> None:
         server = _make_server_with_tokens(self.TOKENS)
-        body = json.dumps(
-            {"agent_id": "agent-b", "host": "127.0.0.1", "port": 9000}
-        )
+        body = json.dumps({"agent_id": "agent-b", "host": "127.0.0.1", "port": 9000})
         headers = _auth_headers(token="tok-a", body_bytes=body.encode("utf-8"))
         handler = _make_handler(server=server, headers=headers)
         handler.rfile.read.return_value = body.encode("utf-8")
@@ -1148,9 +1138,7 @@ class TestAuthDeregisterIdMismatch:
     def test_token_for_a_deregistering_b(self) -> None:
         server = _make_server_with_tokens(self.TOKENS)
         headers = _auth_headers(token="tok-a")
-        handler = _make_handler(
-            path="/agents/agent-b", server=server, headers=headers
-        )
+        handler = _make_handler(path="/agents/agent-b", server=server, headers=headers)
         handler.do_DELETE()
         handler.send_response.assert_called_once_with(403)
         assert "agent_id does not match token" in _body_written(handler)["error"]
@@ -1159,8 +1147,6 @@ class TestAuthDeregisterIdMismatch:
         """Path /agents/ → 400 (before identity check)."""
         server = _make_server_with_tokens(self.TOKENS)
         headers = _auth_headers(token="tok-a")
-        handler = _make_handler(
-            path="/agents/", server=server, headers=headers
-        )
+        handler = _make_handler(path="/agents/", server=server, headers=headers)
         handler.do_DELETE()
         handler.send_response.assert_called_once_with(400)

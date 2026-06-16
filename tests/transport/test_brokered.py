@@ -429,6 +429,7 @@ class TestNetworkedBrokerTransportHttps:
             "secure.local", 443, timeout=5.0, context=None
         )
 
+
 # ===================================================================
 # BrokeredRegistry — register()
 # ===================================================================
@@ -788,6 +789,7 @@ class TestBrokeredRegistryErrors:
             "secure.local", 443, timeout=5.0, context=None
         )
 
+
 # ===================================================================
 # create_transport_pair()
 # ===================================================================
@@ -978,8 +980,8 @@ class TestCreateTransportPairWithToken:
 
         assert isinstance(reg, BrokeredRegistry)
         assert isinstance(transport, NetworkedBrokerTransport)
-        assert reg._agent_token == "shared-token"  # type: ignore[attr-defined]
-        assert transport._agent_token == "shared-token"  # type: ignore[attr-defined]
+        assert reg._agent_token == "shared-token"
+        assert transport._agent_token == "shared-token"
 
     def test_brokered_mode_passes_ssl_context(self) -> None:
         import ssl
@@ -994,13 +996,13 @@ class TestCreateTransportPairWithToken:
 
         assert isinstance(reg, BrokeredRegistry)
         assert isinstance(transport, NetworkedBrokerTransport)
-        assert reg._ssl_context is ctx  # type: ignore[attr-defined]
-        assert transport._ssl_context is ctx  # type: ignore[attr-defined]
+        assert reg._ssl_context is ctx
+        assert transport._ssl_context is ctx
 
     def test_brokered_mode_defaults_token_and_ssl(self) -> None:
         reg, transport = create_transport_pair("brokered")
 
         assert isinstance(reg, BrokeredRegistry)
         assert isinstance(transport, NetworkedBrokerTransport)
-        assert reg._agent_token is None  # type: ignore[attr-defined]
-        assert reg._ssl_context is None  # type: ignore[attr-defined]
+        assert reg._agent_token is None
+        assert reg._ssl_context is None

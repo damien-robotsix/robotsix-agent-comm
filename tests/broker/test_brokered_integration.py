@@ -307,9 +307,7 @@ def broker_with_auth() -> Generator[BrokerServer, None, None]:
 class TestBrokeredAuthIntegration:
     """BrokeredRegistry and NetworkedBrokerTransport with auth-enabled broker."""
 
-    def test_register_with_token(
-        self, broker_with_auth: BrokerServer
-    ) -> None:
+    def test_register_with_token(self, broker_with_auth: BrokerServer) -> None:
         registry = BrokeredRegistry(
             broker_with_auth.host, broker_with_auth.port, agent_token="tok-a"
         )
@@ -564,5 +562,5 @@ class TestBrokeredTLSIntegration:
         )
         assert isinstance(reg, BrokeredRegistry)
         assert isinstance(transport, NetworkedBrokerTransport)
-        assert reg._ssl_context is client_ctx  # type: ignore[attr-defined]
-        assert transport._ssl_context is client_ctx  # type: ignore[attr-defined]
+        assert reg._ssl_context is client_ctx
+        assert transport._ssl_context is client_ctx

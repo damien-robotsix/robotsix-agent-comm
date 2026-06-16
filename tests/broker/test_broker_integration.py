@@ -55,6 +55,7 @@ def _json_request(
     ssl_context: ssl.SSLContext | None = None,
 ) -> tuple[int, Any]:
     """Make a raw HTTP request to the broker, return (status, parsed_body)."""
+    conn: http.client.HTTPConnection
     if ssl_context is not None:
         conn = http.client.HTTPSConnection(
             broker.host, broker.port, timeout=5.0, context=ssl_context
@@ -551,9 +552,7 @@ class TestBrokerTLSIntegration:
         self, broker_tls: tuple[BrokerServer, ssl.SSLContext]
     ) -> None:
         broker, client_ctx = broker_tls
-        status, body = _json_request(
-            "GET", broker, "/health", ssl_context=client_ctx
-        )
+        status, body = _json_request("GET", broker, "/health", ssl_context=client_ctx)
         assert status == 200
         assert body == {"status": "ok"}
 
@@ -570,9 +569,7 @@ class TestBrokerTLSIntegration:
         )
         assert status == 201
 
-        status, body = _json_request(
-            "GET", broker, "/agents", ssl_context=client_ctx
-        )
+        status, body = _json_request("GET", broker, "/agents", ssl_context=client_ctx)
         assert status == 200
         assert len(body["agents"]) == 1
         assert body["agents"][0]["agent_id"] == "tls-agent"
@@ -631,9 +628,7 @@ class TestBrokerTLSIntegration:
         assert status == 201
 
         # Discover.
-        status, body = _json_request(
-            "GET", broker, "/agents", ssl_context=client_ctx
-        )
+        status, body = _json_request("GET", broker, "/agents", ssl_context=client_ctx)
         assert status == 200
         assert len(body["agents"]) == 1
 
@@ -654,9 +649,7 @@ class TestBrokerTLSIntegration:
         assert status == 204
 
         # Gone from discovery.
-        status, body = _json_request(
-            "GET", broker, "/agents", ssl_context=client_ctx
-        )
+        status, body = _json_request("GET", broker, "/agents", ssl_context=client_ctx)
         assert status == 200
         assert body["agents"] == []
 
@@ -726,9 +719,7 @@ class TestBrokerAuthIntegration:
         )
         assert status == 401
 
-    def test_health_with_valid_token(
-        self, broker_with_auth: BrokerServer
-    ) -> None:
+    def test_health_with_valid_token(self, broker_with_auth: BrokerServer) -> None:
         status, body = _json_request(
             "GET",
             broker_with_auth,
@@ -737,9 +728,7 @@ class TestBrokerAuthIntegration:
         )
         assert status == 200
 
-    def test_agents_with_valid_token(
-        self, broker_with_auth: BrokerServer
-    ) -> None:
+    def test_agents_with_valid_token(self, broker_with_auth: BrokerServer) -> None:
         status, body = _json_request(
             "GET",
             broker_with_auth,

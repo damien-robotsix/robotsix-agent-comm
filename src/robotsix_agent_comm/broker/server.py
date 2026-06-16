@@ -160,7 +160,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self._write_error(401, "missing or invalid Authorization header")
             return None
 
-        token = auth_header[len("Bearer "):]
+        token = auth_header[len("Bearer ") :]
 
         agent_id = server._token_to_agent.get(token)
         if agent_id is None:
