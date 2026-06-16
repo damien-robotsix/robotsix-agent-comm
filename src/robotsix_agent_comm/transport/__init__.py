@@ -14,6 +14,11 @@ a relay/gateway can be added later (see ``docs/transport/design.md``).
 from __future__ import annotations
 
 from .base import Transport
+from .brokered import (
+    BrokeredRegistry,
+    NetworkedBrokerTransport,
+    create_transport_pair,
+)
 from .client import TransportClient
 from .endpoints import Endpoint
 from .errors import (
@@ -29,8 +34,10 @@ from .server import TransportServer
 
 __all__ = [
     "AgentNotFoundError",
+    "BrokeredRegistry",
     "DeliveryError",
     "Endpoint",
+    "NetworkedBrokerTransport",
     "Registry",
     "RetryPolicy",
     "Router",
@@ -39,5 +46,6 @@ __all__ = [
     "TransportError",
     "TransportServer",
     "TransportTimeoutError",
+    "create_transport_pair",
     "retry_call",
 ]

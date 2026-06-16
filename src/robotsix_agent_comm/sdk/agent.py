@@ -30,6 +30,7 @@ from ..transport import (
     Registry,
     RetryPolicy,
     Router,
+    Transport,
     TransportClient,
     TransportServer,
     TransportTimeoutError,
@@ -60,6 +61,7 @@ class Agent:
         port: int = 0,
         retry_policy: RetryPolicy | None = None,
         timeout: float = 5.0,
+        transport: Transport | None = None,
     ) -> None:
         self.agent_id = agent_id
         self._registry = registry
@@ -68,7 +70,7 @@ class Agent:
         self._timeout = timeout
         if retry_policy is None:
             retry_policy = RetryPolicy(max_attempts=3, base_delay=0.1, max_delay=2.0)
-        self._client = TransportClient()
+        self._client = transport if transport is not None else TransportClient()
         self._router = Router(registry, self._client, retry_policy, timeout=timeout)
         self._server: TransportServer | None = None
         self._request_handler: RequestHandler | None = None
