@@ -20,11 +20,12 @@ from robotsix_agent_comm.transport import (
     Registry,
     RetryPolicy,
     Router,
+    Transport,
 )
 from robotsix_agent_comm.transport.errors import TransportError
 
 
-class _FakeClient:
+class _FakeClient(Transport):
     """Test double for :class:`Transport` that records send calls."""
 
     def __init__(self, response: Message | None = None) -> None:
@@ -43,7 +44,7 @@ class _FakeClient:
         return True  # pragma: no cover — not exercised by Router
 
 
-class _FailingClient:
+class _FailingClient(Transport):
     """Test double that always raises :class:`TransportError`."""
 
     def __init__(self, error: TransportError | None = None) -> None:

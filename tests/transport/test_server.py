@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import json
 import threading
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from robotsix_agent_comm.protocol import (
+    Message,
     Metadata,
     Notification,
     Request,
@@ -21,6 +23,7 @@ from robotsix_agent_comm.protocol import (
 )
 from robotsix_agent_comm.transport.endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH
 from robotsix_agent_comm.transport.server import (
+    MessageHandler,
     TransportServer,
     _MessageHTTPServer,
     _MessageRequestHandler,
@@ -31,9 +34,15 @@ from robotsix_agent_comm.transport.server import (
 # ---------------------------------------------------------------------------
 
 
-def _make_handler(**kwargs) -> _MessageRequestHandler:
-    """Create a handler instance bypassing BaseHTTPRequestHandler.__init__."""
-    handler = object.__new__(_MessageRequestHandler)
+def _make_handler(**kwargs: Any) -> Any:
+    """Create a handler instance bypassing BaseHTTPRequestHandler.__init__.
+
+    Returns ``Any``: the instance deliberately has its I/O methods
+    (``send_response``, ``wfile``, ...) replaced by mocks, so callers
+    access mock-only attributes (``assert_called_once_with``, ``call_args``)
+    that the real ``_MessageRequestHandler`` type does not declare.
+    """
+    handler: Any = object.__new__(_MessageRequestHandler)
     handler.path = kwargs.get("path", DEFAULT_MESSAGE_PATH)
     handler.headers = kwargs.get("headers", MagicMock())
     handler.rfile = kwargs.get("rfile", MagicMock())
@@ -54,8 +63,8 @@ def _make_handler(**kwargs) -> _MessageRequestHandler:
     return handler
 
 
-def _echo_handler():
-    def handler(message):
+def _echo_handler() -> MessageHandler:
+    def handler(message: Message) -> Message | None:
         if isinstance(message, Request):
             return Response.to(message, body={"echo": message.body})
         return None
