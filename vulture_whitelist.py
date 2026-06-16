@@ -4,6 +4,7 @@
 # in pyproject.toml.
 
 daemon_threads
+do_DELETE
 do_GET
 do_POST
 health_check
