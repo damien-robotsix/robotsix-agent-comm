@@ -45,12 +45,32 @@ async def test_instantiate_with_api_key_creates_client() -> None:
         mock_client_instance = MockOpenAIClient.return_value
         agent = Agent("You are helpful.", api_key="sk-test")
 
-        MockOpenAIClient.assert_called_once_with(api_key="sk-test")
+        MockOpenAIClient.assert_called_once_with(api_key="sk-test", base_url=None)
         MockLLMIOAgent.assert_called_once_with(
             instruction="You are helpful.",
             client=mock_client_instance,
             model="gpt-4o-mini",
             graceful_errors=False,
+        )
+        assert agent._agent is MockLLMIOAgent.return_value
+
+
+@pytest.mark.asyncio
+async def test_instantiate_with_api_key_and_base_url() -> None:
+    """``Agent(instruction, api_key="sk-test", base_url="http://local")``
+    forwards ``base_url`` to ``OpenAIClient``."""
+    with (
+        patch("robotsix_agent_comm.llm.agent.llmio.Agent") as MockLLMIOAgent,
+        patch("robotsix_agent_comm.llm.agent.OpenAIClient") as MockOpenAIClient,
+    ):
+        agent = Agent(
+            "You are helpful.",
+            api_key="sk-test",
+            base_url="http://localhost:11434",
+        )
+
+        MockOpenAIClient.assert_called_once_with(
+            api_key="sk-test", base_url="http://localhost:11434"
         )
         assert agent._agent is MockLLMIOAgent.return_value
 

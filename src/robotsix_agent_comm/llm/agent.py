@@ -34,11 +34,13 @@ class Agent:
         client: BaseClient | None = None,
         model: str = "gpt-4o-mini",
         api_key: str | None = None,
+        base_url: str | None = None,
         graceful_errors: bool = False,
     ) -> None:
         if client is None:
             client = OpenAIClient(
-                api_key=api_key if api_key is not None else os.environ["OPENAI_API_KEY"]
+                api_key=api_key if api_key is not None else os.environ["LLM_API_KEY"],
+                base_url=base_url,
             )
         self._agent = llmio.Agent(
             instruction=instruction,
