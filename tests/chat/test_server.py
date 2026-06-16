@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator
 from unittest.mock import MagicMock, patch
 
@@ -10,8 +11,9 @@ from httpx import ASGITransport, AsyncClient
 
 from robotsix_agent_comm.chat.server import (
     SSE_CONTENT_TYPE,
-    SSE_DONE_SENTINEL,
-    SSE_ERROR_SENTINEL,
+    SSE_DONE_TYPE,
+    SSE_ERROR_TYPE,
+    SSE_TOKEN_TYPE,
     LLMChatAgent,
     create_agent_from_settings,
     create_app,
@@ -79,20 +81,19 @@ async def test_chat_endpoint_streams_tokens() -> None:
 
     text = response.text
     # SSE uses \n\n as event delimiter.  Split on that, then extract the
-    # token from each "data: ..." block.
+    # JSON payload from each "data: ..." block.
     events = [e for e in text.split("\n\n") if e]
-    data_lines: list[str] = []
+    frames: list[dict[str, object]] = []
     for e in events:
         if e.startswith("data: "):
-            data_lines.append(e[len("data: ") :])
-        elif e == "data:":
-            data_lines.append("")
+            payload = e[len("data: ") :]
+            frames.append(json.loads(payload))
 
-    assert len(data_lines) >= 3
-    assert data_lines[0] == "Hello"
-    assert data_lines[1] == " "
-    assert data_lines[2] == "world!"
-    assert data_lines[-1] == SSE_DONE_SENTINEL
+    assert len(frames) >= 4  # 3 tokens + done
+    assert frames[0] == {"type": SSE_TOKEN_TYPE, "content": "Hello"}
+    assert frames[1] == {"type": SSE_TOKEN_TYPE, "content": " "}
+    assert frames[2] == {"type": SSE_TOKEN_TYPE, "content": "world!"}
+    assert frames[-1] == {"type": SSE_DONE_TYPE}
 
 
 @pytest.mark.asyncio
@@ -118,9 +119,7 @@ async def test_chat_endpoint_sends_done_at_end() -> None:
     ) as client:
         response = await client.post("/chat", json={"message": "x"})
 
-    assert response.text.endswith(
-        f"data: {SSE_DONE_SENTINEL}\n\n"
-    ) or response.text.endswith(f"data: {SSE_DONE_SENTINEL}\r\n\r\n")
+    assert response.text.rstrip("\r\n").endswith(f'data: {{"type": "{SSE_DONE_TYPE}"}}')
 
 
 # ---------------------------------------------------------------------------
@@ -202,9 +201,21 @@ async def test_chat_endpoint_agent_raises() -> None:
 
     assert response.status_code == 200
     assert SSE_CONTENT_TYPE in response.headers["content-type"]
-    assert f"data: {SSE_ERROR_SENTINEL}" in response.text
-    assert "LLM went boom" in response.text
-    assert SSE_DONE_SENTINEL not in response.text
+
+    text = response.text
+    events = [e for e in text.split("\n\n") if e]
+    frames: list[dict[str, object]] = []
+    for e in events:
+        if e.startswith("data: "):
+            frames.append(json.loads(e[len("data: ") :]))
+
+    error_frames = [f for f in frames if f.get("type") == SSE_ERROR_TYPE]
+    assert len(error_frames) == 1
+    assert error_frames[0]["message"] == "LLM went boom"
+
+    # A failing agent must not emit a "done" frame.
+    done_frames = [f for f in frames if f.get("type") == SSE_DONE_TYPE]
+    assert len(done_frames) == 0
 
 
 # ---------------------------------------------------------------------------

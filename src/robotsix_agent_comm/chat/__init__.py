@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from .server import (
     SSE_CONTENT_TYPE,
-    SSE_DONE_SENTINEL,
-    SSE_ERROR_SENTINEL,
+    SSE_DONE_TYPE,
+    SSE_ERROR_TYPE,
+    SSE_TOKEN_TYPE,
     ChatAgent,
     create_app,
     run_server,
@@ -20,8 +21,9 @@ from .server import (
 __all__ = [
     "ChatAgent",
     "SSE_CONTENT_TYPE",
-    "SSE_DONE_SENTINEL",
-    "SSE_ERROR_SENTINEL",
+    "SSE_DONE_TYPE",
+    "SSE_ERROR_TYPE",
+    "SSE_TOKEN_TYPE",
     "create_app",
     "run_server",
 ]
