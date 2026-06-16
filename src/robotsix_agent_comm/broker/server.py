@@ -13,7 +13,7 @@ import ssl
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import cast
+from typing import TextIO, cast
 from urllib.parse import urlsplit
 
 from ..protocol import (
@@ -39,6 +39,71 @@ from ..transport.endpoints import HEALTH_PATH
 # ---------------------------------------------------------------------------
 
 
+class _TokenBucket:
+    """Thread-safe token bucket rate limiter for a single principal."""
+
+    def __init__(self, rate: float, capacity: float | None = None) -> None:
+        self._rate = rate
+        self._capacity = capacity if capacity is not None else rate
+        self._tokens = self._capacity
+        self._last_refill = time.monotonic()
+        self._lock = threading.Lock()
+
+    def consume(self, tokens: float = 1.0) -> bool:
+        """Try to consume *tokens*.  Returns ``True`` if allowed."""
+        with self._lock:
+            now = time.monotonic()
+            elapsed = now - self._last_refill
+            self._tokens = min(self._capacity, self._tokens + elapsed * self._rate)
+            self._last_refill = now
+            if self._tokens >= tokens:
+                self._tokens -= tokens
+                return True
+            return False
+
+
+class _AuditLogger:
+    """Write structured JSON audit records to a file or stdout."""
+
+    def __init__(self, path: str | None) -> None:
+        self._file: TextIO | None = None
+        self._lock = threading.Lock()
+        if path is not None:
+            self._file = open(path, "a", encoding="utf-8")  # noqa: SIM115
+
+    def log(
+        self,
+        action: str,
+        agent_id: str,
+        *,
+        path: str = "",
+        status: int = 0,
+        detail: str = "",
+    ) -> None:
+        record = {
+            "timestamp": time.time(),
+            "action": action,
+            "agent_id": agent_id,
+            "path": path,
+            "status": status,
+            "detail": detail,
+        }
+        line = json.dumps(record, ensure_ascii=False) + "\n"
+        with self._lock:
+            if self._file is not None:
+                self._file.write(line)
+                self._file.flush()
+            else:
+                import sys
+
+                sys.stdout.write(line)
+                sys.stdout.flush()
+
+    def close(self) -> None:
+        if self._file is not None:
+            self._file.close()
+
+
 class _BrokerHTTPServer(ThreadingHTTPServer):
     """Threading HTTP server that carries the broker dispatch state."""
 
@@ -58,6 +123,17 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
     # Auth state (child 4)
     agent_tokens: dict[str, str] | None
     _token_to_agent: dict[str, str]
+
+    # Body size limit (child 5)
+    max_body_size: int = 1_048_576
+
+    # Rate limiting (child 5)
+    rate_limit_per_second: float = 0.0
+    _rate_buckets: dict[str, _TokenBucket]
+    _rate_buckets_lock: threading.Lock
+
+    # Audit logging (child 5)
+    _audit_logger: _AuditLogger
 
 
 # ---------------------------------------------------------------------------
@@ -92,8 +168,28 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _read_body(self) -> str:
+    def _read_body(self) -> str | None:
+        """Read the request body, honouring ``Content-Length``.
+
+        Returns the decoded body string, or ``None`` when the body
+        exceeds ``max_body_size`` (a 413 JSON error is already written
+        to the client in that case).  Returns ``""`` for a legitimate
+        empty body.
+        """
         length = int(self.headers.get("Content-Length", 0))
+        limit = self._server().max_body_size
+        if length > limit:
+            self._write_json(
+                413,
+                {
+                    "error": "request body too large",
+                    "max_bytes": limit,
+                    "received_bytes": length,
+                },
+            )
+            # Still drain the rfile so the connection can be reused.
+            self.rfile.read(min(length, limit))
+            return None  # sentinel — caller must return early
         return self.rfile.read(length).decode("utf-8")
 
     def _parse_agent_id_from_path(self) -> str:
@@ -168,6 +264,34 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             return None
         return agent_id
 
+    def _check_rate_limit(self, agent_id: str) -> bool:
+        """Check the rate limit for *agent_id*.  Writes 429 and returns
+        ``False`` when the limit is exceeded.  Always returns ``True``
+        when rate limiting is disabled (``rate_limit_per_second <= 0``)."""
+        server = self._server()
+        if server.rate_limit_per_second <= 0:
+            return True
+
+        with server._rate_buckets_lock:
+            bucket = server._rate_buckets.get(agent_id)
+            if bucket is None:
+                bucket = _TokenBucket(server.rate_limit_per_second)
+                server._rate_buckets[agent_id] = bucket
+
+        if bucket.consume():
+            return True
+
+        body = json.dumps({"error": "rate limit exceeded", "retry_after": 1.0}).encode(
+            "utf-8"
+        )
+        self.send_response(429)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Retry-After", "1")
+        self.end_headers()
+        self.wfile.write(body)
+        return False
+
     # ------------------------------------------------------------------
     # HTTP method dispatchers
     # ------------------------------------------------------------------
@@ -177,6 +301,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         if agent_id is None:
             return
         self._authenticated_agent_id = agent_id
+
+        rate_key = agent_id if agent_id != "" else "__anonymous__"
+        if not self._check_rate_limit(rate_key):
+            return
 
         if self.path == HEALTH_PATH:
             self._write_json(200, {"status": "ok"})
@@ -200,6 +328,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             return
         self._authenticated_agent_id = agent_id
 
+        rate_key = agent_id if agent_id != "" else "__anonymous__"
+        if not self._check_rate_limit(rate_key):
+            return
+
         if self.path == "/agents":
             self._handle_register()
             return
@@ -216,6 +348,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             return
         self._authenticated_agent_id = agent_id
 
+        rate_key = agent_id if agent_id != "" else "__anonymous__"
+        if not self._check_rate_limit(rate_key):
+            return
+
         if self.path.startswith("/agents/"):
             self._handle_deregister()
             return
@@ -228,23 +364,59 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
     def _handle_register(self) -> None:
         """Handle ``POST /agents`` — register or update an agent."""
         raw = self._read_body()
+        if raw is None:
+            return  # 413 already written by _read_body
+
         try:
             data = json.loads(raw)
         except (json.JSONDecodeError, ValueError):
             self._write_error(400, "invalid JSON body")
+            self._server()._audit_logger.log(
+                "register",
+                "unknown",
+                path="/agents",
+                status=400,
+                detail="invalid JSON body",
+            )
             return
 
         if not isinstance(data, dict):
             self._write_error(400, "body must be a JSON object")
+            self._server()._audit_logger.log(
+                "register",
+                "unknown",
+                path="/agents",
+                status=400,
+                detail="body is not a JSON object",
+            )
             return
 
         agent_id = data.get("agent_id")
         host = data.get("host")
         port = data.get("port")
+        server = self._server()
 
         if not isinstance(agent_id, str) or not agent_id:
             self._write_error(
                 400, "agent_id is required and must be a non-empty string"
+            )
+            server._audit_logger.log(
+                "register",
+                "unknown",
+                path="/agents",
+                status=400,
+                detail="missing or invalid agent_id",
+            )
+            return
+
+        if len(agent_id) > 255:
+            self._write_error(400, "agent_id must not exceed 255 characters")
+            server._audit_logger.log(
+                "register",
+                agent_id,
+                path="/agents",
+                status=400,
+                detail="agent_id too long",
             )
             return
 
@@ -254,28 +426,132 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             and agent_id != self._authenticated_agent_id
         ):
             self._write_error(403, "agent_id does not match token")
+            server._audit_logger.log(
+                "register",
+                self._authenticated_agent_id,
+                path="/agents",
+                status=403,
+                detail="agent_id does not match token",
+            )
             return
 
         if not isinstance(host, str) or not host:
             self._write_error(400, "host is required and must be a non-empty string")
-            return
-        if not isinstance(port, int):
-            self._write_error(400, "port is required and must be an integer")
+            server._audit_logger.log(
+                "register",
+                agent_id,
+                path="/agents",
+                status=400,
+                detail="missing or invalid host",
+            )
             return
 
-        scheme = data.get("scheme", "http")
-        path = data.get("path", "/messages")
+        if len(host) > 253:
+            self._write_error(400, "host must not exceed 253 characters")
+            server._audit_logger.log(
+                "register",
+                agent_id,
+                path="/agents",
+                status=400,
+                detail="host too long",
+            )
+            return
+
+        if not isinstance(port, int):
+            self._write_error(400, "port is required and must be an integer")
+            server._audit_logger.log(
+                "register",
+                agent_id,
+                path="/agents",
+                status=400,
+                detail="port not an integer",
+            )
+            return
+
+        if not 1 <= port <= 65535:
+            self._write_error(400, "port must be between 1 and 65535")
+            server._audit_logger.log(
+                "register",
+                agent_id,
+                path="/agents",
+                status=400,
+                detail="port out of range",
+            )
+            return
+
+        # -- scheme validation --
+        if "scheme" in data:
+            scheme_raw = data["scheme"]
+            if not isinstance(scheme_raw, str) or scheme_raw not in ("http", "https"):
+                self._write_error(400, "scheme must be 'http' or 'https'")
+                server._audit_logger.log(
+                    "register",
+                    agent_id,
+                    path="/agents",
+                    status=400,
+                    detail="invalid scheme",
+                )
+                return
+            scheme = scheme_raw
+        else:
+            scheme = "http"
+
+        # -- path validation --
+        if "path" in data:
+            path_raw = data["path"]
+            if not isinstance(path_raw, str) or not path_raw.startswith("/"):
+                self._write_error(400, "path must be a string starting with '/'")
+                server._audit_logger.log(
+                    "register",
+                    agent_id,
+                    path="/agents",
+                    status=400,
+                    detail="invalid path",
+                )
+                return
+            path = path_raw
+        else:
+            path = "/messages"
+
+        # -- capabilities validation --
         capabilities = data.get("capabilities")
+        caps: dict[str, object] = {}
+        if "capabilities" in data:
+            if not isinstance(capabilities, dict):
+                self._write_error(400, "capabilities must be a JSON object")
+                server._audit_logger.log(
+                    "register",
+                    agent_id,
+                    path="/agents",
+                    status=400,
+                    detail="capabilities not a dict",
+                )
+                return
+            caps = dict(capabilities)
+        else:
+            caps = {}
 
         endpoint = Endpoint(
             agent_id=agent_id,
             host=host,
             port=port,
-            scheme=str(scheme) if isinstance(scheme, str) else "http",
-            path=str(path) if isinstance(path, str) else "/messages",
+            scheme=scheme,
+            path=path,
         )
 
-        server = self._server()
+        # -- ttl_seconds validation (before registration so we can reject) --
+        ttl_val = data.get("ttl_seconds")
+        if "ttl_seconds" in data and (not isinstance(ttl_val, int) or ttl_val < 0):
+            self._write_error(400, "ttl_seconds must be a non-negative integer")
+            server._audit_logger.log(
+                "register",
+                agent_id,
+                path="/agents",
+                status=400,
+                detail="invalid ttl_seconds",
+            )
+            return
+
         # Determine whether this is a new registration or an update.
         try:
             server.registry.lookup(agent_id)
@@ -285,29 +561,41 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
 
         server.registry.register(endpoint)
 
-        caps: dict[str, object] = {}
-        if isinstance(capabilities, dict):
-            caps = dict(capabilities)
         with server.capabilities_lock:
             server.capabilities[agent_id] = caps
 
         # Record heartbeat and TTL
-        ttl_val = data.get("ttl_seconds")
         with server.heartbeat_lock:
             server.last_heartbeat[agent_id] = time.monotonic()
-            if isinstance(ttl_val, int):
+            if "ttl_seconds" in data:
+                assert isinstance(ttl_val, int)  # validated above
                 server.ttl_seconds[agent_id] = ttl_val
             elif is_new:
                 server.ttl_seconds[agent_id] = server.default_ttl_seconds
             # else: re-registration without explicit TTL — keep existing
 
-        self._write_json(201 if is_new else 200, {"agent_id": agent_id})
+        status = 201 if is_new else 200
+        server._audit_logger.log(
+            "register",
+            agent_id,
+            path="/agents",
+            status=status,
+            detail="created" if is_new else "updated",
+        )
+        self._write_json(status, {"agent_id": agent_id})
 
     def _handle_deregister(self) -> None:
         """Handle ``DELETE /agents/{id}`` — idempotent removal."""
         agent_id = self._parse_agent_id_from_path()
         if not agent_id:
             self._write_error(400, "missing agent_id in path")
+            self._server()._audit_logger.log(
+                "deregister",
+                "unknown",
+                path=self.path,
+                status=400,
+                detail="missing agent_id in path",
+            )
             return
 
         # When auth is enabled, the path agent_id must match the token.
@@ -316,6 +604,13 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             and agent_id != self._authenticated_agent_id
         ):
             self._write_error(403, "agent_id does not match token")
+            self._server()._audit_logger.log(
+                "deregister",
+                self._authenticated_agent_id,
+                path=self.path,
+                status=403,
+                detail="agent_id does not match token",
+            )
             return
 
         server = self._server()
@@ -329,22 +624,61 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             server.last_heartbeat.pop(agent_id, None)
             server.ttl_seconds.pop(agent_id, None)
 
+        server._audit_logger.log(
+            "deregister",
+            agent_id,
+            path=f"/agents/{agent_id}",
+            status=204,
+            detail="deregistered",
+        )
         self.send_response(204)
         self.end_headers()
 
     def _handle_send(self) -> None:
         """Handle ``POST /messages`` — deserialise, validate, route."""
         raw = self._read_body()
+        if raw is None:
+            return  # 413 already written by _read_body
+
         try:
             message = deserialize(raw)
         except ProtocolError as exc:
             self._write_error(400, str(exc))
+            self._server()._audit_logger.log(
+                "send",
+                self._authenticated_agent_id,
+                path="/messages",
+                status=400,
+                detail=f"deserialization error: {exc}",
+            )
+            return
+
+        # When auth is enabled, sender must match the authenticated agent.
+        if (
+            self._authenticated_agent_id != ""
+            and message.metadata.sender != self._authenticated_agent_id
+        ):
+            self._write_error(403, "sender does not match authenticated agent")
+            self._server()._audit_logger.log(
+                "send",
+                self._authenticated_agent_id,
+                path="/messages",
+                status=403,
+                detail="sender does not match authenticated agent",
+            )
             return
 
         # Empty/missing recipient → 400
         recipient = message.metadata.recipient
         if not recipient:
             self._write_error(400, "metadata.recipient is required")
+            self._server()._audit_logger.log(
+                "send",
+                self._authenticated_agent_id,
+                path="/messages",
+                status=400,
+                detail="missing recipient",
+            )
             return
 
         # Check that the recipient is registered (before routing).
@@ -358,9 +692,23 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 message=f"unknown recipient: {recipient}",
             )
             self._write_serialized(404, serialize(error))
+            server._audit_logger.log(
+                "send",
+                self._authenticated_agent_id,
+                path="/messages",
+                status=404,
+                detail=f"unknown recipient: {recipient}",
+            )
             return
 
         http_status, body_str = self._route_send(message)
+        server._audit_logger.log(
+            "send",
+            self._authenticated_agent_id,
+            path="/messages",
+            status=http_status,
+            detail=f"recipient={recipient}",
+        )
         if body_str is not None:
             self._write_serialized(http_status, body_str)
         else:
@@ -410,6 +758,9 @@ class BrokerServer:
         router_retry_policy: RetryPolicy | None = None,
         ssl_context: ssl.SSLContext | None = None,
         agent_tokens: dict[str, str] | None = None,
+        max_body_size: int = 1_048_576,
+        rate_limit_per_second: float = 0.0,
+        audit_log_path: str | None = None,
     ) -> None:
         self._server = _BrokerHTTPServer((host, port), _BrokerRequestHandler)
 
@@ -438,6 +789,17 @@ class BrokerServer:
         if agent_tokens is not None:
             for agent_id, token in agent_tokens.items():
                 self._server._token_to_agent[token] = agent_id
+
+        # -- Body size limit --
+        self._server.max_body_size = max_body_size
+
+        # -- Rate limiting --
+        self._server.rate_limit_per_second = rate_limit_per_second
+        self._server._rate_buckets = {}
+        self._server._rate_buckets_lock = threading.Lock()
+
+        # -- Audit logging --
+        self._server._audit_logger = _AuditLogger(audit_log_path)
 
         # -- Router for message delivery --
         retry_policy = (
@@ -487,6 +849,8 @@ class BrokerServer:
         self._sweep_stop_event.set()
         self._server.shutdown()
         self._server.server_close()
+        if hasattr(self._server, "_audit_logger"):
+            self._server._audit_logger.close()
         if self._thread is not None:
             self._thread.join()
             self._thread = None

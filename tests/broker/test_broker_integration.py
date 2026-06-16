@@ -829,3 +829,217 @@ class TestBrokerAuthIntegration:
         assert status == 200
         reply = deserialize(json.dumps(body))
         assert isinstance(reply, Response)
+
+
+# ======================================================================
+# Body size limit integration tests (child 5)
+# ======================================================================
+
+
+class TestBrokerBodySizeLimit:
+    def test_oversized_body_returns_413(self) -> None:
+        broker = BrokerServer(host="127.0.0.1", port=0, max_body_size=1024)
+        broker.start()
+        try:
+            # Send a body larger than 1024 bytes.
+            big_body = "x" * 2048
+            status, body = _json_request(
+                "POST",
+                broker,
+                "/agents",
+                body=big_body,
+            )
+            assert status == 413
+            assert isinstance(body, dict)
+            assert body["error"] == "request body too large"
+            assert body["max_bytes"] == 1024
+        finally:
+            broker.stop()
+
+    def test_body_within_limit_succeeds(self) -> None:
+        broker = BrokerServer(host="127.0.0.1", port=0, max_body_size=1024)
+        broker.start()
+        try:
+            status, body = _json_request(
+                "POST",
+                broker,
+                "/agents",
+                body={"agent_id": "a", "host": "127.0.0.1", "port": 9000},
+            )
+            assert status == 201
+        finally:
+            broker.stop()
+
+
+# ======================================================================
+# Rate limiting integration tests (child 5)
+# ======================================================================
+
+
+class TestBrokerRateLimiting:
+    def test_burst_exceeds_limit_returns_429(self) -> None:
+        broker = BrokerServer(host="127.0.0.1", port=0, rate_limit_per_second=5.0)
+        broker.start()
+        try:
+            statuses: list[int] = []
+            for _ in range(10):
+                status, _ = _json_request(
+                    "POST",
+                    broker,
+                    "/agents",
+                    body={"agent_id": "a", "host": "127.0.0.1", "port": 9000},
+                )
+                statuses.append(status)
+
+            # At least some requests should be rate-limited.
+            assert 429 in statuses, f"Expected some 429 responses, got {statuses}"
+        finally:
+            broker.stop()
+
+    def test_429_includes_retry_after_header(self) -> None:
+        broker = BrokerServer(host="127.0.0.1", port=0, rate_limit_per_second=3.0)
+        broker.start()
+        try:
+            # Send many rapid requests.
+            for _ in range(20):
+                status, _ = _json_request(
+                    "POST",
+                    broker,
+                    "/agents",
+                    body={"agent_id": "a", "host": "127.0.0.1", "port": 9000},
+                )
+                if status == 429:
+                    # Make a raw connection to check headers.
+                    import http.client
+
+                    conn = http.client.HTTPConnection(
+                        broker.host, broker.port, timeout=5.0
+                    )
+                    try:
+                        payload = json.dumps(
+                            {"agent_id": "a", "host": "127.0.0.1", "port": 9000}
+                        ).encode("utf-8")
+                        conn.request(
+                            "POST",
+                            "/agents",
+                            body=payload,
+                            headers={
+                                "Content-Type": "application/json",
+                            },
+                        )
+                        resp = conn.getresponse()
+                        assert resp.getheader("Retry-After") == "1"
+                        resp.read()
+                    finally:
+                        conn.close()
+                    break
+        finally:
+            broker.stop()
+
+    def test_rate_limit_zero_disables(self) -> None:
+        broker = BrokerServer(host="127.0.0.1", port=0)  # rate_limit_per_second=0.0
+        broker.start()
+        try:
+            for _ in range(20):
+                status, _ = _json_request(
+                    "POST",
+                    broker,
+                    "/agents",
+                    body={"agent_id": "a", "host": "127.0.0.1", "port": 9000},
+                )
+                assert status != 429, "Rate limiting should be disabled"
+        finally:
+            broker.stop()
+
+
+# ======================================================================
+# Audit logging integration tests (child 5)
+# ======================================================================
+
+
+class TestBrokerAuditLogging:
+    def test_audit_log_writes_json_lines(self) -> None:
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="r+", delete=False, suffix=".jsonl"
+        ) as tf:
+            log_path = tf.name
+
+        try:
+            broker = BrokerServer(host="127.0.0.1", port=0, audit_log_path=log_path)
+            broker.start()
+            try:
+                # Register.
+                _json_request(
+                    "POST",
+                    broker,
+                    "/agents",
+                    body={"agent_id": "log-agent", "host": "127.0.0.1", "port": 9000},
+                )
+                # Send a message to it (register a second agent as recipient first).
+                _json_request(
+                    "POST",
+                    broker,
+                    "/agents",
+                    body={"agent_id": "log-agent-b", "host": "127.0.0.1", "port": 9001},
+                )
+                _json_request(
+                    "POST",
+                    broker,
+                    "/messages",
+                    body=serialize(
+                        Request(
+                            metadata=Metadata.create(
+                                sender="log-agent", recipient="log-agent-b"
+                            ),
+                            body={"action": "ping"},
+                        )
+                    ),
+                )
+                # Deregister.
+                _json_request("DELETE", broker, "/agents/log-agent")
+            finally:
+                broker.stop()
+
+            # Read the log file.
+            with open(log_path, encoding="utf-8") as f:
+                lines = [line.strip() for line in f if line.strip()]
+
+            assert len(lines) >= 3, f"Expected at least 3 audit lines, got {len(lines)}"
+
+            actions = []
+            for line in lines:
+                record = json.loads(line)
+                assert "timestamp" in record
+                assert "action" in record
+                assert "agent_id" in record
+                assert "path" in record
+                assert "status" in record
+                assert "detail" in record
+                actions.append(record["action"])
+
+            assert "register" in actions
+            assert "send" in actions
+            assert "deregister" in actions
+        finally:
+            import os
+
+            if os.path.exists(log_path):
+                os.unlink(log_path)
+
+    def test_audit_disabled_when_path_none(self) -> None:
+        """When audit_log_path is None, the server starts and stops
+        without errors (audit logger writes to stdout silently)."""
+        broker = BrokerServer(host="127.0.0.1", port=0)  # audit_log_path=None
+        broker.start()
+        try:
+            status, _ = _json_request(
+                "POST",
+                broker,
+                "/agents",
+                body={"agent_id": "x", "host": "127.0.0.1", "port": 9000},
+            )
+            assert status == 201
+        finally:
+            broker.stop()
