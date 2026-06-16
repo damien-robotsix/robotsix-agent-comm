@@ -5,7 +5,7 @@ __pycache__/
 # Virtual environments
 .venv/
 
-# Environment
+# Environment secrets
 .env
 
 # Build artifacts
