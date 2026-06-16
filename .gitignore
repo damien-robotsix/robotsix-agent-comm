@@ -21,5 +21,8 @@ build/
 .coverage
 .coverage.*
 
+# Local dependency install directory
+.local-packages/
+
 # mkdocs build output
 site/
