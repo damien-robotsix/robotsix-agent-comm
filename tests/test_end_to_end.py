@@ -153,8 +153,10 @@ def _agent_process(
                 "echo": {"action": f"ping-from-{agent_id}"}
             }
 
-            # Wait a moment for any inbound messages to arrive.
-            time.sleep(0.5)
+            # Wait for expected inbound messages (up to 10s timeout).
+            deadline = time.monotonic() + 10.0
+            while len(received) < 2 and time.monotonic() < deadline:
+                time.sleep(0.05)
 
             # Check what we received.
             received_events = []
