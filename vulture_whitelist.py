@@ -3,6 +3,7 @@
 # Entries below are bare expressions — ruff B018 is suppressed per-file
 # in pyproject.toml.
 
+broker_url
 close
 daemon_threads
 do_DELETE
