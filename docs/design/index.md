@@ -3,8 +3,8 @@
 This document describes the architecture of `robotsix-agent-comm`: how
 agents address one another and how messages travel between them. It is
 grounded in the protocol layer that already exists today and lays out
-the contracts that the later transport, broker/router, and client-API
-layers implement to.
+the contracts that the transport, broker/router, and client-API
+layers implement.
 
 ## System Architecture
 
@@ -51,28 +51,30 @@ the one beneath it:
 
 ```
 +-----------------------------------------------------------+
-|  Client API            (later epic child — not yet built) |
+|  Client API            (built — stdlib-only)              |
 |  public, ergonomic surface: send a Request and await the  |
 |  correlated Response; publish Notifications; register      |
 |  handlers.                                                 |
 +-----------------------------------------------------------+
-|  Broker / Router       (later epic child — not yet built) |
+|  Broker / Router       (built — stdlib-only)              |
 |  resolves Metadata.recipient to a delivery destination;   |
 |  emits Error on undeliverable messages.                   |
 +-----------------------------------------------------------+
-|  Transport             (later epic child — not yet built) |
+|  Transport             (built — stdlib-only)              |
 |  abstract interface + stdlib in-process implementation    |
 |  (asyncio / queue) that moves serialized Messages.        |
 +-----------------------------------------------------------+
-|  Protocol              (EXISTS TODAY)                     |
+|  Protocol              (built — stdlib-only)              |
 |  Message/Request/Response/Error/Notification, Metadata,   |
 |  MessageType, JSON serialize/deserialize, validate.       |
 +-----------------------------------------------------------+
 ```
 
-Only the **Protocol** layer exists today. **Transport**,
-**Broker/Router**, and **Client API** land as later children of this
-epic, each implementing to the contracts described below.
+All four layers are implemented and are stdlib-only (no third-party
+runtime dependencies). The separate **Chat** module
+(`src/robotsix_agent_comm/chat/`) provides an SSE server for human
+interaction on top of the Agent API; it depends on **Starlette** and
+**uvicorn**.
 
 ### Data flow
 
@@ -109,7 +111,7 @@ breaking protocol change.
 
 ### Broker-mediated routing
 
-The broker/router (a later epic child) maintains a registry mapping
+The broker/router maintains a registry mapping
 each address to a delivery destination (a transport endpoint / queue).
 To route a message it reads `Metadata.recipient`, looks the address up
 in the registry, and forwards the message over the transport to the
@@ -191,7 +193,11 @@ described in its own design note:
 
 This design adheres to the stdlib-first principle established in
 [ADR 0001 — Stdlib-first, minimal dependencies](../decisions/0001-stdlib-first.md).
-The concrete stdlib facilities chosen are `asyncio` and `queue` for
-the in-process transport's message passing and concurrency, and `json`
-(already used by the protocol layer) for serialization. No runtime
-dependency is introduced by any layer described here.
+The four core layers (Protocol, Transport, Broker/Router, Client API)
+use only the standard library: `asyncio` and `queue` for the in-process
+transport's message passing and concurrency, `http.server` and
+`http.client` for the network transport, and `json` (already used by
+the protocol layer) for serialization. The **Chat** SSE server
+(`src/robotsix_agent_comm/chat/`) is the one module with third-party
+runtime dependencies — it uses **Starlette** as its ASGI framework and
+**uvicorn** as its server.
