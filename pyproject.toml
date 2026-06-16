@@ -66,6 +66,9 @@ known_first_party = ["robotsix_agent_comm"]
 # imports), not part of this repo's dependency graph — exclude it from deptry
 # as it already is from ruff.
 extend_exclude = ["templates"]
+# llmio is a declared runtime dependency whose first imports will land in a
+# follow-up PR (DEP002 / "not used in codebase").
+per_rule_ignores = { "DEP002" = ["llmio"] }
 
 [tool.pytest.ini_options]
 strict = true
