@@ -1,10 +1,22 @@
 """Run the new brokered unit tests."""
-import subprocess, sys
+
+import subprocess
+import sys
+
 result = subprocess.run(
-    [sys.executable, "-m", "pytest",
-     "tests/transport/test_brokered.py",
-     "-x", "-v", "--tb=short", "-q"],
-    capture_output=True, text=True, timeout=120
+    [
+        sys.executable,
+        "-m",
+        "pytest",
+        "tests/transport/test_brokered.py",
+        "-x",
+        "-v",
+        "--tb=short",
+        "-q",
+    ],
+    capture_output=True,
+    text=True,
+    timeout=120,
 )
 print(result.stdout)
 if result.stderr:
