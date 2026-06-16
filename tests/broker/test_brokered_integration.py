@@ -564,3 +564,130 @@ class TestBrokeredTLSIntegration:
         assert isinstance(transport, NetworkedBrokerTransport)
         assert reg._ssl_context is client_ctx
         assert transport._ssl_context is client_ctx
+
+
+# ---------------------------------------------------------------------------
+# mTLS fixture and brokered integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mtls_broker() -> Generator[tuple[BrokerServer, ssl.SSLContext], None, None]:
+    """Yield ``(BrokerServer, client_ssl_context)`` with mutual TLS enabled."""
+    if not _HAS_TRUSTME:
+        pytest.skip("trustme not installed")
+
+    ca = trustme.CA()
+    server_cert = ca.issue_cert("127.0.0.1")
+    client_cert = ca.issue_cert("test-agent")
+
+    server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_cert.configure_cert(server_ctx)
+    ca.configure_trust(server_ctx)
+
+    client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ca.configure_trust(client_ctx)
+    client_cert.configure_cert(client_ctx)
+
+    broker = BrokerServer(
+        host="127.0.0.1", port=0, ssl_context=server_ctx, require_client_cert=True
+    )
+    broker.start()
+    try:
+        yield broker, client_ctx
+    finally:
+        broker.stop()
+
+
+class TestBrokeredMTLSIntegration:
+    """BrokeredRegistry and NetworkedBrokerTransport over mutual TLS."""
+
+    def test_register_and_lookup_over_mtls(
+        self, mtls_broker: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = mtls_broker
+        registry = BrokeredRegistry(
+            broker.host, broker.port, scheme="https", ssl_context=client_ctx
+        )
+        endpoint = Endpoint(agent_id="mtls-agent", host="127.0.0.1", port=9000)
+        registry.register(endpoint)
+
+        looked_up = registry.lookup("mtls-agent")
+        assert looked_up.agent_id == "mtls-agent"
+
+    def test_send_over_mtls(
+        self,
+        mtls_broker: tuple[BrokerServer, ssl.SSLContext],
+        agent_server: tuple[TransportServer, list[Message]],
+    ) -> None:
+        broker, client_ctx = mtls_broker
+        agent_srv, received = agent_server
+
+        registry = BrokeredRegistry(
+            broker.host, broker.port, scheme="https", ssl_context=client_ctx
+        )
+        endpoint = Endpoint(
+            agent_id="agent-b", host=agent_srv.host, port=agent_srv.port
+        )
+        registry.register(endpoint)
+
+        transport = NetworkedBrokerTransport(
+            broker.host, broker.port, scheme="https", ssl_context=client_ctx
+        )
+        request = Request(
+            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
+            body={"action": "ping"},
+        )
+        reply = transport.send(request, endpoint, timeout=5.0)
+
+        assert len(received) == 1
+        assert isinstance(reply, Response)
+        assert reply.body == {"echo": {"action": "ping"}}
+
+    def test_health_check_over_mtls(
+        self, mtls_broker: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = mtls_broker
+        transport = NetworkedBrokerTransport(
+            broker.host, broker.port, scheme="https", ssl_context=client_ctx
+        )
+        result = transport.health_check(
+            Endpoint(agent_id="a", host="127.0.0.1", port=1), timeout=5.0
+        )
+        assert result is True
+
+    def test_create_transport_pair_with_mtls(
+        self, mtls_broker: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = mtls_broker
+        reg, transport = create_transport_pair(
+            "brokered",
+            broker_host=broker.host,
+            broker_port=broker.port,
+            broker_scheme="https",
+            broker_ssl_context=client_ctx,
+        )
+        assert isinstance(reg, BrokeredRegistry)
+        assert isinstance(transport, NetworkedBrokerTransport)
+
+    def test_non_mtls_transport_rejected(
+        self, mtls_broker: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, _ = mtls_broker
+
+        # Build a context that trusts the server but has no client cert.
+        import ssl as _ssl
+
+        bare_ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_CLIENT)
+        bare_ctx.check_hostname = False
+        bare_ctx.verify_mode = _ssl.CERT_NONE
+
+        transport = NetworkedBrokerTransport(
+            broker.host, broker.port, scheme="https", ssl_context=bare_ctx
+        )
+
+        # health_check should return False instead of raising.
+        result = transport.health_check(
+            Endpoint(agent_id="a", host="127.0.0.1", port=1), timeout=5.0
+        )
+        assert result is False

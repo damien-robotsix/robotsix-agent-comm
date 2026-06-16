@@ -655,6 +655,167 @@ class TestBrokerTLSIntegration:
 
 
 # ---------------------------------------------------------------------------
+# mTLS fixture and integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mtls_broker() -> Iterator[tuple[BrokerServer, ssl.SSLContext]]:
+    """Yield ``(BrokerServer, client_ssl_context)`` with mutual TLS enabled."""
+    if not _HAS_TRUSTME:
+        pytest.skip("trustme not installed")
+
+    ca = trustme.CA()
+    server_cert = ca.issue_cert("127.0.0.1")
+    client_cert = ca.issue_cert("test-agent")
+
+    server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_cert.configure_cert(server_ctx)
+    ca.configure_trust(server_ctx)
+
+    client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ca.configure_trust(client_ctx)
+    client_cert.configure_cert(client_ctx)
+
+    broker = BrokerServer(
+        host="127.0.0.1", port=0, ssl_context=server_ctx, require_client_cert=True
+    )
+    broker.start()
+    try:
+        yield broker, client_ctx
+    finally:
+        broker.stop()
+
+
+class TestBrokerMTLSIntegration:
+    """Integration tests for mutual TLS (mTLS)."""
+
+    def test_health_over_mtls(
+        self, mtls_broker: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = mtls_broker
+        status, body = _json_request("GET", broker, "/health", ssl_context=client_ctx)
+        assert status == 200
+        assert body == {"status": "ok"}
+
+    def test_register_and_discover_over_mtls(
+        self, mtls_broker: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = mtls_broker
+        status, body = _json_request(
+            "POST",
+            broker,
+            "/agents",
+            {"agent_id": "mtls-agent", "host": "127.0.0.1", "port": 9000},
+            ssl_context=client_ctx,
+        )
+        assert status == 201
+
+        status, body = _json_request("GET", broker, "/agents", ssl_context=client_ctx)
+        assert status == 200
+        assert len(body["agents"]) == 1
+        assert body["agents"][0]["agent_id"] == "mtls-agent"
+
+    def test_send_over_mtls(
+        self,
+        mtls_broker: tuple[BrokerServer, ssl.SSLContext],
+        agent_server: tuple[TransportServer, list[Message]],
+    ) -> None:
+        broker, client_ctx = mtls_broker
+        agent_srv, received = agent_server
+
+        _json_request(
+            "POST",
+            broker,
+            "/agents",
+            {
+                "agent_id": "agent-b",
+                "host": agent_srv.host,
+                "port": agent_srv.port,
+            },
+            ssl_context=client_ctx,
+        )
+
+        request = Request(
+            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
+            body={"action": "ping"},
+        )
+        status, body = _json_request(
+            "POST", broker, "/messages", serialize(request), ssl_context=client_ctx
+        )
+        assert status == 200
+        reply = deserialize(json.dumps(body))
+        assert isinstance(reply, Response)
+
+    def test_full_lifecycle_over_mtls(
+        self,
+        mtls_broker: tuple[BrokerServer, ssl.SSLContext],
+        agent_server: tuple[TransportServer, list[Message]],
+    ) -> None:
+        broker, client_ctx = mtls_broker
+        agent_srv, _ = agent_server
+
+        # Register.
+        status, _ = _json_request(
+            "POST",
+            broker,
+            "/agents",
+            {
+                "agent_id": "agent-full",
+                "host": agent_srv.host,
+                "port": agent_srv.port,
+            },
+            ssl_context=client_ctx,
+        )
+        assert status == 201
+
+        # Discover.
+        status, body = _json_request("GET", broker, "/agents", ssl_context=client_ctx)
+        assert status == 200
+        assert len(body["agents"]) == 1
+
+        # Send.
+        request = Request(
+            metadata=Metadata.create(sender="caller", recipient="agent-full"),
+            body={"action": "hello"},
+        )
+        status, body = _json_request(
+            "POST", broker, "/messages", serialize(request), ssl_context=client_ctx
+        )
+        assert status == 200
+
+        # Deregister.
+        status, _ = _json_request(
+            "DELETE", broker, "/agents/agent-full", ssl_context=client_ctx
+        )
+        assert status == 204
+
+        # Gone from discovery.
+        status, body = _json_request("GET", broker, "/agents", ssl_context=client_ctx)
+        assert status == 200
+        assert body["agents"] == []
+
+    def test_non_mtls_client_rejected(
+        self, mtls_broker: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, _ = mtls_broker
+
+        # Build a context that has NO CA trust and NO client certificate.
+        # check_hostname=False and CERT_NONE so the TLS handshake proceeds
+        # until the server requests the client certificate — which the
+        # client cannot provide.  The server then aborts the connection.
+        import ssl as _ssl
+
+        bare_ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_CLIENT)
+        bare_ctx.check_hostname = False
+        bare_ctx.verify_mode = _ssl.CERT_NONE
+        # No client certificate loaded — the server will reject.
+
+        with pytest.raises(OSError):
+            _json_request("GET", broker, "/health", ssl_context=bare_ctx)
+
+
+# ---------------------------------------------------------------------------
 # Auth integration tests (child 4)
 # ---------------------------------------------------------------------------
 
