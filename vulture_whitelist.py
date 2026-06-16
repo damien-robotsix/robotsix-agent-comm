@@ -10,8 +10,13 @@ health_check
 health_url
 list_agents
 log_message
+llm_base_url
+llm_model
+model_post_init
 on_notification
 on_request
 receive_message
+run_server_from_config
 send_notification
 send_request
+__context

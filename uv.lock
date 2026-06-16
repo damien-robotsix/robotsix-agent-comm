@@ -1165,6 +1165,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "llmio" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "starlette" },
     { name = "uvicorn" },
@@ -1190,6 +1191,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "llmio" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "starlette" },
     { name = "uvicorn" },
