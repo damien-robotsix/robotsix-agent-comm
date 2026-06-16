@@ -74,7 +74,7 @@ async def test_chat_endpoint_streams_tokens() -> None:
     data_lines: list[str] = []
     for e in events:
         if e.startswith("data: "):
-            data_lines.append(e[len("data: "):])
+            data_lines.append(e[len("data: ") :])
         elif e == "data:":
             data_lines.append("")
 

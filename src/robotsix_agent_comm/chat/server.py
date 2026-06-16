@@ -57,9 +57,7 @@ async def chat_endpoint(
         return JSONResponse({"error": "invalid JSON body"}, status_code=400)
 
     if not isinstance(body, dict):
-        return JSONResponse(
-            {"error": "expected a JSON object"}, status_code=400
-        )
+        return JSONResponse({"error": "expected a JSON object"}, status_code=400)
 
     message = body.get("message")
     if not message or not isinstance(message, str):
@@ -92,9 +90,7 @@ async def chat_endpoint(
 # ---------------------------------------------------------------------------
 
 
-async def not_found_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def not_found_handler(request: Request, exc: Exception) -> JSONResponse:
     """Return JSON for unmatched routes instead of plain text."""
     return JSONResponse({"error": "not found"}, status_code=404)
 
