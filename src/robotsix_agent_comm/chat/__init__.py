@@ -8,6 +8,20 @@ real port.
 
 from __future__ import annotations
 
-from .server import ChatAgent, create_app, run_server
+from .server import (
+    SSE_CONTENT_TYPE,
+    SSE_DONE_SENTINEL,
+    SSE_ERROR_SENTINEL,
+    ChatAgent,
+    create_app,
+    run_server,
+)
 
-__all__ = ["ChatAgent", "create_app", "run_server"]
+__all__ = [
+    "ChatAgent",
+    "SSE_CONTENT_TYPE",
+    "SSE_DONE_SENTINEL",
+    "SSE_ERROR_SENTINEL",
+    "create_app",
+    "run_server",
+]

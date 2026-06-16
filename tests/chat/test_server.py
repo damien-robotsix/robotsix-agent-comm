@@ -7,7 +7,12 @@ from collections.abc import AsyncIterator
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from robotsix_agent_comm.chat.server import create_app
+from robotsix_agent_comm.chat.server import (
+    SSE_CONTENT_TYPE,
+    SSE_DONE_SENTINEL,
+    SSE_ERROR_SENTINEL,
+    create_app,
+)
 
 
 class MockAgent:
@@ -65,7 +70,7 @@ async def test_chat_endpoint_streams_tokens() -> None:
         response = await client.post("/chat", json={"message": "hello"})
 
     assert response.status_code == 200
-    assert response.headers["content-type"] == "text/event-stream"
+    assert response.headers["content-type"] == SSE_CONTENT_TYPE
 
     text = response.text
     # SSE uses \n\n as event delimiter.  Split on that, then extract the
@@ -82,7 +87,7 @@ async def test_chat_endpoint_streams_tokens() -> None:
     assert data_lines[0] == "Hello"
     assert data_lines[1] == " "
     assert data_lines[2] == "world!"
-    assert data_lines[-1] == "[DONE]"
+    assert data_lines[-1] == SSE_DONE_SENTINEL
 
 
 @pytest.mark.asyncio
@@ -108,9 +113,9 @@ async def test_chat_endpoint_sends_done_at_end() -> None:
     ) as client:
         response = await client.post("/chat", json={"message": "x"})
 
-    assert response.text.endswith("data: [DONE]\n\n") or response.text.endswith(
-        "data: [DONE]\r\n\r\n"
-    )
+    assert response.text.endswith(
+        f"data: {SSE_DONE_SENTINEL}\n\n"
+    ) or response.text.endswith(f"data: {SSE_DONE_SENTINEL}\r\n\r\n")
 
 
 # ---------------------------------------------------------------------------
@@ -191,10 +196,10 @@ async def test_chat_endpoint_agent_raises() -> None:
         response = await client.post("/chat", json={"message": "hello"})
 
     assert response.status_code == 200
-    assert "text/event-stream" in response.headers["content-type"]
-    assert "data: [ERROR]" in response.text
+    assert SSE_CONTENT_TYPE in response.headers["content-type"]
+    assert f"data: {SSE_ERROR_SENTINEL}" in response.text
     assert "LLM went boom" in response.text
-    assert "[DONE]" not in response.text
+    assert SSE_DONE_SENTINEL not in response.text
 
 
 # ---------------------------------------------------------------------------
