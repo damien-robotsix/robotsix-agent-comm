@@ -94,6 +94,23 @@ Plaintext HTTP is not accepted.  The broker's TLS configuration
 (certificate, key, CA bundle) is loaded from a config-mountable path
 (see Deployment model below).
 
+##### 2.1.1 Mutual TLS (mTLS)
+
+The broker **MAY** be deployed with mutual TLS, where every agent
+presents a client certificate that the broker validates against a
+trusted Certificate Authority.  When mTLS is enabled:
+
+- The broker's `ssl_context` must have `verify_mode = ssl.CERT_REQUIRED`
+  and a trusted CA bundle loaded via `load_verify_locations`.
+- Every agent must load a client certificate and private key onto its
+  `ssl_context` via `load_cert_chain` before connecting.
+- The broker's `BrokerServer` accepts a `require_client_cert=True`
+  parameter that sets `verify_mode` automatically.
+
+mTLS operates at the transport layer (TLS handshake).  It is
+**independent of** the per-agent bearer-token authentication described
+in §2.2 — both may be enabled simultaneously for defence-in-depth.
+
 #### 2.2 Per-agent authentication
 
 Every request to the broker (except `GET /health`) MUST carry a

@@ -54,6 +54,18 @@ class NetworkedBrokerTransport(Transport):
             Optional :class:`ssl.SSLContext` for TLS connections.  When
             *scheme* is ``"https"`` and this is provided, it is passed as
             the *context* argument to :class:`http.client.HTTPSConnection`.
+
+            For mutual TLS (mTLS), load the client certificate and private
+            key onto the context before passing it::
+
+                ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                ctx.load_verify_locations(cafile="/path/to/ca.pem")
+                ctx.load_cert_chain(
+                    certfile="/path/to/client.pem",
+                    keyfile="/path/to/client-key.pem",
+                )
+                transport = NetworkedBrokerTransport(..., ssl_context=ctx)
+
         agent_token:
             Optional bearer token included as an ``Authorization`` header
             on every ``POST /messages`` and ``GET /health`` request.
@@ -195,6 +207,18 @@ class BrokeredRegistry:
             Optional :class:`ssl.SSLContext` for TLS connections.  When
             *scheme* is ``"https"`` and this is provided, it is passed as
             the *context* argument to :class:`http.client.HTTPSConnection`.
+
+            For mutual TLS (mTLS), load the client certificate and private
+            key onto the context before passing it::
+
+                ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                ctx.load_verify_locations(cafile="/path/to/ca.pem")
+                ctx.load_cert_chain(
+                    certfile="/path/to/client.pem",
+                    keyfile="/path/to/client-key.pem",
+                )
+                registry = BrokeredRegistry(..., ssl_context=ctx)
+
         agent_token:
             Optional bearer token included as an ``Authorization`` header
             on every ``POST /agents``, ``DELETE /agents/<id>``, and

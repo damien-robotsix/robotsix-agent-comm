@@ -739,6 +739,13 @@ class BrokerServer:
             provided the server's listening socket is wrapped with
             :meth:`ssl.SSLContext.wrap_socket` so all traffic is
             encrypted.
+        require_client_cert:
+            When ``True``, the server requests and validates a client
+            certificate during the TLS handshake (mutual TLS).  Requires
+            *ssl_context* to be provided with a trusted CA loaded via
+            :meth:`ssl.SSLContext.load_verify_locations`.  When *ssl_context*
+            is ``None`` and this is ``True``, :exc:`ValueError` is raised.
+            Defaults to ``False`` (one-way TLS only).
         agent_tokens:
             Optional ``{agent_id: token}`` mapping that enables per-agent
             bearer-token authentication on every endpoint.  When ``None``
@@ -757,15 +764,22 @@ class BrokerServer:
         router_timeout: float = 5.0,
         router_retry_policy: RetryPolicy | None = None,
         ssl_context: ssl.SSLContext | None = None,
+        require_client_cert: bool = False,
         agent_tokens: dict[str, str] | None = None,
         max_body_size: int = 1_048_576,
         rate_limit_per_second: float = 0.0,
         audit_log_path: str | None = None,
     ) -> None:
+        # -- Validate require_client_cert before binding a socket --
+        if require_client_cert and ssl_context is None:
+            raise ValueError("require_client_cert requires ssl_context")
+
         self._server = _BrokerHTTPServer((host, port), _BrokerRequestHandler)
 
         # -- TLS --
         if ssl_context is not None:
+            if require_client_cert:
+                ssl_context.verify_mode = ssl.CERT_REQUIRED
             self._server.socket = ssl_context.wrap_socket(
                 self._server.socket, server_side=True
             )

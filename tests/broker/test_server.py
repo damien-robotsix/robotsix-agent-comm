@@ -596,6 +596,14 @@ class TestBrokerServerProperties:
             bs._server.server_close()
 
 
+class TestBrokerServerRequireClientCert:
+    def test_require_client_cert_without_ssl_raises_value_error(self) -> None:
+        with pytest.raises(
+            ValueError, match="require_client_cert requires ssl_context"
+        ):
+            BrokerServer(require_client_cert=True)
+
+
 # ---------------------------------------------------------------------------
 # TTL & heartbeat tests
 # ---------------------------------------------------------------------------
