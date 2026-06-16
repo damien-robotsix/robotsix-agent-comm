@@ -387,9 +387,7 @@ class BrokerServer:
 
         # Start sweep thread when enabled (sweep_interval_seconds > 0).
         if self._sweep_interval_seconds > 0:
-            self._sweep_thread = threading.Thread(
-                target=self._sweep_loop, daemon=True
-            )
+            self._sweep_thread = threading.Thread(target=self._sweep_loop, daemon=True)
             self._sweep_thread.start()
 
     def stop(self) -> None:

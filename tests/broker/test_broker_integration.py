@@ -10,6 +10,7 @@ import http.client
 import json
 import time
 from collections.abc import Callable, Iterator
+from typing import Any
 
 import pytest
 
@@ -48,7 +49,7 @@ def _json_request(
     broker: BrokerServer,
     path: str,
     body: dict[str, object] | list[object] | str | None = None,
-) -> tuple[int, object]:
+) -> tuple[int, Any]:
     """Make a raw HTTP request to the broker, return (status, parsed_body)."""
     conn = http.client.HTTPConnection(broker.host, broker.port, timeout=5.0)
     try:
