@@ -185,7 +185,7 @@ The decisions behind this architecture are recorded as ADRs:
 
 The concrete network transport that implements the ADR 0002 interface is
 described in its own design note:
-[Transport — HTTP+JSON network implementation](transport.md).
+[Transport — HTTP+JSON network implementation](../transport/design.md).
 
 ### Stdlib-first adherence
 
