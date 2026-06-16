@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import ssl
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -53,6 +54,10 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
     last_heartbeat: dict[str, float]
     ttl_seconds: dict[str, int]
     default_ttl_seconds: int
+
+    # Auth state (child 4)
+    agent_tokens: dict[str, str] | None
+    _token_to_agent: dict[str, str]
 
 
 # ---------------------------------------------------------------------------
@@ -136,11 +141,43 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             return (204, None)
         return (200, serialize(reply))
 
+    def _authenticate(self) -> str | None:
+        """Validate the ``Authorization: Bearer <token>`` header.
+
+        Returns the authenticated ``agent_id`` on success, or the
+        sentinel ``""`` when authentication is disabled
+        (``server.agent_tokens is None``).  Writes a ``401`` JSON
+        error response and returns ``None`` on failure.
+        """
+        server = self._server()
+
+        # Auth disabled — allow all requests.
+        if server.agent_tokens is None:
+            return ""
+
+        auth_header = self.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            self._write_error(401, "missing or invalid Authorization header")
+            return None
+
+        token = auth_header[len("Bearer ") :]
+
+        agent_id = server._token_to_agent.get(token)
+        if agent_id is None:
+            self._write_error(401, "invalid token")
+            return None
+        return agent_id
+
     # ------------------------------------------------------------------
     # HTTP method dispatchers
     # ------------------------------------------------------------------
 
     def do_GET(self) -> None:  # noqa: N802
+        agent_id = self._authenticate()
+        if agent_id is None:
+            return
+        self._authenticated_agent_id = agent_id
+
         if self.path == HEALTH_PATH:
             self._write_json(200, {"status": "ok"})
             return
@@ -158,6 +195,11 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         self._write_error(404, "not found")
 
     def do_POST(self) -> None:  # noqa: N802
+        agent_id = self._authenticate()
+        if agent_id is None:
+            return
+        self._authenticated_agent_id = agent_id
+
         if self.path == "/agents":
             self._handle_register()
             return
@@ -169,6 +211,11 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         self._write_error(404, "not found")
 
     def do_DELETE(self) -> None:  # noqa: N802
+        agent_id = self._authenticate()
+        if agent_id is None:
+            return
+        self._authenticated_agent_id = agent_id
+
         if self.path.startswith("/agents/"):
             self._handle_deregister()
             return
@@ -200,6 +247,15 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 400, "agent_id is required and must be a non-empty string"
             )
             return
+
+        # When auth is enabled, the body agent_id must match the token.
+        if (
+            self._authenticated_agent_id != ""
+            and agent_id != self._authenticated_agent_id
+        ):
+            self._write_error(403, "agent_id does not match token")
+            return
+
         if not isinstance(host, str) or not host:
             self._write_error(400, "host is required and must be a non-empty string")
             return
@@ -252,6 +308,14 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         agent_id = self._parse_agent_id_from_path()
         if not agent_id:
             self._write_error(400, "missing agent_id in path")
+            return
+
+        # When auth is enabled, the path agent_id must match the token.
+        if (
+            self._authenticated_agent_id != ""
+            and agent_id != self._authenticated_agent_id
+        ):
+            self._write_error(403, "agent_id does not match token")
             return
 
         server = self._server()
@@ -320,6 +384,19 @@ class BrokerServer:
     Wraps an HTTP server that exposes register / deregister / discovery /
     send / health endpoints, reusing the existing ``Registry``,
     ``TransportClient``, and ``Router`` from ``robotsix_agent_comm.transport``.
+
+    Parameters:
+        ssl_context:
+            Optional :class:`ssl.SSLContext` for TLS encryption.  When
+            provided the server's listening socket is wrapped with
+            :meth:`ssl.SSLContext.wrap_socket` so all traffic is
+            encrypted.
+        agent_tokens:
+            Optional ``{agent_id: token}`` mapping that enables per-agent
+            bearer-token authentication on every endpoint.  When ``None``
+            (the default) authentication is disabled and all requests are
+            accepted.  When a dict (including an empty one) every request
+            must carry a valid ``Authorization: Bearer <token>`` header.
     """
 
     def __init__(
@@ -331,8 +408,16 @@ class BrokerServer:
         sweep_interval_seconds: float = 30.0,
         router_timeout: float = 5.0,
         router_retry_policy: RetryPolicy | None = None,
+        ssl_context: ssl.SSLContext | None = None,
+        agent_tokens: dict[str, str] | None = None,
     ) -> None:
         self._server = _BrokerHTTPServer((host, port), _BrokerRequestHandler)
+
+        # -- TLS --
+        if ssl_context is not None:
+            self._server.socket = ssl_context.wrap_socket(
+                self._server.socket, server_side=True
+            )
 
         # -- Registry shared with the request handler --
         self._server.registry = Registry()
@@ -346,6 +431,13 @@ class BrokerServer:
         self._server.last_heartbeat = {}
         self._server.ttl_seconds = {}
         self._server.default_ttl_seconds = ttl_seconds
+
+        # -- Auth state --
+        self._server.agent_tokens = agent_tokens
+        self._server._token_to_agent = {}
+        if agent_tokens is not None:
+            for agent_id, token in agent_tokens.items():
+                self._server._token_to_agent[token] = agent_id
 
         # -- Router for message delivery --
         retry_policy = (

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import ssl
 from typing import Any
 
 from ..protocol import Message, ProtocolError, deserialize, serialize
@@ -47,6 +48,15 @@ class NetworkedBrokerTransport(Transport):
     ``endpoint.host`` / ``endpoint.port`` / ``endpoint.path`` fields and
     always POSTs to ``{broker_url}/messages``.  The broker routes to the
     final recipient using its own registry.
+
+    Parameters:
+        ssl_context:
+            Optional :class:`ssl.SSLContext` for TLS connections.  When
+            *scheme* is ``"https"`` and this is provided, it is passed as
+            the *context* argument to :class:`http.client.HTTPSConnection`.
+        agent_token:
+            Optional bearer token included as an ``Authorization`` header
+            on every ``POST /messages`` and ``GET /health`` request.
     """
 
     def __init__(
@@ -55,10 +65,14 @@ class NetworkedBrokerTransport(Transport):
         broker_port: int,
         *,
         scheme: str = "http",
+        ssl_context: ssl.SSLContext | None = None,
+        agent_token: str | None = None,
     ) -> None:
         self._broker_host = broker_host
         self._broker_port = broker_port
         self._scheme = scheme
+        self._ssl_context = ssl_context
+        self._agent_token = agent_token
 
     @property
     def broker_url(self) -> str:
@@ -68,11 +82,20 @@ class NetworkedBrokerTransport(Transport):
     def _connect(self, timeout: float) -> http.client.HTTPConnection:
         if self._scheme == "https":
             return http.client.HTTPSConnection(
-                self._broker_host, self._broker_port, timeout=timeout
+                self._broker_host,
+                self._broker_port,
+                timeout=timeout,
+                context=self._ssl_context,
             )
         return http.client.HTTPConnection(
             self._broker_host, self._broker_port, timeout=timeout
         )
+
+    def _auth_headers(self) -> dict[str, str]:
+        """Return a headers dict with the bearer token when configured."""
+        if self._agent_token is not None:
+            return {"Authorization": f"Bearer {self._agent_token}"}
+        return {}
 
     def send(
         self,
@@ -87,9 +110,10 @@ class NetworkedBrokerTransport(Transport):
         broker based on ``message.metadata.recipient``.
         """
         body = serialize(message).encode("utf-8")
+        headers = {**_JSON_HEADERS, **self._auth_headers()}
         conn = self._connect(timeout)
         try:
-            conn.request("POST", "/messages", body=body, headers=_JSON_HEADERS)
+            conn.request("POST", "/messages", body=body, headers=headers)
             response = conn.getresponse()
             status = response.status
             data = response.read().decode("utf-8")
@@ -135,9 +159,10 @@ class NetworkedBrokerTransport(Transport):
 
         Returns ``False`` on any connection error instead of raising.
         """
+        headers = self._auth_headers()
         conn = self._connect(timeout)
         try:
-            conn.request("GET", "/health")
+            conn.request("GET", "/health", headers=headers)
             response = conn.getresponse()
             response.read()
             return response.status == 200
@@ -164,6 +189,16 @@ class BrokeredRegistry:
 
         ``lookup()`` and ``list_agents()`` each perform an HTTP request.
         Local caching is deferred to a future optimisation.
+
+    Parameters:
+        ssl_context:
+            Optional :class:`ssl.SSLContext` for TLS connections.  When
+            *scheme* is ``"https"`` and this is provided, it is passed as
+            the *context* argument to :class:`http.client.HTTPSConnection`.
+        agent_token:
+            Optional bearer token included as an ``Authorization`` header
+            on every ``POST /agents``, ``DELETE /agents/<id>``, and
+            ``GET /agents`` request.
     """
 
     def __init__(
@@ -172,10 +207,14 @@ class BrokeredRegistry:
         broker_port: int,
         *,
         scheme: str = "http",
+        ssl_context: ssl.SSLContext | None = None,
+        agent_token: str | None = None,
     ) -> None:
         self._broker_host = broker_host
         self._broker_port = broker_port
         self._scheme = scheme
+        self._ssl_context = ssl_context
+        self._agent_token = agent_token
 
     @property
     def broker_url(self) -> str:
@@ -184,7 +223,10 @@ class BrokeredRegistry:
     def _connect(self, timeout: float = 5.0) -> http.client.HTTPConnection:
         if self._scheme == "https":
             return http.client.HTTPSConnection(
-                self._broker_host, self._broker_port, timeout=timeout
+                self._broker_host,
+                self._broker_port,
+                timeout=timeout,
+                context=self._ssl_context,
             )
         return http.client.HTTPConnection(
             self._broker_host, self._broker_port, timeout=timeout
@@ -204,7 +246,11 @@ class BrokeredRegistry:
             payload: bytes | None = None
             if body is not None:
                 payload = json.dumps(body).encode("utf-8")
-            headers = {"Content-Type": "application/json"} if payload else {}
+            headers: dict[str, str] = {}
+            if payload:
+                headers["Content-Type"] = "application/json"
+            if self._agent_token is not None:
+                headers["Authorization"] = f"Bearer {self._agent_token}"
             conn.request(method, path, body=payload, headers=headers)
             response = conn.getresponse()
             data = response.read().decode("utf-8")
@@ -300,6 +346,8 @@ def create_transport_pair(
     broker_host: str = "127.0.0.1",
     broker_port: int = 0,
     broker_scheme: str = "http",
+    broker_ssl_context: ssl.SSLContext | None = None,
+    broker_token: str | None = None,
 ) -> tuple[Registry | BrokeredRegistry, Transport]:
     """Return a ``(registry, transport)`` pair for *mode*.
 
@@ -318,7 +366,19 @@ def create_transport_pair(
         return (Registry(), TransportClient())
     if mode == "brokered":
         return (
-            BrokeredRegistry(broker_host, broker_port, scheme=broker_scheme),
-            NetworkedBrokerTransport(broker_host, broker_port, scheme=broker_scheme),
+            BrokeredRegistry(
+                broker_host,
+                broker_port,
+                scheme=broker_scheme,
+                ssl_context=broker_ssl_context,
+                agent_token=broker_token,
+            ),
+            NetworkedBrokerTransport(
+                broker_host,
+                broker_port,
+                scheme=broker_scheme,
+                ssl_context=broker_ssl_context,
+                agent_token=broker_token,
+            ),
         )
     raise ValueError(f"unknown transport mode: {mode!r}")

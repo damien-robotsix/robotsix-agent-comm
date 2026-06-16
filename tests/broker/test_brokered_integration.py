@@ -6,6 +6,7 @@ Follows the same fixture pattern as ``test_broker_integration.py``.
 
 from __future__ import annotations
 
+import ssl
 import time
 from collections.abc import Callable, Generator
 
@@ -28,6 +29,7 @@ from robotsix_agent_comm.transport import (
 from robotsix_agent_comm.transport.brokered import (
     BrokeredRegistry,
     NetworkedBrokerTransport,
+    create_transport_pair,
 )
 
 # ---------------------------------------------------------------------------
@@ -280,3 +282,285 @@ class TestAgentWithBrokeredComponents:
                 alice.send_request("ghost", {"action": "hello"})
         finally:
             alice.stop()
+
+
+# ---------------------------------------------------------------------------
+# Auth integration tests (child 4)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def broker_with_auth() -> Generator[BrokerServer, None, None]:
+    """Yield a broker with per-agent bearer-token auth enabled."""
+    server = BrokerServer(
+        host="127.0.0.1",
+        port=0,
+        agent_tokens={"agent-a": "tok-a", "agent-b": "tok-b"},
+    )
+    server.start()
+    try:
+        yield server
+    finally:
+        server.stop()
+
+
+class TestBrokeredAuthIntegration:
+    """BrokeredRegistry and NetworkedBrokerTransport with auth-enabled broker."""
+
+    def test_register_with_token(self, broker_with_auth: BrokerServer) -> None:
+        registry = BrokeredRegistry(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-a"
+        )
+        endpoint = Endpoint(agent_id="agent-a", host="127.0.0.1", port=9000)
+        registry.register(endpoint)
+
+        # Verify via discovery (same token).
+        agents = registry.list_agents()
+        assert any(a.agent_id == "agent-a" for a in agents)
+
+    def test_register_with_wrong_token_does_not_register(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        """Register with bad token is fire-and-forget but the agent
+        is not actually registered — verified via a valid-token lookup."""
+        # Attempt registration with a bad token.
+        bad_registry = BrokeredRegistry(
+            broker_with_auth.host, broker_with_auth.port, agent_token="bad-token"
+        )
+        endpoint = Endpoint(agent_id="agent-a", host="127.0.0.1", port=9000)
+        # register() does not raise — it's fire-and-forget.
+        bad_registry.register(endpoint)
+
+        # Look up with a valid token — agent was never registered.
+        good_registry = BrokeredRegistry(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-a"
+        )
+        with pytest.raises(AgentNotFoundError):
+            good_registry.lookup("agent-a")
+
+    def test_lookup_and_list_with_valid_token(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        registry = BrokeredRegistry(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-a"
+        )
+        endpoint = Endpoint(agent_id="agent-a", host="127.0.0.1", port=9000)
+        registry.register(endpoint)
+
+        looked_up = registry.lookup("agent-a")
+        assert looked_up.agent_id == "agent-a"
+
+        agents = registry.list_agents()
+        assert any(a.agent_id == "agent-a" for a in agents)
+
+    def test_send_with_valid_token(
+        self,
+        broker_with_auth: BrokerServer,
+        agent_server: tuple[TransportServer, list[Message]],
+    ) -> None:
+        agent_srv, received = agent_server
+
+        # Register agent-b with its token.
+        reg_b = BrokeredRegistry(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-b"
+        )
+        ep_b = Endpoint(agent_id="agent-b", host=agent_srv.host, port=agent_srv.port)
+        reg_b.register(ep_b)
+
+        # Send from agent-a's transport.
+        transport = NetworkedBrokerTransport(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-a"
+        )
+        request = Request(
+            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
+            body={"action": "ping"},
+        )
+        reply = transport.send(request, ep_b, timeout=5.0)
+
+        assert len(received) == 1
+        assert isinstance(reply, Response)
+        assert reply.body == {"echo": {"action": "ping"}}
+
+    def test_health_check_with_valid_token(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        transport = NetworkedBrokerTransport(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-a"
+        )
+        result = transport.health_check(
+            Endpoint(agent_id="agent-a", host="127.0.0.1", port=9000), timeout=5.0
+        )
+        assert result is True
+
+    def test_health_check_without_token_returns_false(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        transport = NetworkedBrokerTransport(
+            broker_with_auth.host, broker_with_auth.port
+        )
+        result = transport.health_check(
+            Endpoint(agent_id="agent-a", host="127.0.0.1", port=9000), timeout=5.0
+        )
+        assert result is False
+
+    def test_two_agents_with_auth_request_reply(
+        self, broker_with_auth: BrokerServer
+    ) -> None:
+        """Two Agents communicate through an auth-enabled broker."""
+        alice_registry = BrokeredRegistry(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-a"
+        )
+        alice_transport = NetworkedBrokerTransport(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-a"
+        )
+        bob_registry = BrokeredRegistry(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-b"
+        )
+        bob_transport = NetworkedBrokerTransport(
+            broker_with_auth.host, broker_with_auth.port, agent_token="tok-b"
+        )
+
+        bob_received: list[Message] = []
+
+        def bob_handler(message: Message) -> Message | None:
+            bob_received.append(message)
+            if isinstance(message, Request):
+                return Response.to(message, body={"from_bob": message.body})
+            return None
+
+        # Agent IDs must match the tokens: tok-a → agent-a, tok-b → agent-b.
+        alice = Agent(
+            "agent-a",
+            alice_registry,  # type: ignore[arg-type]
+            transport=alice_transport,
+            timeout=3.0,
+        )
+        bob = Agent(
+            "agent-b",
+            bob_registry,  # type: ignore[arg-type]
+            transport=bob_transport,
+            timeout=3.0,
+        )
+
+        bob.on_request(bob_handler)
+
+        alice.start()
+        bob.start()
+
+        try:
+            reply = alice.send_request("agent-b", {"action": "hello"})
+            assert isinstance(reply, Response)
+            assert reply.body == {"from_bob": {"action": "hello"}}
+            assert len(bob_received) == 1
+        finally:
+            bob.stop()
+            alice.stop()
+
+
+# ---------------------------------------------------------------------------
+# TLS + brokered integration tests (child 4)
+# ---------------------------------------------------------------------------
+
+try:
+    import trustme  # noqa: F401
+
+    _HAS_TRUSTME = True
+except ImportError:
+    _HAS_TRUSTME = False
+
+
+@pytest.fixture
+def broker_tls() -> Generator[tuple[BrokerServer, ssl.SSLContext], None, None]:
+    """Yield ``(BrokerServer, client_ssl_context)`` using a self-signed cert."""
+    if not _HAS_TRUSTME:
+        pytest.skip("trustme not installed")
+
+    ca = trustme.CA()
+    server_cert = ca.issue_cert("127.0.0.1")
+
+    server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_cert.configure_cert(server_ctx)
+
+    client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ca.configure_trust(client_ctx)
+
+    broker = BrokerServer(host="127.0.0.1", port=0, ssl_context=server_ctx)
+    broker.start()
+    try:
+        yield broker, client_ctx
+    finally:
+        broker.stop()
+
+
+class TestBrokeredTLSIntegration:
+    """BrokeredRegistry and NetworkedBrokerTransport over TLS."""
+
+    def test_register_and_lookup_over_tls(
+        self, broker_tls: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = broker_tls
+        registry = BrokeredRegistry(
+            broker.host, broker.port, scheme="https", ssl_context=client_ctx
+        )
+        endpoint = Endpoint(agent_id="tls-agent", host="127.0.0.1", port=9000)
+        registry.register(endpoint)
+
+        looked_up = registry.lookup("tls-agent")
+        assert looked_up.agent_id == "tls-agent"
+
+    def test_send_over_tls(
+        self,
+        broker_tls: tuple[BrokerServer, ssl.SSLContext],
+        agent_server: tuple[TransportServer, list[Message]],
+    ) -> None:
+        broker, client_ctx = broker_tls
+        agent_srv, received = agent_server
+
+        registry = BrokeredRegistry(
+            broker.host, broker.port, scheme="https", ssl_context=client_ctx
+        )
+        endpoint = Endpoint(
+            agent_id="agent-b", host=agent_srv.host, port=agent_srv.port
+        )
+        registry.register(endpoint)
+
+        transport = NetworkedBrokerTransport(
+            broker.host, broker.port, scheme="https", ssl_context=client_ctx
+        )
+        request = Request(
+            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
+            body={"action": "ping"},
+        )
+        reply = transport.send(request, endpoint, timeout=5.0)
+
+        assert len(received) == 1
+        assert isinstance(reply, Response)
+        assert reply.body == {"echo": {"action": "ping"}}
+
+    def test_health_check_over_tls(
+        self, broker_tls: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = broker_tls
+        transport = NetworkedBrokerTransport(
+            broker.host, broker.port, scheme="https", ssl_context=client_ctx
+        )
+        result = transport.health_check(
+            Endpoint(agent_id="a", host="127.0.0.1", port=1), timeout=5.0
+        )
+        assert result is True
+
+    def test_create_transport_pair_with_tls(
+        self, broker_tls: tuple[BrokerServer, ssl.SSLContext]
+    ) -> None:
+        broker, client_ctx = broker_tls
+        reg, transport = create_transport_pair(
+            "brokered",
+            broker_host=broker.host,
+            broker_port=broker.port,
+            broker_scheme="https",
+            broker_ssl_context=client_ctx,
+        )
+        assert isinstance(reg, BrokeredRegistry)
+        assert isinstance(transport, NetworkedBrokerTransport)
+        assert reg._ssl_context is client_ctx
+        assert transport._ssl_context is client_ctx
