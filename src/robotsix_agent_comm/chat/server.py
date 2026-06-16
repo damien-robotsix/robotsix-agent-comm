@@ -142,3 +142,19 @@ def run_server(
 
     app = create_app(agent)
     uvicorn.run(app, host=host, port=port)
+
+
+def run_server_from_config(agent: ChatAgent) -> None:
+    """Start the chat SSE server using ``Settings.from_env()`` for host/port.
+
+    Reads ``SERVER_HOST``, ``SERVER_PORT``, and ``LOG_LEVEL`` from the
+    environment (with ``.env`` support), configures Python logging, and
+    then delegates to :func:`run_server`.
+    """
+    from robotsix_agent_comm.config import Settings
+
+    settings = Settings.from_env()
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level.upper(), logging.INFO)
+    )
+    run_server(agent, host=settings.server_host, port=settings.server_port)
