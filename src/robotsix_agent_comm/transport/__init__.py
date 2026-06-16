@@ -8,7 +8,7 @@ wire pair, a :class:`RetryPolicy` with exponential backoff, and a
 
 The layer is stdlib-only and consumes the Phase-4 ``protocol`` package as-is.
 NAT/firewall/relay traversal is out of scope; endpoints are kept URL-shaped so
-a relay/gateway can be added later (see ``docs/design/transport.md``).
+a relay/gateway can be added later (see ``docs/transport/design.md``).
 """
 
 from __future__ import annotations
