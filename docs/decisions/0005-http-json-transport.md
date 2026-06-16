@@ -54,7 +54,7 @@ wins.
   of the wire, without changing the protocol or message semantics.
 - Endpoints are URL-shaped, so a relay/gateway can later address
   NAT/firewall traversal (out of scope now; see
-  `../design/transport.md`).
+  `../transport/design.md`).
 - No authentication, TLS, or encryption is provided in this phase (plain
   HTTP); that is future work and would not change the envelope.
 - Adopting a richer transport (durable, TLS, relayed) remains an additive

@@ -46,6 +46,7 @@ modules:
     paths:
       - src/robotsix_agent_comm/transport/*.py
       - tests/transport/*.py
+      - docs/transport/*.md
     dependencies:
       - protocol
 
