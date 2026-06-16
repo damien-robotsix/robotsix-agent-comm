@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import time
 from collections.abc import Callable, Iterator
 
 import pytest
@@ -335,3 +336,158 @@ class TestBrokerIntegration:
         )
         status, body = _json_request("POST", broker, "/messages", serialize(request2))
         assert status == 404
+
+
+# ---------------------------------------------------------------------------
+# TTL eviction integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestBrokerTTLEviction:
+    """Integration tests for heartbeat-based TTL eviction (child 3)."""
+
+    def test_agent_evicted_after_ttl_expires(self) -> None:
+        """Register with short TTL; after sweep runs the agent is gone."""
+        broker = BrokerServer(
+            host="127.0.0.1",
+            port=0,
+            ttl_seconds=1,
+            sweep_interval_seconds=0.2,
+        )
+        broker.start()
+        try:
+            status, _ = _json_request(
+                "POST",
+                broker,
+                "/agents",
+                {"agent_id": "agent-ttl", "host": "127.0.0.1", "port": 9999},
+            )
+            assert status == 201
+
+            # Agent visible immediately.
+            status, body = _json_request("GET", broker, "/agents")
+            assert status == 200
+            assert len(body["agents"]) == 1
+
+            # Wait for TTL + sweep.
+            time.sleep(1.5)
+
+            # Agent should be gone from discovery.
+            status, body = _json_request("GET", broker, "/agents")
+            assert status == 200
+            assert body["agents"] == []
+        finally:
+            broker.stop()
+
+    def test_evicted_agent_unreachable(self) -> None:
+        """After eviction, sending to the agent returns 404."""
+        broker = BrokerServer(
+            host="127.0.0.1",
+            port=0,
+            ttl_seconds=1,
+            sweep_interval_seconds=0.2,
+        )
+        broker.start()
+        try:
+            _json_request(
+                "POST",
+                broker,
+                "/agents",
+                {"agent_id": "agent-gone", "host": "127.0.0.1", "port": 9999},
+            )
+
+            time.sleep(1.5)
+
+            request = Request(
+                metadata=Metadata.create(sender="caller", recipient="agent-gone"),
+                body={"action": "ping"},
+            )
+            status, body = _json_request(
+                "POST", broker, "/messages", serialize(request)
+            )
+            assert status == 404
+            error_msg = deserialize(json.dumps(body))
+            assert isinstance(error_msg, Error)
+            assert error_msg.body.get("code") == "unknown_recipient"
+        finally:
+            broker.stop()
+
+    def test_agent_that_reregisters_stays_alive(self) -> None:
+        """Re-registering before TTL expires keeps the agent alive."""
+        broker = BrokerServer(
+            host="127.0.0.1",
+            port=0,
+            ttl_seconds=2,
+            sweep_interval_seconds=0.3,
+        )
+        broker.start()
+        try:
+            payload = {"agent_id": "agent-rr", "host": "127.0.0.1", "port": 9999}
+            _json_request("POST", broker, "/agents", payload)
+
+            # Re-register halfway through the TTL.
+            time.sleep(1.0)
+            _json_request("POST", broker, "/agents", payload)
+
+            # Wait past the original TTL would have expired but not past
+            # the refreshed one.
+            time.sleep(1.5)
+
+            # Agent should still be present.
+            status, body = _json_request("GET", broker, "/agents")
+            assert status == 200
+            assert len(body["agents"]) == 1
+            assert body["agents"][0]["agent_id"] == "agent-rr"
+        finally:
+            broker.stop()
+
+    def test_eviction_disabled_with_sweep_interval_zero(self) -> None:
+        """sweep_interval_seconds=0 disables the sweep thread entirely."""
+        broker = BrokerServer(
+            host="127.0.0.1",
+            port=0,
+            ttl_seconds=1,
+            sweep_interval_seconds=0,
+        )
+        broker.start()
+        try:
+            _json_request(
+                "POST",
+                broker,
+                "/agents",
+                {"agent_id": "agent-nosweep", "host": "127.0.0.1", "port": 9999},
+            )
+
+            time.sleep(1.5)
+
+            # Agent must still be present — no sweep thread was started.
+            status, body = _json_request("GET", broker, "/agents")
+            assert status == 200
+            assert len(body["agents"]) == 1
+        finally:
+            broker.stop()
+
+    def test_eviction_disabled_with_ttl_zero(self) -> None:
+        """Default TTL of 0 disables expiry, even with an active sweep."""
+        broker = BrokerServer(
+            host="127.0.0.1",
+            port=0,
+            ttl_seconds=0,
+            sweep_interval_seconds=0.2,
+        )
+        broker.start()
+        try:
+            _json_request(
+                "POST",
+                broker,
+                "/agents",
+                {"agent_id": "agent-nottl", "host": "127.0.0.1", "port": 9999},
+            )
+
+            time.sleep(1.0)
+
+            status, body = _json_request("GET", broker, "/agents")
+            assert status == 200
+            assert len(body["agents"]) == 1
+        finally:
+            broker.stop()

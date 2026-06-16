@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -61,6 +62,10 @@ def _make_handler(**kwargs: Any) -> Any:
         server.registry = Registry()
         server.capabilities_lock = _threading.Lock()
         server.capabilities = {}
+        server.heartbeat_lock = _threading.Lock()
+        server.last_heartbeat = {}
+        server.ttl_seconds = {}
+        server.default_ttl_seconds = 60
         server.router = MagicMock()
     handler.server = server
 
@@ -300,6 +305,10 @@ def _server_with_router(router_mock: Any) -> Any:
     server.registry = Registry()
     server.capabilities_lock = _threading.Lock()
     server.capabilities = {}
+    server.heartbeat_lock = _threading.Lock()
+    server.last_heartbeat = {}
+    server.ttl_seconds = {}
+    server.default_ttl_seconds = 60
     server.router = router_mock
     return server
 
@@ -465,11 +474,13 @@ class TestBrokerServerLifecycle:
         with patch("threading.Thread") as mock_thread_cls:
             bs.start()
 
-        mock_thread_cls.assert_called_once()
-        _, kwargs = mock_thread_cls.call_args
-        assert kwargs["target"] is mock_http.serve_forever
-        assert kwargs["daemon"] is True
-        mock_thread_cls.return_value.start.assert_called_once()
+        # Two calls: serve thread and sweep thread.
+        assert mock_thread_cls.call_count == 2
+        serve_call, sweep_call = mock_thread_cls.call_args_list
+        assert serve_call == call(target=mock_http.serve_forever, daemon=True)
+        assert sweep_call[1]["daemon"] is True
+        # Second thread target is the sweep loop.
+        assert sweep_call[1]["target"].__name__ == "_sweep_loop"
 
     def test_start_idempotent(self) -> None:
         mock_http = MagicMock(spec=_BrokerHTTPServer)
@@ -481,7 +492,9 @@ class TestBrokerServerLifecycle:
             bs.start()
             bs.start()
 
-        mock_thread_cls.assert_called_once()
+        # First start() creates serve + sweep threads (2 calls).
+        # Second start() is a no-op.
+        assert mock_thread_cls.call_count == 2
 
     def test_stop_shuts_down_and_joins(self) -> None:
         mock_http = MagicMock(spec=_BrokerHTTPServer)
@@ -551,3 +564,205 @@ class TestBrokerServerProperties:
             assert bs.port > 0
         finally:
             bs._server.server_close()
+
+
+# ---------------------------------------------------------------------------
+# TTL & heartbeat tests
+# ---------------------------------------------------------------------------
+
+
+class TestTTLAndHeartbeat:
+    """Heartbeat recording and TTL-based eviction (child 3)."""
+
+    def test_registration_records_heartbeat(self) -> None:
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps(
+                {
+                    "agent_id": "agent-a",
+                    "host": "127.0.0.1",
+                    "port": 8000,
+                    "ttl_seconds": 30,
+                }
+            ),
+        )
+        handler.do_POST()
+
+        server = handler.server
+        with server.heartbeat_lock:
+            assert "agent-a" in server.last_heartbeat
+            assert server.ttl_seconds["agent-a"] == 30
+
+    def test_custom_ttl_per_agent(self) -> None:
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps(
+                {
+                    "agent_id": "agent-custom",
+                    "host": "127.0.0.1",
+                    "port": 8000,
+                    "ttl_seconds": 30,
+                }
+            ),
+        )
+        handler.do_POST()
+
+        server = handler.server
+        with server.heartbeat_lock:
+            assert server.ttl_seconds["agent-custom"] == 30
+
+    def test_default_ttl(self) -> None:
+        """When ttl_seconds is missing, the server default is used."""
+        handler = _make_handler()
+        server = handler.server
+        server.default_ttl_seconds = 45
+
+        _set_body(
+            handler,
+            json.dumps({"agent_id": "agent-def", "host": "127.0.0.1", "port": 8000}),
+        )
+        handler.do_POST()
+
+        with server.heartbeat_lock:
+            assert server.ttl_seconds["agent-def"] == 45
+
+    def test_reregistration_refreshes_heartbeat(self) -> None:
+        handler = _make_handler()
+        server = handler.server
+
+        payload = json.dumps({"agent_id": "agent-r", "host": "127.0.0.1", "port": 8000})
+
+        # First registration.
+        _set_body(handler, payload)
+        handler.do_POST()
+        first_hb: float
+        with server.heartbeat_lock:
+            first_hb = server.last_heartbeat["agent-r"]
+
+        # Short pause to ensure monotonic clock advances.
+        time.sleep(0.01)
+
+        # Re-register (reset mocks for second POST).
+        handler.send_response.reset_mock()
+        handler.wfile.write.reset_mock()
+        handler.rfile.read.return_value = payload.encode("utf-8")
+        handler.headers.get.return_value = str(len(payload.encode("utf-8")))
+        handler.do_POST()
+
+        with server.heartbeat_lock:
+            second_hb = server.last_heartbeat["agent-r"]
+        assert second_hb > first_hb
+
+    def test_deregistration_cleans_up_heartbeat_data(self) -> None:
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps({"agent_id": "agent-x", "host": "127.0.0.1", "port": 8000}),
+        )
+        handler.do_POST()
+
+        # Deregister.
+        handler.path = "/agents/agent-x"
+        handler.send_response.reset_mock()
+        handler.wfile.write.reset_mock()
+        handler.do_DELETE()
+
+        server = handler.server
+        with server.heartbeat_lock:
+            assert "agent-x" not in server.last_heartbeat
+            assert "agent-x" not in server.ttl_seconds
+
+    def test_sweep_evicts_expired_agent(self) -> None:
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps({"agent_id": "agent-old", "host": "127.0.0.1", "port": 8000}),
+        )
+        handler.do_POST()
+
+        server = handler.server
+
+        # Backdate the heartbeat so the agent appears expired.
+        with server.heartbeat_lock:
+            server.last_heartbeat["agent-old"] = time.monotonic() - 9999
+            server.ttl_seconds["agent-old"] = 30
+
+        # Run sweep on a lightweight BrokerServer (close its real socket first).
+        bs = BrokerServer()
+        bs._server.server_close()  # release real socket
+        bs._server = server
+        bs._sweep_once()
+
+        # Agent must be gone from registry, capabilities, and heartbeat.
+        with pytest.raises(AgentNotFoundError):
+            server.registry.lookup("agent-old")
+        with server.capabilities_lock:
+            assert "agent-old" not in server.capabilities
+        with server.heartbeat_lock:
+            assert "agent-old" not in server.last_heartbeat
+            assert "agent-old" not in server.ttl_seconds
+
+    def test_sweep_skips_agent_with_active_heartbeat(self) -> None:
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps({"agent_id": "agent-fresh", "host": "127.0.0.1", "port": 8000}),
+        )
+        handler.do_POST()
+
+        server = handler.server
+
+        # Run sweep immediately after registration — agent must survive.
+        bs = BrokerServer()
+        bs._server.server_close()
+        bs._server = server
+        bs._sweep_once()
+
+        endpoint = server.registry.lookup("agent-fresh")
+        assert endpoint.agent_id == "agent-fresh"
+        with server.capabilities_lock:
+            assert "agent-fresh" in server.capabilities
+        with server.heartbeat_lock:
+            assert "agent-fresh" in server.last_heartbeat
+
+    def test_sweep_skips_agent_with_ttl_zero(self) -> None:
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps(
+                {
+                    "agent_id": "agent-immortal",
+                    "host": "127.0.0.1",
+                    "port": 8000,
+                    "ttl_seconds": 0,
+                }
+            ),
+        )
+        handler.do_POST()
+
+        server = handler.server
+
+        # Backdate heartbeat but TTL is 0 (no expiry).
+        with server.heartbeat_lock:
+            server.last_heartbeat["agent-immortal"] = time.monotonic() - 9999
+
+        bs = BrokerServer()
+        bs._server.server_close()
+        bs._server = server
+        bs._sweep_once()
+
+        endpoint = server.registry.lookup("agent-immortal")
+        assert endpoint.agent_id == "agent-immortal"
+
+    def test_sweep_handles_empty_registry(self) -> None:
+        """Sweep on a broker with no registrations — no errors."""
+        handler = _make_handler()
+        server = handler.server
+        # Registry starts empty.
+
+        bs = BrokerServer()
+        bs._server.server_close()
+        bs._server = server
+        bs._sweep_once()  # must not raise

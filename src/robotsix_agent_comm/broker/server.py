@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import cast
 from urllib.parse import urlsplit
@@ -46,6 +47,12 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
     capabilities_lock: threading.Lock
     capabilities: dict[str, dict[str, object]]
     router: Router
+
+    # Heartbeat / TTL eviction state (child 3)
+    heartbeat_lock: threading.Lock
+    last_heartbeat: dict[str, float]
+    ttl_seconds: dict[str, int]
+    default_ttl_seconds: int
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +235,16 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         with server.capabilities_lock:
             server.capabilities[agent_id] = caps
 
+        # Record heartbeat and TTL
+        ttl_val = data.get("ttl_seconds")
+        with server.heartbeat_lock:
+            server.last_heartbeat[agent_id] = time.monotonic()
+            if isinstance(ttl_val, int):
+                server.ttl_seconds[agent_id] = ttl_val
+            elif is_new:
+                server.ttl_seconds[agent_id] = server.default_ttl_seconds
+            # else: re-registration without explicit TTL — keep existing
+
         self._write_json(201 if is_new else 200, {"agent_id": agent_id})
 
     def _handle_deregister(self) -> None:
@@ -243,6 +260,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
 
         with server.capabilities_lock:
             server.capabilities.pop(agent_id, None)
+
+        with server.heartbeat_lock:
+            server.last_heartbeat.pop(agent_id, None)
+            server.ttl_seconds.pop(agent_id, None)
 
         self.send_response(204)
         self.end_headers()
@@ -306,6 +327,8 @@ class BrokerServer:
         *,
         host: str = "127.0.0.1",
         port: int = 0,
+        ttl_seconds: int = 60,
+        sweep_interval_seconds: float = 30.0,
         router_timeout: float = 5.0,
         router_retry_policy: RetryPolicy | None = None,
     ) -> None:
@@ -317,6 +340,12 @@ class BrokerServer:
         # -- Capabilities storage --
         self._server.capabilities_lock = threading.Lock()
         self._server.capabilities = {}
+
+        # -- Heartbeat / TTL eviction state --
+        self._server.heartbeat_lock = threading.Lock()
+        self._server.last_heartbeat = {}
+        self._server.ttl_seconds = {}
+        self._server.default_ttl_seconds = ttl_seconds
 
         # -- Router for message delivery --
         retry_policy = (
@@ -331,7 +360,10 @@ class BrokerServer:
             timeout=router_timeout,
         )
 
+        self._sweep_interval_seconds = sweep_interval_seconds
+        self._sweep_stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+        self._sweep_thread: threading.Thread | None = None
 
     # -- Lifecycle (matches TransportServer) --
 
@@ -353,13 +385,72 @@ class BrokerServer:
         thread.start()
         self._thread = thread
 
+        # Start sweep thread when enabled (sweep_interval_seconds > 0).
+        if self._sweep_interval_seconds > 0:
+            self._sweep_thread = threading.Thread(
+                target=self._sweep_loop, daemon=True
+            )
+            self._sweep_thread.start()
+
     def stop(self) -> None:
         """Stop serving and release the socket."""
+        self._sweep_stop_event.set()
         self._server.shutdown()
         self._server.server_close()
         if self._thread is not None:
             self._thread.join()
             self._thread = None
+        if self._sweep_thread is not None:
+            self._sweep_thread.join()
+            self._sweep_thread = None
+
+    # -- Sweep (heartbeat-based TTL eviction) ---------------------------
+
+    def _sweep_loop(self) -> None:
+        """Run periodic sweep until ``_sweep_stop_event`` is set."""
+        while True:
+            if self._sweep_stop_event.wait(self._sweep_interval_seconds):
+                break  # event was set — shut down
+            self._sweep_once()
+
+    def _sweep_once(self) -> None:
+        """Evict every agent whose TTL has elapsed since last heartbeat."""
+        server = self._server
+        now = time.monotonic()
+
+        # Snapshot current registrations (acquires & releases registry._lock).
+        endpoints = server.registry.list_agents()
+
+        for endpoint in endpoints:
+            agent_id = endpoint.agent_id
+
+            # Read heartbeat state under heartbeat_lock.
+            with server.heartbeat_lock:
+                last_hb = server.last_heartbeat.get(agent_id)
+                ttl = server.ttl_seconds.get(agent_id)
+
+            # No heartbeat data or TTL → skip (defensive).
+            if last_hb is None or ttl is None:
+                continue
+
+            # TTL <= 0 means no expiry.
+            if ttl <= 0:
+                continue
+
+            # Not expired yet.
+            if now - last_hb <= ttl:
+                continue
+
+            # Evict: registry, capabilities, heartbeat bookkeeping.
+            with contextlib.suppress(AgentNotFoundError):
+                server.registry.unregister(agent_id)
+
+            with server.capabilities_lock:
+                server.capabilities.pop(agent_id, None)
+
+            with server.heartbeat_lock:
+                server.last_heartbeat.pop(agent_id, None)
+                server.ttl_seconds.pop(agent_id, None)
 
     def close(self) -> None:
         """Alias for :meth:`stop`."""
