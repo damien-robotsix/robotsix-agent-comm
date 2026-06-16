@@ -119,9 +119,7 @@ async def test_chat_endpoint_sends_done_at_end() -> None:
     ) as client:
         response = await client.post("/chat", json={"message": "x"})
 
-    assert response.text.rstrip("\r\n").endswith(
-        f'data: {{"type": "{SSE_DONE_TYPE}"}}'
-    )
+    assert response.text.rstrip("\r\n").endswith(f'data: {{"type": "{SSE_DONE_TYPE}"}}')
 
 
 # ---------------------------------------------------------------------------
