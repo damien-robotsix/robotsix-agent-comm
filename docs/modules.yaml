@@ -23,16 +23,6 @@ modules:
       - transport
       - sdk
 
-  - id: config
-    description: >-
-      Configuration layer for agent communication. Centralises settings,
-      defaults, and schema-backed config loading so every other sub-package
-      can consume typed configuration without circular dependencies.
-    paths:
-      - src/robotsix_agent_comm/config/*.py
-      - tests/config/*.py
-    dependencies: []
-
   - id: protocol
     description: >-
       Message protocol layer for agent communication. Defines message types
