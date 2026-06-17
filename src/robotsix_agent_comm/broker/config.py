@@ -66,7 +66,7 @@ class BrokerConfig:
     arguments (for tests).
     """
 
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # nosec B104 -- server must accept external connections
     port: int = 8443
     env: str = "production"
 
@@ -169,7 +169,7 @@ class BrokerConfig:
 
         # -- Build config -------------------------------------------------
         config = cls(
-            host=_get("ROBOTSIX_BROKER_HOST", "0.0.0.0"),
+            host=_get("ROBOTSIX_BROKER_HOST", "0.0.0.0"),  # nosec B104 -- server must accept external connections
             port=int(_get("ROBOTSIX_BROKER_PORT", "8443")),
             env=_get("ROBOTSIX_BROKER_ENV", "production"),
             tls_cert=raw_tls_cert or None,
