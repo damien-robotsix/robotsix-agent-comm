@@ -1,0 +1,39 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Tests
+tests/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Docs
+docs/
+site/
+
+# Templates
+templates/
+
+# Scratch / ad-hoc scripts
+scratch_*.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Tooling
+.ruff_cache/
+.mypy_cache/
+.pre-commit-config.yaml
+
+# Misc
+*.md.tmp
+Dockerfile
+docker-compose.yml
+.dockerignore
+.env.broker.example
