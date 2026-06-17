@@ -38,6 +38,9 @@ docs = [
     "mkdocstrings[python]",
 ]
 
+[project.scripts]
+robotsix-broker = "robotsix_agent_comm.broker.service:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/robotsix_agent_comm"]
 

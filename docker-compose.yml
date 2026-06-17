@@ -1,0 +1,33 @@
+services:
+  robotsix-broker:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+
+    # Copy .env.broker.example to .env.broker and fill in the vars,
+    # or set them directly in the environment block below.
+    # env_file:
+    #   - .env.broker
+
+    environment:
+      ROBOTSIX_BROKER_HOST: "0.0.0.0"
+      ROBOTSIX_BROKER_PORT: "8443"
+      ROBOTSIX_BROKER_ENV: "production"
+      ROBOTSIX_BROKER_TLS_CERT: "/etc/robotsix/tls/server.pem"
+      ROBOTSIX_BROKER_TLS_KEY: "/etc/robotsix/tls/server.key"
+      ROBOTSIX_BROKER_AGENT_TOKENS_FILE: "/etc/robotsix/broker/agent-tokens.json"
+      # ROBOTSIX_BROKER_TLS_CA: "/etc/robotsix/tls/ca.pem"
+      # ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT: "false"
+      # ROBOTSIX_BROKER_TTL_SECONDS: "60"
+      # ROBOTSIX_BROKER_RATE_LIMIT: "20.0"
+      # ROBOTSIX_BROKER_MAX_BODY_SIZE: "1048576"
+      # ROBOTSIX_BROKER_AUDIT_LOG: "/var/log/robotsix-broker/audit.log"
+
+    volumes:
+      # Mount TLS material read-only.
+      - ./tls:/etc/robotsix/tls:ro
+      # Mount agent-tokens JSON file read-only.
+      - ./agent-tokens.json:/etc/robotsix/broker/agent-tokens.json:ro
+      # Optional: mount a directory for audit log output.
+      # - ./logs/broker:/var/log/robotsix-broker
