@@ -296,14 +296,24 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
     # HTTP method dispatchers
     # ------------------------------------------------------------------
 
-    def do_GET(self) -> None:  # noqa: N802
+    def _authenticated_and_rate_limited(self) -> str | None:
+        """Check authentication and rate limit.
+
+        Return agent_id if allowed, else None.
+        """
         agent_id = self._authenticate()
         if agent_id is None:
-            return
+            return None
         self._authenticated_agent_id = agent_id
 
         rate_key = agent_id if agent_id != "" else "__anonymous__"
         if not self._check_rate_limit(rate_key):
+            return None
+        return agent_id
+
+    def do_GET(self) -> None:  # noqa: N802
+        agent_id = self._authenticated_and_rate_limited()
+        if agent_id is None:
             return
 
         if self.path == HEALTH_PATH:
@@ -323,13 +333,8 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         self._write_error(404, "not found")
 
     def do_POST(self) -> None:  # noqa: N802
-        agent_id = self._authenticate()
+        agent_id = self._authenticated_and_rate_limited()
         if agent_id is None:
-            return
-        self._authenticated_agent_id = agent_id
-
-        rate_key = agent_id if agent_id != "" else "__anonymous__"
-        if not self._check_rate_limit(rate_key):
             return
 
         if self.path == "/agents":
@@ -343,13 +348,8 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         self._write_error(404, "not found")
 
     def do_DELETE(self) -> None:  # noqa: N802
-        agent_id = self._authenticate()
+        agent_id = self._authenticated_and_rate_limited()
         if agent_id is None:
-            return
-        self._authenticated_agent_id = agent_id
-
-        rate_key = agent_id if agent_id != "" else "__anonymous__"
-        if not self._check_rate_limit(rate_key):
             return
 
         if self.path.startswith("/agents/"):
