@@ -12,6 +12,6 @@ permissions:
 
 jobs:
   docs:
-    uses: damien-robotsix/robotsix-mill/.github/workflows/python-docs.yml@main
+    uses: damien-robotsix/robotsix-mill/.github/workflows/python-docs.yml@90fcbcb32974e45c86e798f6da435e430e276a99  # main
     with:
       python-version: "3.12"
