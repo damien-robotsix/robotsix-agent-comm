@@ -248,6 +248,175 @@ def _agent_process_auth_failure(
 
 
 # ---------------------------------------------------------------------------
+# Calendar-dispatch subprocess functions
+# ---------------------------------------------------------------------------
+
+
+def _calendar_dispatch_consumer(
+    broker_host: str,
+    broker_port: int,
+    ca_cert_path: str,
+    result_queue: multiprocessing.Queue[dict[str, Any]],
+    ready_event: multiprocessing.synchronize.Event,
+    start_event: multiprocessing.synchronize.Event,
+) -> None:
+    """Run in a child process: calendar-agent consumer.
+
+    Registers as ``calendar-agent``, listens on a TransportServer,
+    and responds to calendar-dispatch ``Request`` messages with a
+    calendar-shaped echo.
+    """
+    try:
+        client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        client_ctx.load_verify_locations(ca_cert_path)
+
+        registry = BrokeredRegistry(
+            broker_host,
+            broker_port,
+            scheme="https",
+            ssl_context=client_ctx,
+            agent_token="tok-calendar-agent",
+        )
+
+        received: list[Message] = []
+
+        def handler(message: Message) -> Message | None:
+            received.append(message)
+            if isinstance(message, Request):
+                if message.body.get("action") == "calendar_dispatch":
+                    response_body = {
+                        **message.body,
+                        "status": "ok",
+                        "event_ref": "calendar-event-ref-001",
+                    }
+                    return Response.to(message, body=response_body)
+                return Response.to(message, body={"echo": message.body})
+            return None
+
+        server = TransportServer(handler, host="127.0.0.1", port=0)
+        server.start()
+
+        try:
+            endpoint = Endpoint(
+                agent_id="calendar-agent", host=server.host, port=server.port
+            )
+            registry.register(endpoint)
+
+            ready_event.set()
+            start_event.wait(timeout=15)
+
+            # Wait for the dispatch request (up to 10s).
+            deadline = time.monotonic() + 10.0
+            while len(received) < 1 and time.monotonic() < deadline:
+                time.sleep(0.05)
+
+            dispatch_received = any(
+                isinstance(m, Request) and m.body.get("action") == "calendar_dispatch"
+                for m in received
+            )
+
+            result_queue.put(
+                {
+                    "agent_id": "calendar-agent",
+                    "status": "ok",
+                    "dispatch_received": dispatch_received,
+                    "received_count": len(received),
+                }
+            )
+        finally:
+            server.stop()
+    except Exception:
+        result_queue.put(
+            {
+                "agent_id": "calendar-agent",
+                "status": "error",
+                "traceback": traceback.format_exc(),
+            }
+        )
+
+
+def _calendar_dispatch_producer(
+    broker_host: str,
+    broker_port: int,
+    ca_cert_path: str,
+    result_queue: multiprocessing.Queue[dict[str, Any]],
+    ready_event: multiprocessing.synchronize.Event,
+    start_event: multiprocessing.synchronize.Event,
+) -> None:
+    """Run in a child process: auto-mail producer.
+
+    Registers as ``auto-mail``, sends a calendar-dispatch ``Request``
+    to ``calendar-agent`` through the broker, and verifies the response.
+    """
+    try:
+        client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        client_ctx.load_verify_locations(ca_cert_path)
+
+        registry = BrokeredRegistry(
+            broker_host,
+            broker_port,
+            scheme="https",
+            ssl_context=client_ctx,
+            agent_token="tok-auto-mail",
+        )
+        transport = NetworkedBrokerTransport(
+            broker_host,
+            broker_port,
+            scheme="https",
+            ssl_context=client_ctx,
+            agent_token="tok-auto-mail",
+        )
+
+        # Register with a dummy endpoint (producer does not listen).
+        endpoint = Endpoint(agent_id="auto-mail", host="127.0.0.1", port=1)
+        registry.register(endpoint)
+
+        ready_event.set()
+        start_event.wait(timeout=15)
+
+        # Small settle delay.
+        time.sleep(0.3)
+
+        request = Request(
+            metadata=Metadata.create(sender="auto-mail", recipient="calendar-agent"),
+            body={
+                "action": "calendar_dispatch",
+                "card_id": "card-test-001",
+                "event": {
+                    "summary": "Test Event",
+                    "start": "2025-06-01T09:00:00Z",
+                    "end": "2025-06-01T10:00:00Z",
+                },
+            },
+        )
+        reply = transport.send(request, endpoint, timeout=10.0)
+
+        reply_ok = (
+            isinstance(reply, Response)
+            and reply.body.get("status") == "ok"
+            and reply.body.get("event_ref") == "calendar-event-ref-001"
+            and reply.body.get("card_id") == "card-test-001"
+        )
+
+        result_queue.put(
+            {
+                "agent_id": "auto-mail",
+                "status": "ok",
+                "reply_ok": reply_ok,
+                "reply_body": reply.body if isinstance(reply, Response) else None,
+            }
+        )
+    except Exception:
+        result_queue.put(
+            {
+                "agent_id": "auto-mail",
+                "status": "error",
+                "traceback": traceback.format_exc(),
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
@@ -280,6 +449,42 @@ def secured_broker() -> Generator[tuple[BrokerServer, str, str, str], None, None
     finally:
         broker.stop()
         # Clean up temp cert files.
+        for p in (ca_path, cert_path, key_path):
+            if os.path.exists(p):
+                os.unlink(p)
+        with contextlib.suppress(OSError):
+            os.rmdir(tmpdir)
+
+
+@pytest.fixture
+def calendar_dispatch_broker() -> Generator[
+    tuple[BrokerServer, str, str, str], None, None
+]:
+    """Start a TLS+auth BrokerServer for calendar-dispatch end-to-end tests.
+
+    Yields ``(broker, ca_cert_path, server_cert_path, server_key_path)``.
+    Uses tokens for ``auto-mail`` and ``calendar-agent``.
+    """
+    tmpdir = tempfile.mkdtemp(prefix="cal_dispatch_tls_")
+    ca_path, cert_path, key_path = _write_certs_to_dir(tmpdir)
+
+    server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_ctx.load_cert_chain(cert_path, key_path)
+
+    broker = BrokerServer(
+        host="127.0.0.1",
+        port=0,
+        ssl_context=server_ctx,
+        agent_tokens={
+            "auto-mail": "tok-auto-mail",
+            "calendar-agent": "tok-calendar-agent",
+        },
+    )
+    broker.start()
+    try:
+        yield broker, ca_path, cert_path, key_path
+    finally:
+        broker.stop()
         for p in (ca_path, cert_path, key_path):
             if os.path.exists(p):
                 os.unlink(p)
@@ -516,3 +721,143 @@ class TestEndToEndSecured:
         assert agents[0]["capabilities"] == {"role": "legit"}, (
             f"agent-a capabilities were overwritten by spoof attempt: {agents[0]}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Calendar-dispatch end-to-end tests
+# ---------------------------------------------------------------------------
+
+
+class TestCalendarDispatchEndToEnd:
+    """End-to-end calendar-dispatch: producer → broker → consumer over TLS+auth.
+
+    Also verifies that the secured broker rejects plaintext connections
+    and anonymous (no-token) requests.
+    """
+
+    def test_calendar_dispatch_happy_path(
+        self, calendar_dispatch_broker: tuple[BrokerServer, str, str, str]
+    ) -> None:
+        """Producer sends calendar-dispatch Request; consumer echoes a
+        calendar-shaped Response."""
+        broker, ca_path, _cert_path, _key_path = calendar_dispatch_broker
+
+        ctx = multiprocessing.get_context("spawn")
+        result_queue: multiprocessing.Queue[dict[str, Any]] = ctx.Queue()
+        ready_consumer = ctx.Event()
+        ready_producer = ctx.Event()
+        start_event = ctx.Event()
+
+        proc_consumer = ctx.Process(
+            target=_calendar_dispatch_consumer,
+            args=(
+                broker.host,
+                broker.port,
+                ca_path,
+                result_queue,
+                ready_consumer,
+                start_event,
+            ),
+            name="cal-consumer",
+        )
+        proc_producer = ctx.Process(
+            target=_calendar_dispatch_producer,
+            args=(
+                broker.host,
+                broker.port,
+                ca_path,
+                result_queue,
+                ready_producer,
+                start_event,
+            ),
+            name="cal-producer",
+        )
+
+        proc_consumer.start()
+        proc_producer.start()
+
+        try:
+            ready_consumer.wait(timeout=15)
+            ready_producer.wait(timeout=15)
+
+            time.sleep(0.2)
+            start_event.set()
+
+            results: list[dict[str, Any]] = []
+            deadline = time.monotonic() + 20
+            while len(results) < 2 and time.monotonic() < deadline:
+                with contextlib.suppress(Exception):
+                    results.append(result_queue.get(timeout=1.0))
+
+            assert len(results) == 2, (
+                f"Expected 2 results, got {len(results)}: {results}"
+            )
+
+            for r in results:
+                assert r["status"] == "ok", (
+                    f"Agent {r.get('agent_id')} failed: {r.get('traceback', '')}"
+                )
+
+            consumer_result = next(
+                r for r in results if r["agent_id"] == "calendar-agent"
+            )
+            producer_result = next(r for r in results if r["agent_id"] == "auto-mail")
+
+            assert consumer_result["dispatch_received"], (
+                "Consumer did not receive the calendar-dispatch request"
+            )
+            reply_body = producer_result.get("reply_body")
+            assert producer_result["reply_ok"], (
+                f"Producer did not receive expected response: {reply_body}"
+            )
+        finally:
+            for p in (proc_consumer, proc_producer):
+                if p.is_alive():
+                    p.terminate()
+                    p.join(timeout=5)
+
+    def test_plaintext_rejected_by_tls_broker(
+        self, calendar_dispatch_broker: tuple[BrokerServer, str, str, str]
+    ) -> None:
+        """A plaintext HTTP connection to the TLS-enabled broker must fail."""
+        import http.client as _http_client
+
+        broker, _ca_path, _cert_path, _key_path = calendar_dispatch_broker
+
+        conn = _http_client.HTTPConnection(broker.host, broker.port, timeout=5.0)
+        try:
+            conn.request("GET", "/health")
+            try:
+                resp = conn.getresponse()
+                assert resp.status != 200, (
+                    f"Plaintext connection unexpectedly succeeded with {resp.status}"
+                )
+            except OSError:
+                pass  # Expected: TLS-enabled broker rejects plaintext
+        except OSError:
+            pass  # Also expected: request itself may fail
+        finally:
+            conn.close()
+
+    def test_anonymous_rejected_by_auth_broker(
+        self, calendar_dispatch_broker: tuple[BrokerServer, str, str, str]
+    ) -> None:
+        """An HTTPS request without an Authorization header must receive 401."""
+        import http.client as _http_client
+
+        broker, ca_path, _cert_path, _key_path = calendar_dispatch_broker
+
+        client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        client_ctx.load_verify_locations(ca_path)
+
+        conn = _http_client.HTTPSConnection(
+            broker.host, broker.port, timeout=5.0, context=client_ctx
+        )
+        try:
+            conn.request("GET", "/health")
+            resp = conn.getresponse()
+            assert resp.status == 401, (
+                f"Expected 401 for anonymous request, got {resp.status}"
+            )
+        finally:
+            conn.close()
