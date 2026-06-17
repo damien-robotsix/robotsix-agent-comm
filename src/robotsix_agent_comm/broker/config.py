@@ -42,7 +42,7 @@ def _parse_inline_tokens(raw: str) -> dict[str, str]:
             raise ValueError(
                 f"malformed token entry {entry!r}: expected id=token format"
             )
-        agent_id, sep, token = entry.partition("=")
+        agent_id, _, token = entry.partition("=")
         agent_id = agent_id.strip()
         token = token.strip()
         if not agent_id:

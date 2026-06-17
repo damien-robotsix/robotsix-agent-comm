@@ -18,3 +18,5 @@ on_request
 receive_message
 send_notification
 send_request
+argv
+frame
