@@ -13,6 +13,7 @@ plugins:
 
 nav:
   - Home: index.md
+  - Changelog: CHANGELOG.md
   - Design: design/index.md
   - API reference: api/index.md
   - Tutorials: tutorials/index.md
