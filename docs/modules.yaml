@@ -76,3 +76,16 @@ modules:
     dependencies:
       - protocol
       - transport
+
+  - id: broker
+    description: >-
+      Broker server for agent communication. Provides a central hub for agent
+      registration, discovery, message routing, and health monitoring. Implements
+      the full HTTP+JSON transport protocol with TLS support, bearer-token
+      authentication, rate limiting, TTL-based eviction, and audit logging.
+    paths:
+      - src/robotsix_agent_comm/broker/*.py
+      - tests/broker/*.py
+    dependencies:
+      - protocol
+      - transport
