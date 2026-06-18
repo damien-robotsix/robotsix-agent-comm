@@ -36,6 +36,7 @@ from robotsix_agent_comm.transport.brokered import (
     NetworkedBrokerTransport,
     create_transport_pair,
 )
+from robotsix_agent_comm.transport.endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH
 
 # ---------------------------------------------------------------------------
 # Test doubles for http.client
@@ -163,7 +164,7 @@ class TestNetworkedBrokerTransportSend:
         assert fake_conn._request_args is not None
         method, path, body, headers = fake_conn._request_args
         assert method == "POST"
-        assert path == "/messages"
+        assert path == DEFAULT_MESSAGE_PATH
         assert body == expected_body
         assert headers == {"Content-Type": "application/json"}
 
@@ -359,7 +360,8 @@ class TestNetworkedBrokerTransportSend:
         fake_conn = mock_conn_cls.return_value
         method, path, _body, _headers = fake_conn._request_args
         assert method == "POST"
-        assert path == "/messages"  # always /messages, never /custom
+        # always DEFAULT_MESSAGE_PATH, never /custom
+        assert path == DEFAULT_MESSAGE_PATH
 
 
 # ===================================================================
@@ -382,7 +384,7 @@ class TestNetworkedBrokerTransportHealthCheck:
         fake_conn = mock_conn_cls.return_value
         method, path, _body, _headers = fake_conn._request_args
         assert method == "GET"
-        assert path == "/health"
+        assert path == HEALTH_PATH
 
     def test_health_check_returns_false_on_oserror(self) -> None:
         """``OSError`` during request → ``False`` (no exception raised)."""
@@ -450,7 +452,7 @@ class TestBrokeredRegistryRegister:
                 host="10.0.0.5",
                 port=9000,
                 scheme="http",
-                path="/messages",
+                path=DEFAULT_MESSAGE_PATH,
             )
             registry.register(ep)
 
@@ -465,7 +467,7 @@ class TestBrokeredRegistryRegister:
         assert body["host"] == "10.0.0.5"
         assert body["port"] == 9000
         assert body["scheme"] == "http"
-        assert body["path"] == "/messages"
+        assert body["path"] == DEFAULT_MESSAGE_PATH
         assert body["capabilities"] == {}
 
     def test_register_includes_capabilities_empty_dict(self) -> None:
@@ -504,7 +506,7 @@ class TestBrokeredRegistryRegister:
         _method, _path, body_bytes, _headers = fake_conn._request_args
         body = json.loads(body_bytes.decode("utf-8"))
         assert body["scheme"] == "http"
-        assert body["path"] == "/messages"
+        assert body["path"] == DEFAULT_MESSAGE_PATH
 
 
 # ===================================================================
