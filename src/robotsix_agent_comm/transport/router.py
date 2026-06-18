@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from ..protocol import Message
 from .base import Transport
+from .brokered import BrokeredRegistry
 from .errors import AgentNotFoundError
 from .registry import Registry
 from .retry import RetryPolicy, retry_call
@@ -21,7 +22,7 @@ class Router:
 
     def __init__(
         self,
-        registry: Registry,
+        registry: Registry | BrokeredRegistry,
         client: Transport,
         retry_policy: RetryPolicy,
         *,

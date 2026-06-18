@@ -193,13 +193,13 @@ class TestAgentWithBrokeredComponents:
 
         alice = Agent(
             "alice",
-            registry,  # type: ignore[arg-type]
+            registry,
             transport=transport,
             timeout=3.0,
         )
         bob = Agent(
             "bob",
-            registry,  # type: ignore[arg-type]
+            registry,
             transport=transport,
             timeout=3.0,
         )
@@ -234,13 +234,13 @@ class TestAgentWithBrokeredComponents:
 
         alice = Agent(
             "alice",
-            registry,  # type: ignore[arg-type]
+            registry,
             transport=transport,
             timeout=3.0,
         )
         bob = Agent(
             "bob",
-            registry,  # type: ignore[arg-type]
+            registry,
             transport=transport,
             timeout=3.0,
         )
@@ -272,7 +272,7 @@ class TestAgentWithBrokeredComponents:
 
         alice = Agent(
             "alice",
-            registry,  # type: ignore[arg-type]
+            registry,
             transport=transport,
             timeout=3.0,
         )
@@ -431,13 +431,13 @@ class TestBrokeredAuthIntegration:
         # Agent IDs must match the tokens: tok-a → agent-a, tok-b → agent-b.
         alice = Agent(
             "agent-a",
-            alice_registry,  # type: ignore[arg-type]
+            alice_registry,
             transport=alice_transport,
             timeout=3.0,
         )
         bob = Agent(
             "agent-b",
-            bob_registry,  # type: ignore[arg-type]
+            bob_registry,
             transport=bob_transport,
             timeout=3.0,
         )
