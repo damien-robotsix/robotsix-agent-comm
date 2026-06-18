@@ -41,7 +41,48 @@ _DELIVERY_FAILED = "delivery_failed"
 _UNKNOWN_RECIPIENT = "unknown_recipient"
 
 
-class NetworkedBrokerTransport(Transport):
+class _BrokerConnectionMixin:
+    """Shared HTTP connection boilerplate for broker clients.
+
+    Provides the ``__init__`` fields, ``broker_url`` property, and
+    ``_connect`` method used by both :class:`NetworkedBrokerTransport`
+    and :class:`BrokeredRegistry`.
+    """
+
+    def __init__(
+        self,
+        broker_host: str,
+        broker_port: int,
+        *,
+        scheme: str = "http",
+        ssl_context: ssl.SSLContext | None = None,
+        agent_token: str | None = None,
+    ) -> None:
+        self._broker_host = broker_host
+        self._broker_port = broker_port
+        self._scheme = scheme
+        self._ssl_context = ssl_context
+        self._agent_token = agent_token
+
+    @property
+    def broker_url(self) -> str:
+        """Return the broker's origin URL."""
+        return f"{self._scheme}://{self._broker_host}:{self._broker_port}"
+
+    def _connect(self, timeout: float = 5.0) -> http.client.HTTPConnection:
+        if self._scheme == "https":
+            return http.client.HTTPSConnection(
+                self._broker_host,
+                self._broker_port,
+                timeout=timeout,
+                context=self._ssl_context,
+            )
+        return http.client.HTTPConnection(
+            self._broker_host, self._broker_port, timeout=timeout
+        )
+
+
+class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
     """A :class:`Transport` that sends all messages through a broker.
 
     Unlike :class:`TransportClient`, this transport *ignores* the
@@ -70,38 +111,6 @@ class NetworkedBrokerTransport(Transport):
             Optional bearer token included as an ``Authorization`` header
             on every ``POST /messages`` and ``GET /health`` request.
     """
-
-    def __init__(
-        self,
-        broker_host: str,
-        broker_port: int,
-        *,
-        scheme: str = "http",
-        ssl_context: ssl.SSLContext | None = None,
-        agent_token: str | None = None,
-    ) -> None:
-        self._broker_host = broker_host
-        self._broker_port = broker_port
-        self._scheme = scheme
-        self._ssl_context = ssl_context
-        self._agent_token = agent_token
-
-    @property
-    def broker_url(self) -> str:
-        """Return the broker's origin URL."""
-        return f"{self._scheme}://{self._broker_host}:{self._broker_port}"
-
-    def _connect(self, timeout: float) -> http.client.HTTPConnection:
-        if self._scheme == "https":
-            return http.client.HTTPSConnection(
-                self._broker_host,
-                self._broker_port,
-                timeout=timeout,
-                context=self._ssl_context,
-            )
-        return http.client.HTTPConnection(
-            self._broker_host, self._broker_port, timeout=timeout
-        )
 
     def _auth_headers(self) -> dict[str, str]:
         """Return a headers dict with the bearer token when configured."""
@@ -189,7 +198,7 @@ class NetworkedBrokerTransport(Transport):
 # ---------------------------------------------------------------------------
 
 
-class BrokeredRegistry:
+class BrokeredRegistry(_BrokerConnectionMixin):
     """Duck-typed match for :class:`Registry` that delegates to the broker.
 
     Every method maps to an HTTP call against the broker's REST API,
@@ -224,37 +233,6 @@ class BrokeredRegistry:
             on every ``POST /agents``, ``DELETE /agents/<id>``, and
             ``GET /agents`` request.
     """
-
-    def __init__(
-        self,
-        broker_host: str,
-        broker_port: int,
-        *,
-        scheme: str = "http",
-        ssl_context: ssl.SSLContext | None = None,
-        agent_token: str | None = None,
-    ) -> None:
-        self._broker_host = broker_host
-        self._broker_port = broker_port
-        self._scheme = scheme
-        self._ssl_context = ssl_context
-        self._agent_token = agent_token
-
-    @property
-    def broker_url(self) -> str:
-        return f"{self._scheme}://{self._broker_host}:{self._broker_port}"
-
-    def _connect(self, timeout: float = 5.0) -> http.client.HTTPConnection:
-        if self._scheme == "https":
-            return http.client.HTTPSConnection(
-                self._broker_host,
-                self._broker_port,
-                timeout=timeout,
-                context=self._ssl_context,
-            )
-        return http.client.HTTPConnection(
-            self._broker_host, self._broker_port, timeout=timeout
-        )
 
     def _request(
         self,
