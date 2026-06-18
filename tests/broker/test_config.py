@@ -76,27 +76,29 @@ class TestFromEnvBasics:
         assert config.max_body_size is None
         assert config.audit_log is None
 
-    def test_parses_each_var(self, tmp_path: Any) -> None:
+    def test_parses_each_var(self, cert_and_token_files: dict[str, Any]) -> None:
         # Write a token file.
-        token_file = tmp_path / "tokens.json"
-        token_file.write_text(json.dumps({"a": "ta", "b": "tb"}))
+        cert_and_token_files["token_file"].write_text(
+            json.dumps({"a": "ta", "b": "tb"})
+        )
 
-        # Create a dummy cert/key so they pass file-existence checks.
-        cert_file = tmp_path / "cert.pem"
-        key_file = tmp_path / "key.pem"
-        ca_file = tmp_path / "ca.pem"
-        for f in (cert_file, key_file, ca_file):
-            f.write_text("dummy")
+        # Create a dummy CA so it passes file-existence checks.
+        ca_file = cert_and_token_files["cert"].parent / "ca.pem"
+        ca_file.write_text("dummy")
 
         env: dict[str, str] = {
             "ROBOTSIX_BROKER_HOST": "127.0.0.1",
             "ROBOTSIX_BROKER_PORT": "9443",
             "ROBOTSIX_BROKER_ENV": "production",  # prod so TLS required
-            "ROBOTSIX_BROKER_TLS_CERT": str(cert_file),
-            "ROBOTSIX_BROKER_TLS_KEY": str(key_file),
+            "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                "ROBOTSIX_BROKER_TLS_CERT"
+            ],
+            "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files["ROBOTSIX_BROKER_TLS_KEY"],
             "ROBOTSIX_BROKER_TLS_CA": str(ca_file),
             "ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT": "true",
-            "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+            "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+            ],
             "ROBOTSIX_BROKER_TTL_SECONDS": "120",
             "ROBOTSIX_BROKER_RATE_LIMIT": "5.5",
             "ROBOTSIX_BROKER_MAX_BODY_SIZE": "512000",
@@ -107,8 +109,8 @@ class TestFromEnvBasics:
         assert config.host == "127.0.0.1"
         assert config.port == 9443
         assert config.env == "production"
-        assert config.tls_cert == str(cert_file)
-        assert config.tls_key == str(key_file)
+        assert config.tls_cert == cert_and_token_files["ROBOTSIX_BROKER_TLS_CERT"]
+        assert config.tls_key == cert_and_token_files["ROBOTSIX_BROKER_TLS_KEY"]
         assert config.tls_ca == str(ca_file)
         assert config.require_client_cert is True
         assert config.agent_tokens == {"a": "ta", "b": "tb"}
@@ -124,35 +126,34 @@ class TestFromEnvBasics:
 
 
 class TestTokenPrecedence:
-    def test_file_wins_over_inline(self, tmp_path: Any) -> None:
-        token_file = tmp_path / "tokens.json"
-        token_file.write_text(json.dumps({"file-agent": "file-tok"}))
-
-        cert_file = tmp_path / "cert.pem"
-        key_file = tmp_path / "key.pem"
-        cert_file.write_text("dummy")
-        key_file.write_text("dummy")
+    def test_file_wins_over_inline(self, cert_and_token_files: dict[str, Any]) -> None:
+        cert_and_token_files["token_file"].write_text(
+            json.dumps({"file-agent": "file-tok"})
+        )
 
         env: dict[str, str] = {
             "ROBOTSIX_BROKER_ENV": "production",
-            "ROBOTSIX_BROKER_TLS_CERT": str(cert_file),
-            "ROBOTSIX_BROKER_TLS_KEY": str(key_file),
-            "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+            "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                "ROBOTSIX_BROKER_TLS_CERT"
+            ],
+            "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files["ROBOTSIX_BROKER_TLS_KEY"],
+            "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+            ],
             "ROBOTSIX_BROKER_AGENT_TOKENS": "inline-agent=inline-tok",
         }
         config = BrokerConfig.from_env(env)
         assert config.agent_tokens == {"file-agent": "file-tok"}
 
-    def test_inline_used_when_no_file(self, tmp_path: Any) -> None:
-        cert_file = tmp_path / "cert.pem"
-        key_file = tmp_path / "key.pem"
-        cert_file.write_text("dummy")
-        key_file.write_text("dummy")
-
+    def test_inline_used_when_no_file(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
         env: dict[str, str] = {
             "ROBOTSIX_BROKER_ENV": "production",
-            "ROBOTSIX_BROKER_TLS_CERT": str(cert_file),
-            "ROBOTSIX_BROKER_TLS_KEY": str(key_file),
+            "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                "ROBOTSIX_BROKER_TLS_CERT"
+            ],
+            "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files["ROBOTSIX_BROKER_TLS_KEY"],
             "ROBOTSIX_BROKER_AGENT_TOKENS": "a=ta,b=tb",
         }
         config = BrokerConfig.from_env(env)
@@ -169,21 +170,22 @@ class TestBooleanParsing:
         "val",
         ["1", "true", "yes", "TRUE", "YES", "True", " trUE "],
     )
-    def test_truthy(self, val: str, tmp_path: Any) -> None:
-        cert_file = tmp_path / "cert.pem"
-        key_file = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert_file, key_file):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": "t"}))
+    def test_truthy(self, val: str, cert_and_token_files: dict[str, Any]) -> None:
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": "t"}))
 
         env: dict[str, str] = {
             "ROBOTSIX_BROKER_ENV": "production",
-            "ROBOTSIX_BROKER_TLS_CERT": str(cert_file),
-            "ROBOTSIX_BROKER_TLS_KEY": str(key_file),
+            "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                "ROBOTSIX_BROKER_TLS_CERT"
+            ],
+            "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files["ROBOTSIX_BROKER_TLS_KEY"],
             "ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT": val,
-            "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
-            "ROBOTSIX_BROKER_TLS_CA": str(cert_file),  # need CA for mTLS
+            "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+            ],
+            "ROBOTSIX_BROKER_TLS_CA": cert_and_token_files[
+                "ROBOTSIX_BROKER_TLS_CERT"
+            ],  # need CA for mTLS
         }
         config = BrokerConfig.from_env(env)
         assert config.require_client_cert is True
@@ -226,14 +228,16 @@ class TestProductionTLSRequired:
                 }
             )
 
-    def test_key_file_nonexistent_raises(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        cert.write_text("dummy")
+    def test_key_file_nonexistent_raises(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
         with pytest.raises(ValueError, match="TLS key file not found"):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
                     "ROBOTSIX_BROKER_TLS_KEY": "/nonexistent/key.pem",
                 }
             )
@@ -245,52 +249,56 @@ class TestProductionTLSRequired:
 
 
 class TestProductionAuthRequired:
-    def test_no_tokens_raises(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        cert.write_text("dummy")
-        key.write_text("dummy")
+    def test_no_tokens_raises(self, cert_and_token_files: dict[str, Any]) -> None:
         with pytest.raises(
             ValueError, match="authentication is required in production"
         ):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                    "ROBOTSIX_BROKER_TLS_KEY": str(key),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
+                    "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_KEY"
+                    ],
                 }
             )
 
-    def test_empty_tokens_file_raises(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text("{}")
+    def test_empty_tokens_file_raises(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
+        cert_and_token_files["token_file"].write_text("{}")
         with pytest.raises(ValueError, match="agent tokens mapping is empty"):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                    "ROBOTSIX_BROKER_TLS_KEY": str(key),
-                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
+                    "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_KEY"
+                    ],
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                        "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                    ],
                 }
             )
 
-    def test_valid_tokens_succeeds(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": "t"}))
+    def test_valid_tokens_succeeds(self, cert_and_token_files: dict[str, Any]) -> None:
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": "t"}))
         config = BrokerConfig.from_env(
             {
                 "ROBOTSIX_BROKER_ENV": "production",
-                "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                "ROBOTSIX_BROKER_TLS_KEY": str(key),
-                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_CERT"
+                ],
+                "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_KEY"
+                ],
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                ],
             }
         )
         assert config.agent_tokens == {"a": "t"}
@@ -302,61 +310,69 @@ class TestProductionAuthRequired:
 
 
 class TestProductionMTLS:
-    def test_require_client_cert_without_ca_raises(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": "t"}))
+    def test_require_client_cert_without_ca_raises(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": "t"}))
         with pytest.raises(ValueError, match="mutual TLS requires a CA"):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                    "ROBOTSIX_BROKER_TLS_KEY": str(key),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
+                    "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_KEY"
+                    ],
                     "ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT": "true",
-                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                        "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                    ],
                 }
             )
 
     def test_require_client_cert_with_nonexistent_ca_raises(
-        self, tmp_path: Any
+        self, cert_and_token_files: dict[str, Any]
     ) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": "t"}))
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": "t"}))
         with pytest.raises(ValueError, match="TLS CA file not found"):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                    "ROBOTSIX_BROKER_TLS_KEY": str(key),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
+                    "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_KEY"
+                    ],
                     "ROBOTSIX_BROKER_TLS_CA": "/nonexistent/ca.pem",
                     "ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT": "true",
-                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                        "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                    ],
                 }
             )
 
-    def test_require_client_cert_with_valid_ca_succeeds(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        ca = tmp_path / "ca.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key, ca):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": "t"}))
+    def test_require_client_cert_with_valid_ca_succeeds(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
+        ca = cert_and_token_files["cert"].parent / "ca.pem"
+        ca.write_text("dummy")
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": "t"}))
         config = BrokerConfig.from_env(
             {
                 "ROBOTSIX_BROKER_ENV": "production",
-                "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                "ROBOTSIX_BROKER_TLS_KEY": str(key),
+                "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_CERT"
+                ],
+                "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_KEY"
+                ],
                 "ROBOTSIX_BROKER_TLS_CA": str(ca),
                 "ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT": "true",
-                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                ],
             }
         )
         assert config.require_client_cert is True
@@ -386,15 +402,16 @@ class TestDevModeWarnings:
         assert "authentication is not configured" in caplog.text
 
     def test_empty_tokens_dev_mode_warning_in_log(
-        self, caplog: Any, tmp_path: Any
+        self, caplog: Any, cert_and_token_files: dict[str, Any]
     ) -> None:
         caplog.set_level(logging.WARNING)
-        token_file = tmp_path / "tokens.json"
-        token_file.write_text("{}")
+        cert_and_token_files["token_file"].write_text("{}")
         BrokerConfig.from_env(
             {
                 "ROBOTSIX_BROKER_ENV": "development",
-                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                ],
             }
         )
         # The file contains an empty object, triggering
@@ -402,22 +419,23 @@ class TestDevModeWarnings:
         assert "agent tokens mapping is empty" in caplog.text
 
     def test_dev_mode_with_tls_and_auth_no_warnings(
-        self, caplog: Any, tmp_path: Any
+        self, caplog: Any, cert_and_token_files: dict[str, Any]
     ) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": "t"}))
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": "t"}))
 
         caplog.set_level(logging.WARNING)
         BrokerConfig.from_env(
             {
                 "ROBOTSIX_BROKER_ENV": "development",
-                "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                "ROBOTSIX_BROKER_TLS_KEY": str(key),
-                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_CERT"
+                ],
+                "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_KEY"
+                ],
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                ],
             }
         )
         assert "DEVELOPMENT MODE" not in caplog.text
@@ -429,69 +447,78 @@ class TestDevModeWarnings:
 
 
 class TestTokenFileValidation:
-    def test_nonexistent_file_raises(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        for f in (cert, key):
-            f.write_text("dummy")
+    def test_nonexistent_file_raises(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
         with pytest.raises(ValueError, match="cannot read file"):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                    "ROBOTSIX_BROKER_TLS_KEY": str(key),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
+                    "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_KEY"
+                    ],
                     "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": "/nonexistent/tokens.json",
                 }
             )
 
-    def test_invalid_json_in_file_raises(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text("not json")
+    def test_invalid_json_in_file_raises(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
+        cert_and_token_files["token_file"].write_text("not json")
         with pytest.raises(ValueError, match="invalid JSON"):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                    "ROBOTSIX_BROKER_TLS_KEY": str(key),
-                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
+                    "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_KEY"
+                    ],
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                        "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                    ],
                 }
             )
 
-    def test_array_in_file_raises(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text("[1,2,3]")
+    def test_array_in_file_raises(self, cert_and_token_files: dict[str, Any]) -> None:
+        cert_and_token_files["token_file"].write_text("[1,2,3]")
         with pytest.raises(ValueError, match="must be a JSON object"):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                    "ROBOTSIX_BROKER_TLS_KEY": str(key),
-                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
+                    "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_KEY"
+                    ],
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                        "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                    ],
                 }
             )
 
-    def test_non_string_token_value_raises(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": 123}))
+    def test_non_string_token_value_raises(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": 123}))
         with pytest.raises(ValueError, match="must be a string"):
             BrokerConfig.from_env(
                 {
                     "ROBOTSIX_BROKER_ENV": "production",
-                    "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                    "ROBOTSIX_BROKER_TLS_KEY": str(key),
-                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                    "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_CERT"
+                    ],
+                    "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                        "ROBOTSIX_BROKER_TLS_KEY"
+                    ],
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                        "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                    ],
                 }
             )
 
@@ -513,39 +540,43 @@ class TestEdgeCases:
                 }
             )
 
-    def test_unknown_env_var_ignored(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": "t"}))
+    def test_unknown_env_var_ignored(
+        self, cert_and_token_files: dict[str, Any]
+    ) -> None:
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": "t"}))
 
         config = BrokerConfig.from_env(
             {
                 "ROBOTSIX_BROKER_ENV": "production",
-                "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                "ROBOTSIX_BROKER_TLS_KEY": str(key),
-                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_CERT"
+                ],
+                "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_KEY"
+                ],
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                ],
                 "UNRELATED_VAR": "ignored",
             }
         )
         assert config.host == "0.0.0.0"  # default
 
-    def test_config_is_frozen(self, tmp_path: Any) -> None:
-        cert = tmp_path / "cert.pem"
-        key = tmp_path / "key.pem"
-        token_file = tmp_path / "tokens.json"
-        for f in (cert, key):
-            f.write_text("dummy")
-        token_file.write_text(json.dumps({"a": "t"}))
+    def test_config_is_frozen(self, cert_and_token_files: dict[str, Any]) -> None:
+        cert_and_token_files["token_file"].write_text(json.dumps({"a": "t"}))
 
         config = BrokerConfig.from_env(
             {
                 "ROBOTSIX_BROKER_ENV": "production",
-                "ROBOTSIX_BROKER_TLS_CERT": str(cert),
-                "ROBOTSIX_BROKER_TLS_KEY": str(key),
-                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": str(token_file),
+                "ROBOTSIX_BROKER_TLS_CERT": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_CERT"
+                ],
+                "ROBOTSIX_BROKER_TLS_KEY": cert_and_token_files[
+                    "ROBOTSIX_BROKER_TLS_KEY"
+                ],
+                "ROBOTSIX_BROKER_AGENT_TOKENS_FILE": cert_and_token_files[
+                    "ROBOTSIX_BROKER_AGENT_TOKENS_FILE"
+                ],
             }
         )
         with pytest.raises(FrozenInstanceError):
