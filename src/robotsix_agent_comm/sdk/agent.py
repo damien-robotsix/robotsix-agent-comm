@@ -12,6 +12,7 @@ of scope.
 from __future__ import annotations
 
 import contextlib
+import logging
 import queue
 import threading
 from collections.abc import Callable
@@ -42,6 +43,8 @@ from ..transport import (
 
 #: Long-poll hold (seconds) the pull receive-loop requests from the broker.
 _PULL_POLL_WAIT = 20.0
+
+logger = logging.getLogger(__name__)
 
 RequestHandler = Callable[[Request], Message | None]
 """Callback handling an inbound :class:`Request`; may return a reply."""
@@ -204,7 +207,12 @@ class Agent:
                 self._recv_stop.wait(1.0)
                 continue
             for message in messages:
-                self._dispatch_pull(message)
+                # A bad message or handler must never kill the receive-loop —
+                # that would silently take the whole agent offline.
+                try:
+                    self._dispatch_pull(message)
+                except Exception:  # noqa: BLE001 — last-resort loop guard
+                    logger.exception("error dispatching polled message")
 
     def _dispatch_pull(self, message: Message) -> None:
         """Route a polled message: resolve a pending reply, or handle it."""
@@ -217,7 +225,20 @@ class Agent:
                 slot.append(message)
                 event.set()
                 return
-        reply = self._handle(message)
+        try:
+            reply = self._handle(message)
+        except Exception:  # noqa: BLE001 — surface as an Error, never crash
+            logger.exception("request handler raised for %s", type(message).__name__)
+            reply = (
+                Error.to(
+                    message,
+                    code="handler_error",
+                    message="internal handler error",
+                    sender=self.agent_id,
+                )
+                if isinstance(message, Request)
+                else None
+            )
         if reply is not None:
             # POST the reply back through the broker to the original sender.
             with contextlib.suppress(Exception):

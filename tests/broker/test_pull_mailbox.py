@@ -13,7 +13,7 @@ from collections.abc import Generator
 import pytest
 
 from robotsix_agent_comm.broker import BrokerServer
-from robotsix_agent_comm.protocol import Message, Request, Response
+from robotsix_agent_comm.protocol import Error, Message, Request, Response
 from robotsix_agent_comm.sdk.agent import Agent
 from robotsix_agent_comm.transport import Endpoint
 from robotsix_agent_comm.transport.brokered import (
@@ -75,6 +75,30 @@ def test_notification_via_mailbox(broker: BrokerServer) -> None:
 
     assert msg.body == {"event": "spike"}
     assert got and got[0].body == {"event": "spike"}
+
+
+def test_handler_exception_returns_error_and_keeps_loop(broker: BrokerServer) -> None:
+    calls = {"n": 0}
+    responder = _pull_agent("responder", broker)
+    requester = _pull_agent("requester", broker)
+
+    @responder.on_request
+    def _handle(request: Request) -> Message:
+        calls["n"] += 1
+        if request.body.get("boom"):
+            raise RuntimeError("kaboom")
+        return Response.to(request, body={"ok": True})
+
+    with responder, requester:
+        # A raising handler must reply with an Error (not hang the caller)...
+        err = requester.send_request("responder", {"boom": True}, timeout=5.0)
+        # ...and the receive-loop must survive to serve the next request.
+        ok = requester.send_request("responder", {"boom": False}, timeout=5.0)
+
+    assert isinstance(err, Error)
+    assert err.body.get("code") == "handler_error"
+    assert ok.body == {"ok": True}
+    assert calls["n"] == 2
 
 
 def test_poll_timeout_returns_empty(broker: BrokerServer) -> None:
