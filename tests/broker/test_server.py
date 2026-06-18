@@ -81,6 +81,8 @@ def _make_handler(**kwargs: Any) -> Any:
         server._rate_buckets = {}
         server._rate_buckets_lock = _threading.Lock()
         server._audit_logger = kwargs.get("_audit_logger", MagicMock())
+        server.mailboxes = {}
+        server.mailbox_cond = _threading.Condition()
     handler.server = server
 
     return handler
@@ -340,6 +342,8 @@ def _server_with_router(router_mock: Any) -> Any:
     server._rate_buckets = {}
     server._rate_buckets_lock = _threading.Lock()
     server._audit_logger = MagicMock()
+    server.mailboxes = {}
+    server.mailbox_cond = _threading.Condition()
     return server
 
 
@@ -848,6 +852,8 @@ def _make_server_with_tokens(tokens: dict[str, str]) -> Any:
     server._rate_buckets = {}
     server._rate_buckets_lock = _threading.Lock()
     server._audit_logger = MagicMock()
+    server.mailboxes = {}
+    server.mailbox_cond = _threading.Condition()
     return server
 
 

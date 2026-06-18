@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import contextlib
 import queue
+import threading
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from ..protocol import (
     Error,
@@ -27,14 +28,19 @@ from ..transport import (
     AgentNotFoundError,
     DeliveryError,
     Endpoint,
+    NetworkedBrokerTransport,
     Registry,
     RetryPolicy,
     Router,
     Transport,
     TransportClient,
+    TransportError,
     TransportServer,
     TransportTimeoutError,
 )
+
+#: Long-poll hold (seconds) the pull receive-loop requests from the broker.
+_PULL_POLL_WAIT = 20.0
 
 RequestHandler = Callable[[Request], Message | None]
 """Callback handling an inbound :class:`Request`; may return a reply."""
@@ -62,17 +68,24 @@ class Agent:
         retry_policy: RetryPolicy | None = None,
         timeout: float = 5.0,
         transport: Transport | None = None,
+        pull: bool = False,
     ) -> None:
         self.agent_id = agent_id
         self._registry = registry
         self._host = host
         self._port = port
         self._timeout = timeout
+        self._pull = pull
         if retry_policy is None:
             retry_policy = RetryPolicy(max_attempts=3, base_delay=0.1, max_delay=2.0)
         self._client = transport if transport is not None else TransportClient()
         self._router = Router(registry, self._client, retry_policy, timeout=timeout)
         self._server: TransportServer | None = None
+        # Pull (mailbox) mode: receive-loop + per-request reply waiters.
+        self._recv_thread: threading.Thread | None = None
+        self._recv_stop = threading.Event()
+        self._waiters: dict[str, tuple[threading.Event, list[Message]]] = {}
+        self._waiters_lock = threading.Lock()
         self._request_handler: RequestHandler | None = None
         self._notification_handler: NotificationHandler | None = None
         self._inbox: queue.Queue[Message] = queue.Queue()
@@ -127,7 +140,23 @@ class Agent:
     # -- lifecycle --------------------------------------------------------
 
     def start(self) -> None:
-        """Start the listener and register this agent's endpoint."""
+        """Start receiving and register this agent's endpoint.
+
+        In pull mode the agent registers a *mailbox* (no local listener) and
+        receives by long-polling the broker — NAT-safe. Otherwise it opens a
+        local :class:`TransportServer` the broker/peers dial into.
+        """
+        if self._pull:
+            if self._recv_thread is not None:
+                return
+            self._registry.register(
+                Endpoint(agent_id=self.agent_id, host="mailbox", port=0, mailbox=True)
+            )
+            self._recv_stop.clear()
+            thread = threading.Thread(target=self._recv_loop, daemon=True)
+            thread.start()
+            self._recv_thread = thread
+            return
         if self._server is not None:
             return
         server = TransportServer(self._handle, host=self._host, port=self._port)
@@ -138,13 +167,68 @@ class Agent:
         )
 
     def stop(self) -> None:
-        """Unregister this agent and stop the listener."""
+        """Unregister this agent and stop receiving."""
+        if self._pull:
+            if self._recv_thread is None:
+                return
+            self._recv_stop.set()
+            with contextlib.suppress(AgentNotFoundError):
+                self._registry.unregister(self.agent_id)
+            self._recv_thread.join(timeout=2.0)
+            self._recv_thread = None
+            return
         if self._server is None:
             return
         with contextlib.suppress(AgentNotFoundError):
             self._registry.unregister(self.agent_id)
         self._server.stop()
         self._server = None
+
+    # -- pull (mailbox) receive-loop --------------------------------------
+
+    def _recv_loop(self) -> None:
+        """Long-poll the broker mailbox and dispatch inbound messages."""
+        transport = cast("NetworkedBrokerTransport", self._client)
+        while not self._recv_stop.is_set():
+            try:
+                messages = transport.receive(
+                    self.agent_id,
+                    wait=_PULL_POLL_WAIT,
+                    timeout=_PULL_POLL_WAIT + 10.0,
+                )
+            except TransportTimeoutError:
+                continue
+            except (TransportError, OSError):
+                # Broker briefly unreachable — back off, then retry.
+                self._recv_stop.wait(1.0)
+                continue
+            for message in messages:
+                self._dispatch_pull(message)
+
+    def _dispatch_pull(self, message: Message) -> None:
+        """Route a polled message: resolve a pending reply, or handle it."""
+        corr = message.correlation_id
+        if corr is not None:
+            with self._waiters_lock:
+                waiter = self._waiters.get(corr)
+            if waiter is not None:
+                event, slot = waiter
+                slot.append(message)
+                event.set()
+                return
+        reply = self._handle(message)
+        if reply is not None:
+            # POST the reply back through the broker to the original sender.
+            with contextlib.suppress(Exception):
+                self._client.send(
+                    reply,
+                    Endpoint(
+                        agent_id=reply.metadata.recipient or "",
+                        host="broker",
+                        port=0,
+                    ),
+                    timeout=self._timeout,
+                )
 
     def close(self) -> None:
         """Alias for :meth:`stop`."""
@@ -180,10 +264,39 @@ class Agent:
             ),
             body=dict(body) if body is not None else {},
         )
+        if self._pull:
+            return self._send_request_pull(request, recipient, timeout)
         reply = self._router.route(request, timeout=timeout)
         if reply is None:
             raise DeliveryError(f"no reply received from {recipient!r}")
         return reply
+
+    def _send_request_pull(
+        self, request: Request, recipient: str, timeout: float | None
+    ) -> Message:
+        """Pull-mode request: POST it, then wait for the correlated reply that
+        the receive-loop delivers from this agent's own mailbox."""
+        key = request.message_id
+        event = threading.Event()
+        slot: list[Message] = []
+        with self._waiters_lock:
+            self._waiters[key] = (event, slot)
+        try:
+            # Endpoint is ignored by the broker transport (routes by recipient).
+            self._client.send(
+                request,
+                Endpoint(agent_id=recipient, host="broker", port=0),
+                timeout=self._timeout,
+            )
+            wait_timeout = self._timeout if timeout is None else timeout
+            if not event.wait(wait_timeout):
+                raise TransportTimeoutError(
+                    f"no reply from {recipient!r} within {wait_timeout}s"
+                )
+            return slot[0]
+        finally:
+            with self._waiters_lock:
+                self._waiters.pop(key, None)
 
     def send_notification(
         self,

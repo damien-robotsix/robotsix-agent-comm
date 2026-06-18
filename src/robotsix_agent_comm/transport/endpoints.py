@@ -28,6 +28,10 @@ class Endpoint:
     port: int
     scheme: str = "http"
     path: str = DEFAULT_MESSAGE_PATH
+    #: When True the agent has no dialable listener; the broker holds its
+    #: messages in a mailbox and the agent fetches them via ``GET /messages``
+    #: (NAT-safe pull delivery). host/port are placeholders in this case.
+    mailbox: bool = False
 
     @property
     def base_url(self) -> str:

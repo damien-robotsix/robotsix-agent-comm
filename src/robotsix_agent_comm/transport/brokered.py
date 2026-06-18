@@ -18,6 +18,7 @@ import http.client
 import json
 import ssl
 from typing import Any
+from urllib.parse import urlencode
 
 from ..protocol import Message, ProtocolError, deserialize, serialize
 from .base import Transport
@@ -151,7 +152,9 @@ class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
                 return deserialize(data)
             except ProtocolError as exc:
                 raise TransportError(f"invalid response from broker: {exc}") from exc
-        if status == 204 or not data:
+        # 202 = queued to a mailbox recipient (pull delivery); the reply, if
+        # any, arrives later via the sender's own mailbox (see ``receive``).
+        if status in (202, 204) or not data:
             return None
 
         # 4xx/5xx — try to parse an Error envelope.
@@ -190,6 +193,47 @@ class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
             return False
         finally:
             conn.close()
+
+    def receive(self, agent_id: str, *, wait: float, timeout: float) -> list[Message]:
+        """Long-poll the broker for *agent_id*'s queued mailbox messages.
+
+        Issues ``GET /messages?agent_id=&wait=`` and returns the deserialized
+        messages (empty when the poll times out with nothing queued). The
+        ``agent_id`` query is used when broker auth is disabled; with auth the
+        broker derives the identity from the bearer token. *timeout* must
+        exceed *wait* so the client outlasts the server-side hold.
+        """
+        query = urlencode({"agent_id": agent_id, "wait": wait})
+        path = f"{DEFAULT_MESSAGE_PATH}?{query}"
+        conn = self._connect(timeout)
+        try:
+            conn.request("GET", path, headers=self._auth_headers())
+            response = conn.getresponse()
+            status = response.status
+            data = response.read().decode("utf-8")
+        except TimeoutError as exc:
+            raise TransportTimeoutError(
+                f"poll to broker timed out after {timeout}s"
+            ) from exc
+        except OSError as exc:
+            raise TransportError(f"failed to reach broker: {exc}") from exc
+        finally:
+            conn.close()
+
+        if status != 200:
+            raise TransportError(f"broker GET /messages returned HTTP {status}: {data}")
+        try:
+            parsed = json.loads(data) if data else {}
+        except json.JSONDecodeError as exc:
+            raise TransportError(f"invalid poll response from broker: {exc}") from exc
+        raw_messages = parsed.get("messages", []) if isinstance(parsed, dict) else []
+        out: list[Message] = []
+        for raw in raw_messages:
+            try:
+                out.append(deserialize(raw))
+            except ProtocolError as exc:
+                raise TransportError(f"invalid message from broker: {exc}") from exc
+        return out
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +320,7 @@ class BrokeredRegistry(_BrokerConnectionMixin):
             "scheme": endpoint.scheme,
             "path": endpoint.path,
             "capabilities": {},
+            "mailbox": endpoint.mailbox,
         }
         # ttl_seconds is omitted so the broker uses its default.
         self._request("POST", "/agents", body=body)
