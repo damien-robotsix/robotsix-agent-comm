@@ -22,6 +22,8 @@ from .brokered import (
 from .client import TransportClient
 from .endpoints import Endpoint
 from .errors import (
+    DELIVERY_FAILED,
+    UNKNOWN_RECIPIENT,
     AgentNotFoundError,
     DeliveryError,
     TransportError,
@@ -35,6 +37,7 @@ from .server import TransportServer
 __all__ = [
     "AgentNotFoundError",
     "BrokeredRegistry",
+    "DELIVERY_FAILED",
     "DeliveryError",
     "Endpoint",
     "NetworkedBrokerTransport",
@@ -46,6 +49,7 @@ __all__ = [
     "TransportError",
     "TransportServer",
     "TransportTimeoutError",
+    "UNKNOWN_RECIPIENT",
     "create_transport_pair",
     "retry_call",
 ]

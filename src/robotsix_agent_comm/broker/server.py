@@ -24,6 +24,8 @@ from ..protocol import (
     serialize,
 )
 from ..transport import (
+    DELIVERY_FAILED,
+    UNKNOWN_RECIPIENT,
     AgentNotFoundError,
     DeliveryError,
     Endpoint,
@@ -221,14 +223,14 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             # empty recipient earlier.
             error = Error.to(
                 message,
-                code="unknown_recipient",
+                code=UNKNOWN_RECIPIENT,
                 message=f"unknown recipient: {message.metadata.recipient}",
             )
             return (404, serialize(error))
         except DeliveryError as exc:
             error = Error.to(
                 message,
-                code="delivery_failed",
+                code=DELIVERY_FAILED,
                 message=str(exc),
             )
             return (502, serialize(error))
@@ -688,7 +690,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         except AgentNotFoundError:
             error = Error.to(
                 message,
-                code="unknown_recipient",
+                code=UNKNOWN_RECIPIENT,
                 message=f"unknown recipient: {recipient}",
             )
             self._write_serialized(404, serialize(error))

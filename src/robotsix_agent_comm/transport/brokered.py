@@ -24,6 +24,8 @@ from .base import Transport
 from .client import TransportClient
 from .endpoints import Endpoint
 from .errors import (
+    DELIVERY_FAILED,
+    UNKNOWN_RECIPIENT,
     AgentNotFoundError,
     DeliveryError,
     TransportError,
@@ -36,9 +38,6 @@ from .registry import Registry
 # ---------------------------------------------------------------------------
 
 _JSON_HEADERS = {"Content-Type": "application/json"}
-
-_DELIVERY_FAILED = "delivery_failed"
-_UNKNOWN_RECIPIENT = "unknown_recipient"
 
 
 class _BrokerConnectionMixin:
@@ -160,11 +159,11 @@ class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
             error_msg = deserialize(data)
             if hasattr(error_msg, "body") and isinstance(error_msg.body, dict):
                 code = error_msg.body.get("code", "")
-                if code == _UNKNOWN_RECIPIENT:
+                if code == UNKNOWN_RECIPIENT:
                     raise AgentNotFoundError(
                         f"unknown recipient: {message.metadata.recipient}"
                     )
-                if code == _DELIVERY_FAILED:
+                if code == DELIVERY_FAILED:
                     raise DeliveryError(
                         error_msg.body.get("message", "delivery failed")
                     )

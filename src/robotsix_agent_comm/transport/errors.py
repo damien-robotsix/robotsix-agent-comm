@@ -34,3 +34,9 @@ class DeliveryError(TransportError):
     def __init__(self, message: str, *, cause: BaseException | None = None) -> None:
         super().__init__(message)
         self.cause = cause
+
+
+#: Error code for the ``"delivery_failed"`` error envelope.
+DELIVERY_FAILED: str = "delivery_failed"
+#: Error code for the ``"unknown_recipient"`` error envelope.
+UNKNOWN_RECIPIENT: str = "unknown_recipient"
