@@ -12,9 +12,10 @@ import json
 import ssl
 import threading
 import time
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TextIO, cast
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from ..protocol import (
     Error,
@@ -35,6 +36,9 @@ from ..transport import (
     TransportClient,
 )
 from ..transport.endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH
+
+#: Upper bound on a single ``GET /messages`` long-poll hold (seconds).
+_MAX_POLL_WAIT_SECONDS = 30.0
 
 # ---------------------------------------------------------------------------
 # Private HTTP server subclass
@@ -136,6 +140,13 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
 
     # Audit logging (child 5)
     _audit_logger: _AuditLogger
+
+    # Mailbox / pull delivery: per-agent queues of serialized messages for
+    # agents registered with mailbox=True (no dialable listener — NAT-safe).
+    # Guarded by mailbox_cond, which is also used to wake GET /messages
+    # long-polls when a message is enqueued.
+    mailboxes: dict[str, deque[str]]
+    mailbox_cond: threading.Condition
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +343,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self._write_json(200, {"agents": agents})
             return
 
+        if urlsplit(self.path).path == DEFAULT_MESSAGE_PATH:
+            self._handle_poll(agent_id)
+            return
+
         self._write_error(404, "not found")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -398,6 +413,13 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         port = data.get("port")
         server = self._server()
 
+        # Mailbox (pull) agents have no dialable listener; the broker queues
+        # their messages for GET /messages. host/port are then optional.
+        mailbox_flag = bool(data.get("mailbox", False))
+        if mailbox_flag:
+            host = host if isinstance(host, str) and host else "mailbox"
+            port = port if isinstance(port, int) and 1 <= port <= 65535 else 0
+
         if not isinstance(agent_id, str) or not agent_id:
             self._write_error(
                 400, "agent_id is required and must be a non-empty string"
@@ -437,49 +459,52 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
-        if not isinstance(host, str) or not host:
-            self._write_error(400, "host is required and must be a non-empty string")
-            server._audit_logger.log(
-                "register",
-                agent_id,
-                path="/agents",
-                status=400,
-                detail="missing or invalid host",
-            )
-            return
+        if not mailbox_flag:
+            if not isinstance(host, str) or not host:
+                self._write_error(
+                    400, "host is required and must be a non-empty string"
+                )
+                server._audit_logger.log(
+                    "register",
+                    agent_id,
+                    path="/agents",
+                    status=400,
+                    detail="missing or invalid host",
+                )
+                return
 
-        if len(host) > 253:
-            self._write_error(400, "host must not exceed 253 characters")
-            server._audit_logger.log(
-                "register",
-                agent_id,
-                path="/agents",
-                status=400,
-                detail="host too long",
-            )
-            return
+            if len(host) > 253:
+                self._write_error(400, "host must not exceed 253 characters")
+                server._audit_logger.log(
+                    "register",
+                    agent_id,
+                    path="/agents",
+                    status=400,
+                    detail="host too long",
+                )
+                return
 
-        if not isinstance(port, int):
-            self._write_error(400, "port is required and must be an integer")
-            server._audit_logger.log(
-                "register",
-                agent_id,
-                path="/agents",
-                status=400,
-                detail="port not an integer",
-            )
-            return
+            if not isinstance(port, int):
+                self._write_error(400, "port is required and must be an integer")
+                server._audit_logger.log(
+                    "register",
+                    agent_id,
+                    path="/agents",
+                    status=400,
+                    detail="port not an integer",
+                )
+                return
 
-        if not 1 <= port <= 65535:
-            self._write_error(400, "port must be between 1 and 65535")
-            server._audit_logger.log(
-                "register",
-                agent_id,
-                path="/agents",
-                status=400,
-                detail="port out of range",
-            )
-            return
+            if not 1 <= port <= 65535:
+                self._write_error(400, "port must be between 1 and 65535")
+                server._audit_logger.log(
+                    "register",
+                    agent_id,
+                    path="/agents",
+                    status=400,
+                    detail="port out of range",
+                )
+                return
 
         # -- scheme validation --
         if "scheme" in data:
@@ -533,12 +558,17 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         else:
             caps = {}
 
+        # host/port are validated str/int for endpoint agents, and defaulted to
+        # str/int above for mailbox agents — narrow for the type checker.
+        assert isinstance(host, str)
+        assert isinstance(port, int)
         endpoint = Endpoint(
             agent_id=agent_id,
             host=host,
             port=port,
             scheme=scheme,
             path=path,
+            mailbox=mailbox_flag,
         )
 
         # -- ttl_seconds validation (before registration so we can reject) --
@@ -562,6 +592,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             is_new = True
 
         server.registry.register(endpoint)
+
+        if mailbox_flag:
+            with server.mailbox_cond:
+                server.mailboxes.setdefault(agent_id, deque())
 
         with server.capabilities_lock:
             server.capabilities[agent_id] = caps
@@ -626,6 +660,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             server.last_heartbeat.pop(agent_id, None)
             server.ttl_seconds.pop(agent_id, None)
 
+        with server.mailbox_cond:
+            server.mailboxes.pop(agent_id, None)
+            server.mailbox_cond.notify_all()
+
         server._audit_logger.log(
             "deregister",
             agent_id,
@@ -686,7 +724,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         # Check that the recipient is registered (before routing).
         server = self._server()
         try:
-            server.registry.lookup(recipient)
+            recipient_ep = server.registry.lookup(recipient)
         except AgentNotFoundError:
             error = Error.to(
                 message,
@@ -703,6 +741,25 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
+        # Mailbox (pull) recipient: enqueue and let the agent fetch it via
+        # GET /messages. NAT-safe — the broker never dials the recipient.
+        if recipient_ep.mailbox:
+            with server.mailbox_cond:
+                server.mailboxes.setdefault(recipient, deque()).append(
+                    serialize(message)
+                )
+                server.mailbox_cond.notify_all()
+            server._audit_logger.log(
+                "send",
+                self._authenticated_agent_id,
+                path="/messages",
+                status=202,
+                detail=f"queued for mailbox {recipient}",
+            )
+            self.send_response(202)
+            self.end_headers()
+            return
+
         http_status, body_str = self._route_send(message)
         server._audit_logger.log(
             "send",
@@ -716,6 +773,62 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(http_status)
             self.end_headers()
+
+    def _handle_poll(self, agent_id: str) -> None:
+        """Handle ``GET /messages`` — long-poll the caller's mailbox.
+
+        The caller is identified by its auth token (*agent_id*); when auth is
+        disabled (*agent_id* is ``""``), an explicit ``?agent_id=`` query
+        parameter is required. Blocks up to ``?wait=<seconds>`` (capped by
+        :data:`_MAX_POLL_WAIT_SECONDS`) until a message is queued, then returns
+        ``{"messages": [<serialized>, ...]}`` (possibly empty on timeout).
+        """
+        server = self._server()
+        query = parse_qs(urlsplit(self.path).query)
+        poll_id = agent_id or query.get("agent_id", [""])[0]
+        if not poll_id:
+            self._write_error(400, "agent_id required (auth token or ?agent_id=)")
+            return
+
+        # A poll counts as a heartbeat so a pull agent stays registered while
+        # it is actively listening (it only POSTs /agents once, at start).
+        with server.heartbeat_lock:
+            if poll_id in server.ttl_seconds:
+                server.last_heartbeat[poll_id] = time.monotonic()
+
+        try:
+            wait = max(
+                0.0, min(_MAX_POLL_WAIT_SECONDS, float(query.get("wait", ["25"])[0]))
+            )
+        except ValueError:
+            wait = 25.0
+
+        with server.mailbox_cond:
+            mbox = server.mailboxes.get(poll_id)
+            if mbox is None:
+                # Caller is not registered as a mailbox agent — nothing to do.
+                self._write_json(200, {"messages": []})
+                return
+            deadline = time.monotonic() + wait
+            while not mbox:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                server.mailbox_cond.wait(remaining)
+                mbox = server.mailboxes.get(poll_id)
+                if mbox is None:  # evicted while waiting
+                    self._write_json(200, {"messages": []})
+                    return
+            messages = list(mbox)
+            mbox.clear()
+        server._audit_logger.log(
+            "poll",
+            poll_id,
+            path="/messages",
+            status=200,
+            detail=f"delivered={len(messages)}",
+        )
+        self._write_json(200, {"messages": messages})
 
     def log_message(self, _format: str, *_args: object) -> None:
         """Silence the default stderr request logging."""
@@ -816,6 +929,10 @@ class BrokerServer:
 
         # -- Audit logging --
         self._server._audit_logger = _AuditLogger(audit_log_path)
+
+        # -- Mailbox / pull delivery --
+        self._server.mailboxes = {}
+        self._server.mailbox_cond = threading.Condition()
 
         # -- Router for message delivery --
         retry_policy = (
@@ -921,6 +1038,10 @@ class BrokerServer:
             with server.heartbeat_lock:
                 server.last_heartbeat.pop(agent_id, None)
                 server.ttl_seconds.pop(agent_id, None)
+
+            with server.mailbox_cond:
+                server.mailboxes.pop(agent_id, None)
+                server.mailbox_cond.notify_all()
 
     def close(self) -> None:
         """Alias for :meth:`stop`."""
