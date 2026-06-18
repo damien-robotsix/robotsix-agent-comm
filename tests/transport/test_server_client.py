@@ -26,6 +26,7 @@ from robotsix_agent_comm.transport import (
     TransportError,
     TransportServer,
 )
+from robotsix_agent_comm.transport.endpoints import DEFAULT_MESSAGE_PATH
 
 
 def _echo_handler(
@@ -147,7 +148,7 @@ def test_malformed_body_returns_4xx(
     server, _ = running_server
     conn = http.client.HTTPConnection(server.host, server.port, timeout=1.0)
     try:
-        conn.request("POST", "/messages", body=b"{not json")
+        conn.request("POST", DEFAULT_MESSAGE_PATH, body=b"{not json")
         response = conn.getresponse()
         body = response.read()
     finally:

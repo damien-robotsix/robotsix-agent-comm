@@ -34,7 +34,7 @@ from ..transport import (
     Router,
     TransportClient,
 )
-from ..transport.endpoints import HEALTH_PATH
+from ..transport.endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH
 
 # ---------------------------------------------------------------------------
 # Private HTTP server subclass
@@ -343,7 +343,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self._handle_register()
             return
 
-        if self.path == "/messages":
+        if self.path == DEFAULT_MESSAGE_PATH:
             self._handle_send()
             return
 

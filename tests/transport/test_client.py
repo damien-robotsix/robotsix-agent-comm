@@ -19,7 +19,7 @@ from robotsix_agent_comm.protocol import (
     serialize,
 )
 from robotsix_agent_comm.transport.client import TransportClient
-from robotsix_agent_comm.transport.endpoints import Endpoint
+from robotsix_agent_comm.transport.endpoints import HEALTH_PATH, Endpoint
 from robotsix_agent_comm.transport.errors import TransportError, TransportTimeoutError
 
 
@@ -223,7 +223,7 @@ def test_health_check_returns_true_on_200(
         result = client.health_check(endpoint, timeout=5.0)
 
     assert result is True
-    mock_conn.request.assert_called_once_with("GET", "/health")
+    mock_conn.request.assert_called_once_with("GET", HEALTH_PATH)
     mock_conn.close.assert_called_once()
 
 

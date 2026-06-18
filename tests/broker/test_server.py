@@ -30,7 +30,7 @@ from robotsix_agent_comm.protocol import (
     serialize,
 )
 from robotsix_agent_comm.transport import AgentNotFoundError, Registry
-from robotsix_agent_comm.transport.endpoints import HEALTH_PATH
+from robotsix_agent_comm.transport.endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH
 
 # ---------------------------------------------------------------------------
 # Helper: construct a handler bypassing BaseHTTPRequestHandler.__init__
@@ -222,7 +222,7 @@ class TestRegisterEndpoint:
 
         endpoint = handler.server.registry.lookup("agent-d")
         assert endpoint.scheme == "http"
-        assert endpoint.path == "/messages"
+        assert endpoint.path == DEFAULT_MESSAGE_PATH
 
 
 # ---------------------------------------------------------------------------
@@ -369,7 +369,7 @@ class TestSendEndpoint:
         )
         router.route.return_value = expected_reply
 
-        handler = _make_handler(server=server, path="/messages")
+        handler = _make_handler(server=server, path=DEFAULT_MESSAGE_PATH)
         _set_body(handler, raw)
         handler.do_POST()
 
@@ -395,7 +395,7 @@ class TestSendEndpoint:
             Endpoint(agent_id="agent-b", host="127.0.0.1", port=9001)
         )
 
-        handler = _make_handler(server=server, path="/messages")
+        handler = _make_handler(server=server, path=DEFAULT_MESSAGE_PATH)
         _set_body(handler, raw)
         handler.do_POST()
 
@@ -409,7 +409,7 @@ class TestSendEndpoint:
         )
         raw = serialize(request)
 
-        handler = _make_handler(path="/messages")
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH)
         _set_body(handler, raw)
         handler.do_POST()
 
@@ -425,7 +425,7 @@ class TestSendEndpoint:
         )
         raw = serialize(request)
 
-        handler = _make_handler(path="/messages")
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH)
         _set_body(handler, raw)
         handler.do_POST()
 
@@ -433,7 +433,7 @@ class TestSendEndpoint:
         assert "recipient" in _body_written(handler)["error"].lower()
 
     def test_malformed_json_body_returns_400(self) -> None:
-        handler = _make_handler(path="/messages")
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH)
         _set_body(handler, "{not valid")
         handler.do_POST()
 
@@ -458,7 +458,7 @@ class TestSendEndpoint:
 
         server.registry.register(Endpoint(agent_id="agent-b", host="127.0.0.1", port=1))
 
-        handler = _make_handler(server=server, path="/messages")
+        handler = _make_handler(server=server, path=DEFAULT_MESSAGE_PATH)
         _set_body(handler, raw)
         handler.do_POST()
 
@@ -915,7 +915,7 @@ class TestAuthDisabled:
         )
         server.router = router
 
-        handler = _make_handler(server=server, path="/messages")
+        handler = _make_handler(server=server, path=DEFAULT_MESSAGE_PATH)
         _set_body(handler, raw)
         handler.do_POST()
 
@@ -969,7 +969,7 @@ class TestAuthMissingHeader:
 
     def test_post_messages_missing_header(self) -> None:
         server = _make_server_with_tokens(self.TOKENS)
-        handler = _make_handler(path="/messages", server=server)
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server)
         request = Request(
             metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
             body={"action": "ping"},
@@ -1032,7 +1032,7 @@ class TestAuthInvalidToken:
         )
         raw = serialize(request)
         headers = _auth_headers(token="bad-token", body_bytes=raw.encode("utf-8"))
-        handler = _make_handler(path="/messages", server=server, headers=headers)
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, headers=headers)
         handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
         handler.send_response.assert_called_once_with(401)
@@ -1111,7 +1111,7 @@ class TestAuthValidToken:
             Endpoint(agent_id="agent-b", host="127.0.0.1", port=9001)
         )
 
-        handler = _make_handler(path="/messages", server=server, headers=headers)
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, headers=headers)
         handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
 
@@ -1196,7 +1196,7 @@ class TestSendAntiSpoofing:
         )
         raw = serialize(request)
         headers = _auth_headers(token="tok-a", body_bytes=raw.encode("utf-8"))
-        handler = _make_handler(path="/messages", server=server, headers=headers)
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, headers=headers)
         handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
 
@@ -1220,7 +1220,7 @@ class TestSendAntiSpoofing:
         )
         raw = serialize(request)
         headers = _auth_headers(token="tok-a", body_bytes=raw.encode("utf-8"))
-        handler = _make_handler(path="/messages", server=server, headers=headers)
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, headers=headers)
         handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
 
@@ -1246,7 +1246,7 @@ class TestSendAntiSpoofing:
             body={"action": "ping"},
         )
         raw = serialize(request)
-        handler = _make_handler(path="/messages", server=server)
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server)
         _set_body(handler, raw)
         handler.do_POST()
 
@@ -1292,7 +1292,7 @@ class TestMaxBodySize:
         assert handler.server.max_body_size == 1_048_576
 
     def test_body_exceeds_limit_on_send_returns_413(self) -> None:
-        handler = _make_handler(path="/messages", max_body_size=10)
+        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, max_body_size=10)
         body = serialize(
             Request(
                 metadata=Metadata.create(sender="a", recipient="b"),
@@ -1687,14 +1687,14 @@ class TestAuditLogging:
             body={"action": "ping"},
         )
         raw = serialize(request)
-        h = _make_handler(path="/messages", server=server, _audit_logger=mock_logger)
+        h = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, _audit_logger=mock_logger)
         _set_body(h, raw)
         h.do_POST()
 
         mock_logger.log.assert_called()
         success_call = mock_logger.log.call_args_list[-1]
         assert success_call[0][0] == "send"
-        assert success_call[1]["path"] == "/messages"
+        assert success_call[1]["path"] == DEFAULT_MESSAGE_PATH
         assert "recipient=agent-b" in str(success_call[1]["detail"])
 
     def test_validation_error_logs_audit_entry(self) -> None:

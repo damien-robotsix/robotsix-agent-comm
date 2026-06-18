@@ -22,7 +22,7 @@ from typing import Any
 from ..protocol import Message, ProtocolError, deserialize, serialize
 from .base import Transport
 from .client import TransportClient
-from .endpoints import Endpoint
+from .endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH, Endpoint
 from .errors import (
     DELIVERY_FAILED,
     UNKNOWN_RECIPIENT,
@@ -133,7 +133,7 @@ class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
         headers = {**_JSON_HEADERS, **self._auth_headers()}
         conn = self._connect(timeout)
         try:
-            conn.request("POST", "/messages", body=body, headers=headers)
+            conn.request("POST", DEFAULT_MESSAGE_PATH, body=body, headers=headers)
             response = conn.getresponse()
             status = response.status
             data = response.read().decode("utf-8")
@@ -182,7 +182,7 @@ class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
         headers = self._auth_headers()
         conn = self._connect(timeout)
         try:
-            conn.request("GET", "/health", headers=headers)
+            conn.request("GET", HEALTH_PATH, headers=headers)
             response = conn.getresponse()
             response.read()
             return response.status == 200
