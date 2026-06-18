@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import http.client
 import json
-import os
 import signal
 import ssl
 import threading
@@ -22,34 +21,7 @@ except ImportError:
 from robotsix_agent_comm.broker import BrokerConfig, BrokerServer, build_broker
 from robotsix_agent_comm.broker.config import _file_readable
 from robotsix_agent_comm.broker.service import main
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _write_certs_to_dir(tmpdir: str) -> tuple[str, str, str]:
-    """Generate a self-signed cert via trustme and write PEM files.
-
-    Returns ``(ca_cert_path, server_cert_path, server_key_path)``.
-    Mirrors ``tests/test_end_to_end.py::_write_certs_to_dir``.
-    """
-    ca = trustme.CA()
-    server_cert = ca.issue_cert("127.0.0.1")
-
-    ca_path = os.path.join(tmpdir, "ca.pem")
-    cert_path = os.path.join(tmpdir, "server.pem")
-    key_path = os.path.join(tmpdir, "server.key")
-
-    with open(ca_path, "wb") as f:
-        f.write(ca.cert_pem.bytes())
-    with open(cert_path, "wb") as f:
-        f.write(server_cert.cert_chain_pems[0].bytes())
-    with open(key_path, "wb") as f:
-        f.write(server_cert.private_key_pem.bytes())
-
-    return ca_path, cert_path, key_path
-
+from tests.helpers import _write_certs_to_dir
 
 # ---------------------------------------------------------------------------
 # build_broker tests
