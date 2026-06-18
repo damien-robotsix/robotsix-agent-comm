@@ -1032,7 +1032,9 @@ class TestAuthInvalidToken:
         )
         raw = serialize(request)
         headers = _auth_headers(token="bad-token", body_bytes=raw.encode("utf-8"))
-        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, headers=headers)
+        handler = _make_handler(
+            path=DEFAULT_MESSAGE_PATH, server=server, headers=headers
+        )
         handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
         handler.send_response.assert_called_once_with(401)
@@ -1111,7 +1113,9 @@ class TestAuthValidToken:
             Endpoint(agent_id="agent-b", host="127.0.0.1", port=9001)
         )
 
-        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, headers=headers)
+        handler = _make_handler(
+            path=DEFAULT_MESSAGE_PATH, server=server, headers=headers
+        )
         handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
 
@@ -1196,7 +1200,9 @@ class TestSendAntiSpoofing:
         )
         raw = serialize(request)
         headers = _auth_headers(token="tok-a", body_bytes=raw.encode("utf-8"))
-        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, headers=headers)
+        handler = _make_handler(
+            path=DEFAULT_MESSAGE_PATH, server=server, headers=headers
+        )
         handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
 
@@ -1220,7 +1226,9 @@ class TestSendAntiSpoofing:
         )
         raw = serialize(request)
         headers = _auth_headers(token="tok-a", body_bytes=raw.encode("utf-8"))
-        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, headers=headers)
+        handler = _make_handler(
+            path=DEFAULT_MESSAGE_PATH, server=server, headers=headers
+        )
         handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
 
@@ -1687,7 +1695,9 @@ class TestAuditLogging:
             body={"action": "ping"},
         )
         raw = serialize(request)
-        h = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server, _audit_logger=mock_logger)
+        h = _make_handler(
+            path=DEFAULT_MESSAGE_PATH, server=server, _audit_logger=mock_logger
+        )
         _set_body(h, raw)
         h.do_POST()
 

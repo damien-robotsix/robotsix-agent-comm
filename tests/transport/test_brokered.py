@@ -360,7 +360,8 @@ class TestNetworkedBrokerTransportSend:
         fake_conn = mock_conn_cls.return_value
         method, path, _body, _headers = fake_conn._request_args
         assert method == "POST"
-        assert path == DEFAULT_MESSAGE_PATH  # always DEFAULT_MESSAGE_PATH, never /custom
+        # always DEFAULT_MESSAGE_PATH, never /custom
+        assert path == DEFAULT_MESSAGE_PATH
 
 
 # ===================================================================
