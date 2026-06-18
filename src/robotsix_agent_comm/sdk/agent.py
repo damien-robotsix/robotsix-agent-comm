@@ -26,6 +26,7 @@ from ..protocol import (
 )
 from ..transport import (
     AgentNotFoundError,
+    BrokeredRegistry,
     DeliveryError,
     Endpoint,
     NetworkedBrokerTransport,
@@ -61,7 +62,7 @@ class Agent:
     def __init__(
         self,
         agent_id: str,
-        registry: Registry,
+        registry: Registry | BrokeredRegistry,
         *,
         host: str = "127.0.0.1",
         port: int = 0,
