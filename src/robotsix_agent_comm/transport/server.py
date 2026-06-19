@@ -122,10 +122,6 @@ class TransportServer:
             self._thread.join()
             self._thread = None
 
-    def close(self) -> None:
-        """Alias for :meth:`stop`."""
-        self.stop()
-
     def __enter__(self) -> TransportServer:
         self.start()
         return self
