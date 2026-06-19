@@ -726,6 +726,33 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self.send_response(http_status)
             self.end_headers()
 
+    def _auto_register_mailbox(self, agent_id: str) -> None:
+        """(Re)create a mailbox registration for a polling pull agent the broker
+        has no record of — e.g. after a restart cleared the in-memory registry.
+
+        Mirrors the mailbox path of ``POST /agents`` (idempotent): registry
+        entry + empty queue + default TTL/heartbeat. Each lock is taken
+        independently (never nested) to avoid deadlocking with the poll path.
+        """
+        server = self._server()
+        server.registry.register(
+            Endpoint(agent_id=agent_id, host="mailbox", port=0, mailbox=True)
+        )
+        with server.mailbox_cond:
+            server.mailboxes.setdefault(agent_id, deque())
+        with server.capabilities_lock:
+            server.capabilities.setdefault(agent_id, {})
+        with server.heartbeat_lock:
+            server.last_heartbeat[agent_id] = time.monotonic()
+            server.ttl_seconds.setdefault(agent_id, server.default_ttl_seconds)
+        server._audit_logger.log(
+            "auto-register",
+            agent_id,
+            path="/messages",
+            status=200,
+            detail="mailbox re-registered on poll",
+        )
+
     def _handle_poll(self, agent_id: str) -> None:
         """Handle ``GET /messages`` — long-poll the caller's mailbox.
 
@@ -741,6 +768,15 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         if not poll_id:
             self._write_error(400, "agent_id required (auth token or ?agent_id=)")
             return
+
+        # Self-heal: the broker registry is in-memory, so a restart (image
+        # update, cert renewal) loses every registration — but pull agents keep
+        # long-polling with a valid token and only POST /agents once, at start.
+        # Re-create the caller's mailbox on poll so senders can reach it again
+        # without a manual agent restart. When auth is enabled ``poll_id`` is the
+        # token-authenticated principal, so a caller can only (re)register itself.
+        if poll_id not in server.mailboxes:
+            self._auto_register_mailbox(poll_id)
 
         # A poll counts as a heartbeat so a pull agent stays registered while
         # it is actively listening (it only POSTs /agents once, at start).
