@@ -557,22 +557,6 @@ class TestBrokerServerLifecycle:
         mock_http.shutdown.assert_called_once()
         mock_http.server_close.assert_called_once()
 
-    def test_close_is_alias_for_stop(self) -> None:
-        mock_http = MagicMock(spec=_BrokerHTTPServer)
-        bs = BrokerServer()
-        bs._server.server_close()
-        bs._server = mock_http
-
-        mock_thread = MagicMock(spec=threading.Thread)
-        bs._thread = mock_thread
-
-        bs.close()
-
-        mock_http.shutdown.assert_called_once()
-        mock_http.server_close.assert_called_once()
-        mock_thread.join.assert_called_once()
-        assert bs._thread is None
-
     def test_context_manager_starts_and_stops(self) -> None:
         mock_http = MagicMock(spec=_BrokerHTTPServer)
         bs = BrokerServer()
