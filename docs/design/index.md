@@ -71,10 +71,7 @@ the one beneath it:
 ```
 
 All four layers are implemented and are stdlib-only (no third-party
-runtime dependencies). The separate **Chat** module
-(`src/robotsix_agent_comm/chat/`) provides an SSE server for human
-interaction on top of the Agent API; it depends on **Starlette** and
-**uvicorn**.
+runtime dependencies).
 
 ### Data flow
 
@@ -197,7 +194,7 @@ The four core layers (Protocol, Transport, Broker/Router, Client API)
 use only the standard library: `asyncio` and `queue` for the in-process
 transport's message passing and concurrency, `http.server` and
 `http.client` for the network transport, and `json` (already used by
-the protocol layer) for serialization. The **Chat** SSE server
-(`src/robotsix_agent_comm/chat/`) is the one module with third-party
-runtime dependencies — it uses **Starlette** as its ASGI framework and
-**uvicorn** as its server.
+the protocol layer) for serialization. The **Chat** SSE server (extracted to the separate
+[`robotsix-chat`](https://github.com/damien-robotsix/robotsix-chat)
+package) was the one module with third-party runtime dependencies — it
+uses **Starlette** as its ASGI framework and **uvicorn** as its server.
