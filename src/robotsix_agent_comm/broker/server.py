@@ -171,6 +171,13 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
     def _write_error(self, status: int, message: str) -> None:
         self._write_json(status, {"error": message})
 
+    def _reject(self, status: int, detail: str, agent_id: str = "unknown") -> None:
+        """Write an error response and log the rejection."""
+        self._write_error(status, detail)
+        self._server()._audit_logger.log(
+            "register", agent_id, path="/agents", status=status, detail=detail
+        )
+
     def _write_serialized(
         self, status: int, payload: str, content_type: str = "application/json"
     ) -> None:
@@ -387,25 +394,11 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         try:
             data = json.loads(raw)
         except (json.JSONDecodeError, ValueError):
-            self._write_error(400, "invalid JSON body")
-            self._server()._audit_logger.log(
-                "register",
-                "unknown",
-                path="/agents",
-                status=400,
-                detail="invalid JSON body",
-            )
+            self._reject(400, "invalid JSON body")
             return
 
         if not isinstance(data, dict):
-            self._write_error(400, "body must be a JSON object")
-            self._server()._audit_logger.log(
-                "register",
-                "unknown",
-                path="/agents",
-                status=400,
-                detail="body is not a JSON object",
-            )
+            self._reject(400, "body must be a JSON object")
             return
 
         agent_id = data.get("agent_id")
@@ -421,26 +414,14 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             port = port if isinstance(port, int) and 1 <= port <= 65535 else 0
 
         if not isinstance(agent_id, str) or not agent_id:
-            self._write_error(
-                400, "agent_id is required and must be a non-empty string"
-            )
-            server._audit_logger.log(
-                "register",
-                "unknown",
-                path="/agents",
-                status=400,
-                detail="missing or invalid agent_id",
-            )
+            self._reject(400, "agent_id is required and must be a non-empty string")
             return
 
         if len(agent_id) > 255:
-            self._write_error(400, "agent_id must not exceed 255 characters")
-            server._audit_logger.log(
-                "register",
-                agent_id,
-                path="/agents",
-                status=400,
-                detail="agent_id too long",
+            self._reject(
+                400,
+                "agent_id must not exceed 255 characters",
+                agent_id=agent_id,
             )
             return
 
@@ -449,60 +430,43 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self._authenticated_agent_id != ""
             and agent_id != self._authenticated_agent_id
         ):
-            self._write_error(403, "agent_id does not match token")
-            server._audit_logger.log(
-                "register",
-                self._authenticated_agent_id,
-                path="/agents",
-                status=403,
-                detail="agent_id does not match token",
+            self._reject(
+                403,
+                "agent_id does not match token",
+                agent_id=self._authenticated_agent_id,
             )
             return
 
         if not mailbox_flag:
             if not isinstance(host, str) or not host:
-                self._write_error(
-                    400, "host is required and must be a non-empty string"
-                )
-                server._audit_logger.log(
-                    "register",
-                    agent_id,
-                    path="/agents",
-                    status=400,
-                    detail="missing or invalid host",
+                self._reject(
+                    400,
+                    "host is required and must be a non-empty string",
+                    agent_id=agent_id,
                 )
                 return
 
             if len(host) > 253:
-                self._write_error(400, "host must not exceed 253 characters")
-                server._audit_logger.log(
-                    "register",
-                    agent_id,
-                    path="/agents",
-                    status=400,
-                    detail="host too long",
+                self._reject(
+                    400,
+                    "host must not exceed 253 characters",
+                    agent_id=agent_id,
                 )
                 return
 
             if not isinstance(port, int):
-                self._write_error(400, "port is required and must be an integer")
-                server._audit_logger.log(
-                    "register",
-                    agent_id,
-                    path="/agents",
-                    status=400,
-                    detail="port not an integer",
+                self._reject(
+                    400,
+                    "port is required and must be an integer",
+                    agent_id=agent_id,
                 )
                 return
 
             if not 1 <= port <= 65535:
-                self._write_error(400, "port must be between 1 and 65535")
-                server._audit_logger.log(
-                    "register",
-                    agent_id,
-                    path="/agents",
-                    status=400,
-                    detail="port out of range",
+                self._reject(
+                    400,
+                    "port must be between 1 and 65535",
+                    agent_id=agent_id,
                 )
                 return
 
@@ -510,13 +474,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         if "scheme" in data:
             scheme_raw = data["scheme"]
             if not isinstance(scheme_raw, str) or scheme_raw not in ("http", "https"):
-                self._write_error(400, "scheme must be 'http' or 'https'")
-                server._audit_logger.log(
-                    "register",
-                    agent_id,
-                    path="/agents",
-                    status=400,
-                    detail="invalid scheme",
+                self._reject(
+                    400,
+                    "scheme must be 'http' or 'https'",
+                    agent_id=agent_id,
                 )
                 return
             scheme = scheme_raw
@@ -527,13 +488,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         if "path" in data:
             path_raw = data["path"]
             if not isinstance(path_raw, str) or not path_raw.startswith("/"):
-                self._write_error(400, "path must be a string starting with '/'")
-                server._audit_logger.log(
-                    "register",
-                    agent_id,
-                    path="/agents",
-                    status=400,
-                    detail="invalid path",
+                self._reject(
+                    400,
+                    "path must be a string starting with '/'",
+                    agent_id=agent_id,
                 )
                 return
             path = path_raw
@@ -545,13 +503,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         caps: dict[str, object] = {}
         if "capabilities" in data:
             if not isinstance(capabilities, dict):
-                self._write_error(400, "capabilities must be a JSON object")
-                server._audit_logger.log(
-                    "register",
-                    agent_id,
-                    path="/agents",
-                    status=400,
-                    detail="capabilities not a dict",
+                self._reject(
+                    400,
+                    "capabilities must be a JSON object",
+                    agent_id=agent_id,
                 )
                 return
             caps = dict(capabilities)
@@ -574,13 +529,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         # -- ttl_seconds validation (before registration so we can reject) --
         ttl_val = data.get("ttl_seconds")
         if "ttl_seconds" in data and (not isinstance(ttl_val, int) or ttl_val < 0):
-            self._write_error(400, "ttl_seconds must be a non-negative integer")
-            server._audit_logger.log(
-                "register",
-                agent_id,
-                path="/agents",
-                status=400,
-                detail="invalid ttl_seconds",
+            self._reject(
+                400,
+                "ttl_seconds must be a non-negative integer",
+                agent_id=agent_id,
             )
             return
 
