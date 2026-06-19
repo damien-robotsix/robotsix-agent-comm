@@ -926,7 +926,11 @@ class TestAuth:
     # -- GET /health --------------------------------------------------------
 
     def test_get_health(
-        self, tokens, make_headers, expect_success, error_substr
+        self,
+        tokens: dict[str, str] | None,
+        make_headers: Any,
+        expect_success: bool,
+        error_substr: str | None,
     ) -> None:
         handler = self._build_handler(tokens, make_headers, path=HEALTH_PATH)
         handler.do_GET()
@@ -940,7 +944,11 @@ class TestAuth:
     # -- GET /agents --------------------------------------------------------
 
     def test_get_agents(
-        self, tokens, make_headers, expect_success, error_substr
+        self,
+        tokens: dict[str, str] | None,
+        make_headers: Any,
+        expect_success: bool,
+        error_substr: str | None,
     ) -> None:
         handler = self._build_handler(tokens, make_headers, path="/agents")
         handler.do_GET()
@@ -954,7 +962,11 @@ class TestAuth:
     # -- POST /agents -------------------------------------------------------
 
     def test_post_agents(
-        self, tokens, make_headers, expect_success, error_substr
+        self,
+        tokens: dict[str, str] | None,
+        make_headers: Any,
+        expect_success: bool,
+        error_substr: str | None,
     ) -> None:
         body = json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000})
         handler = self._build_handler(
@@ -971,7 +983,11 @@ class TestAuth:
     # -- DELETE /agents/{id} ------------------------------------------------
 
     def test_delete_agents(
-        self, tokens, make_headers, expect_success, error_substr
+        self,
+        tokens: dict[str, str] | None,
+        make_headers: Any,
+        expect_success: bool,
+        error_substr: str | None,
     ) -> None:
         server = self._build_server(tokens)
 
@@ -1008,7 +1024,11 @@ class TestAuth:
     # -- POST /messages -----------------------------------------------------
 
     def test_post_messages(
-        self, tokens, make_headers, expect_success, error_substr
+        self,
+        tokens: dict[str, str] | None,
+        make_headers: Any,
+        expect_success: bool,
+        error_substr: str | None,
     ) -> None:
         request = Request(
             metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
