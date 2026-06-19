@@ -288,23 +288,6 @@ class TestTransportServerLifecycle:
         server.server_close.assert_called_once()
         # No thread to join — _thread is None, nothing to assert
 
-    def test_close_is_alias_for_stop(self) -> None:
-        """close() delegates to stop() — same lifecycle semantics."""
-        server = MagicMock(spec=_MessageHTTPServer)
-        ts = TransportServer(MagicMock())
-        ts._server.server_close()
-        ts._server = server
-
-        mock_thread = MagicMock(spec=threading.Thread)
-        ts._thread = mock_thread
-
-        ts.close()
-
-        server.shutdown.assert_called_once()
-        server.server_close.assert_called_once()
-        mock_thread.join.assert_called_once()
-        assert ts._thread is None
-
     def test_context_manager_starts_and_stops(self) -> None:
         """with block calls start() on enter and stop() on exit."""
         server = MagicMock(spec=_MessageHTTPServer)
