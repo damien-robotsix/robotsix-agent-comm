@@ -9,9 +9,11 @@ lower layers unchanged.
 from __future__ import annotations
 
 from .agent import Agent, NotificationHandler, RequestHandler
+from .brokered import BrokeredAgent
 
 __all__ = [
     "Agent",
+    "BrokeredAgent",
     "NotificationHandler",
     "RequestHandler",
 ]
