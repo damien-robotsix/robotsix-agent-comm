@@ -76,6 +76,7 @@ modules:
     paths:
       - src/robotsix_agent_comm/broker/*.py
       - tests/broker/*.py
+      - docs/broker/*.md
     dependencies:
       - protocol
       - transport
