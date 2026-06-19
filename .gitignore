@@ -13,6 +13,9 @@ dist/
 build/
 *.egg-info/
 
+# Scratch files
+scratch_*
+
 # Tool caches
 .mypy_cache/
 .ruff_cache/
