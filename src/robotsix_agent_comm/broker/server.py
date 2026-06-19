@@ -1043,10 +1043,6 @@ class BrokerServer:
                 server.mailboxes.pop(agent_id, None)
                 server.mailbox_cond.notify_all()
 
-    def close(self) -> None:
-        """Alias for :meth:`stop`."""
-        self.stop()
-
     def __enter__(self) -> BrokerServer:
         self.start()
         return self
