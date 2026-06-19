@@ -252,10 +252,6 @@ class Agent:
                     timeout=self._timeout,
                 )
 
-    def close(self) -> None:
-        """Alias for :meth:`stop`."""
-        self.stop()
-
     def __enter__(self) -> Agent:
         self.start()
         return self

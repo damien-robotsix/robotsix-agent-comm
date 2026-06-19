@@ -15,7 +15,7 @@ snippet below mirrors a runnable script under
 
 An `Agent` is bound to one `agent_id` and injected with a shared `Registry`.
 Calling `start()` binds an ephemeral port (`port=0`), starts a listener, and
-registers the agent's endpoint; `stop()`/`close()` reverse this. The agent is
+registers the agent's endpoint; `stop()` reverse this. The agent is
 also a context manager.
 
 ```python
