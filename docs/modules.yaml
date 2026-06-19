@@ -18,6 +18,7 @@ modules:
       - src/robotsix_agent_comm/py.typed
       - tests/__init__.py
       - tests/test_smoke.py
+      - tests/helpers.py
     dependencies:
       - protocol
       - transport
