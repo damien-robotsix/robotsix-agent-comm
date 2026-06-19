@@ -13,5 +13,5 @@ following sections:
   pre-publication checklist.
 - [Decisions](decisions/0001-stdlib-first.md) — Architecture Decision
   Records (ADRs).
-- [Contributing](CONTRIBUTING.md) — development setup, coding
+- [Contributing](../CONTRIBUTING.md) — development setup, coding
   conventions, and how to contribute.
