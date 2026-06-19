@@ -15,7 +15,7 @@ nav:
   - Home: index.md
   - Changelog: CHANGELOG.md
   - Contributing: CONTRIBUTING.md
-  - Deployment: deployment/index.md
+  - Broker deployment: broker/deployment.md
   - Design: design/index.md
   - API reference: api/index.md
   - Tutorials: tutorials/index.md
