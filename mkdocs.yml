@@ -14,6 +14,7 @@ plugins:
 nav:
   - Home: index.md
   - Changelog: CHANGELOG.md
+  - Contributing: CONTRIBUTING.md
   - Deployment: deployment/index.md
   - Design: design/index.md
   - API reference: api/index.md
