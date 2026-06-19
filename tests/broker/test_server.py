@@ -858,275 +858,193 @@ def _make_server_with_tokens(tokens: dict[str, str]) -> Any:
 
 
 # ======================================================================
-# Auth tests — disabled
+# Auth tests — parametrized
 # ======================================================================
 
 
-class TestAuthDisabled:
-    """When ``agent_tokens`` is ``None``, all endpoints work without auth."""
+@pytest.mark.parametrize(
+    "tokens,make_headers,expect_success,error_substr",
+    [
+        (None, lambda _body_bytes=None: None, True, None),
+        ({"agent-a": "tok-a"}, lambda _body_bytes=None: None, False, "Authorization"),
+        (
+            {"agent-a": "tok-a"},
+            lambda body_bytes=None: _auth_headers(
+                token="bad-token", body_bytes=body_bytes
+            ),
+            False,
+            "invalid token",
+        ),
+        (
+            {"agent-a": "tok-a", "agent-b": "tok-b"},
+            lambda body_bytes=None: _auth_headers(token="tok-a", body_bytes=body_bytes),
+            True,
+            None,
+        ),
+    ],
+    ids=["disabled", "missing_header", "invalid_token", "valid_token"],
+)
+class TestAuth:
+    """Parametrized auth tests: all 4 auth conditions × 5 endpoints."""
 
-    def test_health_no_auth_header(self) -> None:
-        handler = _make_handler(path=HEALTH_PATH)
+    @staticmethod
+    def _build_server(tokens: dict[str, str] | None) -> Any:
+        """Return a mock server configured for *tokens*.
+
+        When *tokens* is ``None``, auth is disabled (``agent_tokens=None``).
+        """
+        if tokens is None:
+            server = _make_server_with_tokens({})
+            server.agent_tokens = None
+            return server
+        return _make_server_with_tokens(tokens)
+
+    @staticmethod
+    def _build_handler(
+        tokens: dict[str, str] | None,
+        make_headers: Any,
+        *,
+        path: str = "/agents",
+        body_bytes: bytes | None = None,
+        server: Any = None,
+    ) -> Any:
+        """Create a handler with the correct server, headers, and body."""
+        if server is None:
+            server = TestAuth._build_server(tokens)
+        headers = make_headers(body_bytes)
+        kwargs: dict[str, Any] = {"path": path, "server": server}
+        if headers is not None:
+            kwargs["headers"] = headers
+        handler = _make_handler(**kwargs)
+        if body_bytes is not None:
+            if headers is None:
+                _set_body(handler, body_bytes.decode("utf-8"))
+            else:
+                handler.rfile.read.return_value = body_bytes
+        return handler
+
+    # -- GET /health --------------------------------------------------------
+
+    def test_get_health(
+        self, tokens, make_headers, expect_success, error_substr
+    ) -> None:
+        handler = self._build_handler(tokens, make_headers, path=HEALTH_PATH)
         handler.do_GET()
-        handler.send_response.assert_called_once_with(200)
-        assert _body_written(handler) == {"status": "ok"}
+        if expect_success:
+            handler.send_response.assert_called_once_with(200)
+            assert _body_written(handler) == {"status": "ok"}
+        else:
+            handler.send_response.assert_called_once_with(401)
+            assert error_substr in _body_written(handler)["error"]
 
-    def test_agents_no_auth_header(self) -> None:
-        handler = _make_handler(path="/agents")
+    # -- GET /agents --------------------------------------------------------
+
+    def test_get_agents(
+        self, tokens, make_headers, expect_success, error_substr
+    ) -> None:
+        handler = self._build_handler(tokens, make_headers, path="/agents")
         handler.do_GET()
-        handler.send_response.assert_called_once_with(200)
-        assert _body_written(handler) == {"agents": []}
+        if expect_success:
+            handler.send_response.assert_called_once_with(200)
+            assert _body_written(handler) == {"agents": []}
+        else:
+            handler.send_response.assert_called_once_with(401)
+            assert error_substr in _body_written(handler)["error"]
 
-    def test_register_no_auth_header(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps({"agent_id": "agent-x", "host": "127.0.0.1", "port": 9000}),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(201)
+    # -- POST /agents -------------------------------------------------------
 
-    def test_deregister_no_auth_header(self) -> None:
-        handler = _make_handler()
-        # Register first.
-        _set_body(
-            handler,
-            json.dumps({"agent_id": "agent-x", "host": "127.0.0.1", "port": 8000}),
-        )
-        handler.do_POST()
-
-        handler.send_response.reset_mock()
-        handler.path = "/agents/agent-x"
-        handler.do_DELETE()
-        handler.send_response.assert_called_once_with(204)
-
-    def test_send_no_auth_header(self) -> None:
-        request = Request(
-            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
-            body={"action": "ping"},
-        )
-        raw = serialize(request)
-
-        router = MagicMock()
-        router.route.return_value = None
-
-        from robotsix_agent_comm.transport.endpoints import Endpoint
-
-        server = _make_server_with_tokens({})  # empty dict would enable auth
-        # Override: set agent_tokens to None for this test.
-        server.agent_tokens = None
-
-        server.registry.register(
-            Endpoint(agent_id="agent-b", host="127.0.0.1", port=9001)
-        )
-        server.router = router
-
-        handler = _make_handler(server=server, path=DEFAULT_MESSAGE_PATH)
-        _set_body(handler, raw)
-        handler.do_POST()
-
-        router.route.assert_called_once()
-        handler.send_response.assert_called_once_with(204)
-
-
-# ======================================================================
-# Auth tests — missing header
-# ======================================================================
-
-
-class TestAuthMissingHeader:
-    """When auth is enabled and no Authorization header is present,
-    every endpoint returns 401."""
-
-    TOKENS = {"agent-a": "tok-a"}
-
-    def test_get_health_missing_header(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        handler = _make_handler(path=HEALTH_PATH, server=server)
-        handler.do_GET()
-        handler.send_response.assert_called_once_with(401)
-        assert "Authorization" in _body_written(handler)["error"]
-
-    def test_get_agents_missing_header(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        handler = _make_handler(path="/agents", server=server)
-        handler.do_GET()
-        handler.send_response.assert_called_once_with(401)
-        assert "Authorization" in _body_written(handler)["error"]
-
-    def test_post_agents_missing_header(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        handler = _make_handler(server=server)
-        # Even with a valid body, auth is checked first.
-        _set_body(
-            handler,
-            json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000}),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(401)
-        assert "Authorization" in _body_written(handler)["error"]
-
-    def test_delete_agents_missing_header(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        handler = _make_handler(path="/agents/agent-a", server=server)
-        handler.do_DELETE()
-        handler.send_response.assert_called_once_with(401)
-        assert "Authorization" in _body_written(handler)["error"]
-
-    def test_post_messages_missing_header(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        handler = _make_handler(path=DEFAULT_MESSAGE_PATH, server=server)
-        request = Request(
-            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
-            body={"action": "ping"},
-        )
-        _set_body(handler, serialize(request))
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(401)
-        assert "Authorization" in _body_written(handler)["error"]
-
-
-# ======================================================================
-# Auth tests — invalid token
-# ======================================================================
-
-
-class TestAuthInvalidToken:
-    """When the bearer token is not in the configured mapping, 401."""
-
-    TOKENS = {"agent-a": "tok-a"}
-
-    def test_get_health_invalid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        headers = _auth_headers(token="bad-token")
-        handler = _make_handler(path=HEALTH_PATH, server=server, headers=headers)
-        handler.do_GET()
-        handler.send_response.assert_called_once_with(401)
-        assert "invalid token" in _body_written(handler)["error"]
-
-    def test_get_agents_invalid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        headers = _auth_headers(token="bad-token")
-        handler = _make_handler(path="/agents", server=server, headers=headers)
-        handler.do_GET()
-        handler.send_response.assert_called_once_with(401)
-        assert "invalid token" in _body_written(handler)["error"]
-
-    def test_post_agents_invalid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
+    def test_post_agents(
+        self, tokens, make_headers, expect_success, error_substr
+    ) -> None:
         body = json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000})
-        headers = _auth_headers(token="bad-token", body_bytes=body.encode("utf-8"))
-        handler = _make_handler(server=server, headers=headers)
-        handler.rfile.read.return_value = body.encode("utf-8")
+        handler = self._build_handler(
+            tokens, make_headers, body_bytes=body.encode("utf-8")
+        )
         handler.do_POST()
-        handler.send_response.assert_called_once_with(401)
-        assert "invalid token" in _body_written(handler)["error"]
+        if expect_success:
+            handler.send_response.assert_called_once_with(201)
+            assert _body_written(handler) == {"agent_id": "agent-a"}
+        else:
+            handler.send_response.assert_called_once_with(401)
+            assert error_substr in _body_written(handler)["error"]
 
-    def test_delete_agents_invalid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        headers = _auth_headers(token="bad-token")
-        handler = _make_handler(path="/agents/agent-a", server=server, headers=headers)
+    # -- DELETE /agents/{id} ------------------------------------------------
+
+    def test_delete_agents(
+        self, tokens, make_headers, expect_success, error_substr
+    ) -> None:
+        server = self._build_server(tokens)
+
+        if expect_success:
+            # Success case: register agent-a first (so deregister finds it).
+            reg_body = json.dumps(
+                {"agent_id": "agent-a", "host": "127.0.0.1", "port": 8000}
+            )
+            reg_headers = make_headers(reg_body.encode("utf-8"))
+            reg_kwargs: dict[str, Any] = {"server": server}
+            if reg_headers is not None:
+                reg_kwargs["headers"] = reg_headers
+            reg_handler = _make_handler(**reg_kwargs)
+            if reg_headers is None:
+                _set_body(reg_handler, reg_body)
+            else:
+                reg_handler.rfile.read.return_value = reg_body.encode("utf-8")
+            reg_handler.do_POST()
+            assert reg_handler.send_response.call_args[0][0] == 201
+
+        handler = self._build_handler(
+            tokens,
+            make_headers,
+            path="/agents/agent-a",
+            server=server,
+        )
         handler.do_DELETE()
-        handler.send_response.assert_called_once_with(401)
-        assert "invalid token" in _body_written(handler)["error"]
+        if expect_success:
+            handler.send_response.assert_called_once_with(204)
+        else:
+            handler.send_response.assert_called_once_with(401)
+            assert error_substr in _body_written(handler)["error"]
 
-    def test_post_messages_invalid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
+    # -- POST /messages -----------------------------------------------------
+
+    def test_post_messages(
+        self, tokens, make_headers, expect_success, error_substr
+    ) -> None:
         request = Request(
             metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
             body={"action": "ping"},
         )
-        raw = serialize(request)
-        headers = _auth_headers(token="bad-token", body_bytes=raw.encode("utf-8"))
-        handler = _make_handler(
-            path=DEFAULT_MESSAGE_PATH, server=server, headers=headers
+        raw = serialize(request).encode("utf-8")
+
+        server = self._build_server(tokens)
+        router = None
+
+        if expect_success:
+            # Success case: wire up router + recipient endpoint.
+            router = MagicMock()
+            router.route.return_value = None
+            server.router = router
+            from robotsix_agent_comm.transport.endpoints import Endpoint
+
+            server.registry.register(
+                Endpoint(agent_id="agent-b", host="127.0.0.1", port=9001)
+            )
+
+        handler = self._build_handler(
+            tokens,
+            make_headers,
+            path=DEFAULT_MESSAGE_PATH,
+            body_bytes=raw,
+            server=server,
         )
-        handler.rfile.read.return_value = raw.encode("utf-8")
         handler.do_POST()
-        handler.send_response.assert_called_once_with(401)
-        assert "invalid token" in _body_written(handler)["error"]
-
-
-# ======================================================================
-# Auth tests — valid token
-# ======================================================================
-
-
-class TestAuthValidToken:
-    """With a valid bearer token, all endpoints succeed."""
-
-    TOKENS = {"agent-a": "tok-a", "agent-b": "tok-b"}
-
-    def test_get_health_valid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        headers = _auth_headers(token="tok-a")
-        handler = _make_handler(path=HEALTH_PATH, server=server, headers=headers)
-        handler.do_GET()
-        handler.send_response.assert_called_once_with(200)
-        assert _body_written(handler) == {"status": "ok"}
-
-    def test_get_agents_valid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        headers = _auth_headers(token="tok-a")
-        handler = _make_handler(path="/agents", server=server, headers=headers)
-        handler.do_GET()
-        handler.send_response.assert_called_once_with(200)
-        assert _body_written(handler) == {"agents": []}
-
-    def test_post_agents_valid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        body = json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000})
-        headers = _auth_headers(token="tok-a", body_bytes=body.encode("utf-8"))
-        handler = _make_handler(server=server, headers=headers)
-        handler.rfile.read.return_value = body.encode("utf-8")
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(201)
-        assert _body_written(handler) == {"agent_id": "agent-a"}
-
-    def test_delete_agents_valid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        # Register agent-a with its own token first.
-        body = json.dumps({"agent_id": "agent-a", "host": "127.0.0.1", "port": 8000})
-        headers_reg = _auth_headers(token="tok-a", body_bytes=body.encode("utf-8"))
-        handler_reg = _make_handler(server=server, headers=headers_reg)
-        handler_reg.rfile.read.return_value = body.encode("utf-8")
-        handler_reg.do_POST()
-        assert handler_reg.send_response.call_args[0][0] == 201
-
-        # Now deregister with the same token.
-        headers_del = _auth_headers(token="tok-a")
-        handler = _make_handler(
-            path="/agents/agent-a", server=server, headers=headers_del
-        )
-        handler.do_DELETE()
-        handler.send_response.assert_called_once_with(204)
-
-    def test_post_messages_valid_token(self) -> None:
-        server = _make_server_with_tokens(self.TOKENS)
-        request = Request(
-            metadata=Metadata.create(sender="agent-a", recipient="agent-b"),
-            body={"action": "ping"},
-        )
-        raw = serialize(request)
-        headers = _auth_headers(token="tok-a", body_bytes=raw.encode("utf-8"))
-
-        router = MagicMock()
-        router.route.return_value = None
-        server.router = router
-        from robotsix_agent_comm.transport.endpoints import Endpoint
-
-        server.registry.register(
-            Endpoint(agent_id="agent-b", host="127.0.0.1", port=9001)
-        )
-
-        handler = _make_handler(
-            path=DEFAULT_MESSAGE_PATH, server=server, headers=headers
-        )
-        handler.rfile.read.return_value = raw.encode("utf-8")
-        handler.do_POST()
-
-        router.route.assert_called_once()
-        handler.send_response.assert_called_once_with(204)
+        if expect_success:
+            handler.send_response.assert_called_once_with(204)
+            assert router is not None
+            router.route.assert_called_once()
+        else:
+            handler.send_response.assert_called_once_with(401)
+            assert error_substr in _body_written(handler)["error"]
 
 
 # ======================================================================
@@ -1134,12 +1052,15 @@ class TestAuthValidToken:
 # ======================================================================
 
 
-class TestAuthRegisterIdMismatch:
-    """``POST /agents`` returns 403 when token's agent_id ≠ body agent_id."""
+class TestAuthIdentityMismatch:
+    """Identity-mismatch tests for register and deregister endpoints."""
 
     TOKENS = {"agent-a": "tok-a", "agent-b": "tok-b"}
 
-    def test_token_for_a_registering_b(self) -> None:
+    # -- POST /agents (register) --------------------------------------------
+
+    def test_register_token_for_a_registering_b(self) -> None:
+        """token-a attempting to register agent-b → 403."""
         server = _make_server_with_tokens(self.TOKENS)
         body = json.dumps({"agent_id": "agent-b", "host": "127.0.0.1", "port": 9000})
         headers = _auth_headers(token="tok-a", body_bytes=body.encode("utf-8"))
@@ -1149,26 +1070,20 @@ class TestAuthRegisterIdMismatch:
         handler.send_response.assert_called_once_with(403)
         assert "agent_id does not match token" in _body_written(handler)["error"]
 
-    def test_token_for_a_registering_without_agent_id_in_body(self) -> None:
-        """Body missing agent_id → 400 (before identity check) — but
-        actually agent_id is checked before identity.  Let's verify
-        that a body with agent_id missing returns 400, not 403."""
+    def test_register_missing_agent_id_in_body(self) -> None:
+        """Body missing agent_id → 400 (before identity check)."""
         server = _make_server_with_tokens(self.TOKENS)
         body = json.dumps({"host": "127.0.0.1", "port": 9000})
         headers = _auth_headers(token="tok-a", body_bytes=body.encode("utf-8"))
         handler = _make_handler(server=server, headers=headers)
         handler.rfile.read.return_value = body.encode("utf-8")
         handler.do_POST()
-        # Missing agent_id → 400, auth has already passed by this point.
         handler.send_response.assert_called_once_with(400)
 
+    # -- DELETE /agents/{id} (deregister) -----------------------------------
 
-class TestAuthDeregisterIdMismatch:
-    """``DELETE /agents/<id>`` returns 403 when token's agent_id ≠ path id."""
-
-    TOKENS = {"agent-a": "tok-a", "agent-b": "tok-b"}
-
-    def test_token_for_a_deregistering_b(self) -> None:
+    def test_deregister_token_for_a_deregistering_b(self) -> None:
+        """token-a attempting to deregister agent-b → 403."""
         server = _make_server_with_tokens(self.TOKENS)
         headers = _auth_headers(token="tok-a")
         handler = _make_handler(path="/agents/agent-b", server=server, headers=headers)
@@ -1176,7 +1091,7 @@ class TestAuthDeregisterIdMismatch:
         handler.send_response.assert_called_once_with(403)
         assert "agent_id does not match token" in _body_written(handler)["error"]
 
-    def test_token_for_a_deregistering_missing_agent_id(self) -> None:
+    def test_deregister_missing_agent_id(self) -> None:
         """Path /agents/ → 400 (before identity check)."""
         server = _make_server_with_tokens(self.TOKENS)
         headers = _auth_headers(token="tok-a")
