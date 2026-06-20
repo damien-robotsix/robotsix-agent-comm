@@ -19,4 +19,4 @@ python examples/error_handling.py
     for unknown recipients, inspecting an `Error` reply, and the default
     retry policy.
 
-See the [SDK tutorial](../docs/tutorials/index.md) for a full walkthrough.
+See the [SDK tutorial](../docs/sdk/tutorial.md) for a full walkthrough.
