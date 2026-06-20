@@ -15,25 +15,25 @@ Communication is built on the message envelope defined in
 dataclass carrying:
 
 - `type` — a `MessageType` discriminator, one of `REQUEST`,
-  `RESPONSE`, `ERROR`, or `NOTIFICATION`.
+    `RESPONSE`, `ERROR`, or `NOTIFICATION`.
 - `metadata` — a `Metadata` value whose `sender` (str) and
-  `recipient` (str | None) fields carry the addressing information,
-  plus a `timestamp` and an `extra: dict[str, Any]` escape hatch for
-  application-defined metadata.
+    `recipient` (str | None) fields carry the addressing information,
+    plus a `timestamp` and an `extra: dict[str, Any]` escape hatch for
+    application-defined metadata.
 - `message_id` — a unique identifier minted per message.
 - `correlation_id` — links a reply back to the message it answers
-  (None for requests and notifications).
+    (None for requests and notifications).
 - `body` — an application-defined `dict[str, Any]` payload.
 - `protocol_version` — the wire-protocol version, currently
-  `PROTOCOL_VERSION = "1.0"`.
+    `PROTOCOL_VERSION = "1.0"`.
 
 The four concrete kinds subclass `Message`:
 
 - `Request` — expects a matching `Response`; its `correlation_id` is
-  always None.
+    always None.
 - `Response` — answers a `Request`; requires a `correlation_id`.
 - `Error` — reports a failure, optionally correlated to a failing
-  request.
+    request.
 - `Notification` — fire-and-forget, with no correlation.
 
 The request↔response correlation mechanism is the classmethods
@@ -129,7 +129,7 @@ with `error_body(code, message, ...)`.
 The canonical error `code` strings the broker emits are:
 
 - `"unknown_recipient"` — `recipient` named an address that is not
-  registered.
+    registered.
 - `"missing_recipient"` — `recipient` was None or empty.
 
 A `Notification` that is itself undeliverable is reported with the
@@ -144,43 +144,43 @@ child). Stronger guarantees can be layered on later transports without
 changing the protocol.
 
 - **Delivery guarantee: at-most-once.** A message handed to the
-  in-process transport is delivered to its endpoint zero or one time;
-  there is no acknowledgement or redelivery. Justification: this is
-  the guarantee a stdlib in-memory `queue.Queue` / `asyncio.Queue`
-  provides directly (ADR 0001), with no broker-side persistence or
-  dedup machinery to build or maintain.
+    in-process transport is delivered to its endpoint zero or one time;
+    there is no acknowledgement or redelivery. Justification: this is
+    the guarantee a stdlib in-memory `queue.Queue` / `asyncio.Queue`
+    provides directly (ADR 0001), with no broker-side persistence or
+    dedup machinery to build or maintain.
 - **Ordering guarantee: per-endpoint FIFO.** Messages destined for a
-  single endpoint are delivered in the order the broker enqueued them.
-  There is no global ordering across endpoints. Justification: a
-  per-endpoint stdlib queue preserves enqueue order for free, while
-  global ordering would require a serialization point that the
-  stdlib-first, in-process design does not need.
+    single endpoint are delivered in the order the broker enqueued them.
+    There is no global ordering across endpoints. Justification: a
+    per-endpoint stdlib queue preserves enqueue order for free, while
+    global ordering would require a serialization point that the
+    stdlib-first, in-process design does not need.
 - **Retry / failure policy: no retries.** The baseline does not retry
-  delivery. An undeliverable message produces an `Error` (see
-  Addressing and Routing); a handler that raises surfaces the failure
-  to that handler's owner and does not cause redelivery. Justification:
-  at-most-once with no persistence has nowhere durable to retry from,
-  so retries are intentionally absent. A future durable transport may
-  add at-least-once delivery and bounded retries behind the same
-  transport interface without altering the protocol or these envelope
-  semantics.
+    delivery. An undeliverable message produces an `Error` (see
+    Addressing and Routing); a handler that raises surfaces the failure
+    to that handler's owner and does not cause redelivery. Justification:
+    at-most-once with no persistence has nowhere durable to retry from,
+    so retries are intentionally absent. A future durable transport may
+    add at-least-once delivery and bounded retries behind the same
+    transport interface without altering the protocol or these envelope
+    semantics.
 
 ## Design Decisions & ADRs
 
 The decisions behind this architecture are recorded as ADRs:
 
 - [ADR 0002 — Transport architecture](../decisions/0002-transport-architecture.md):
-  an abstract transport interface with a stdlib in-process transport
-  (`asyncio` / `queue`) as the default first implementation.
+    an abstract transport interface with a stdlib in-process transport
+    (`asyncio` / `queue`) as the default first implementation.
 - [ADR 0003 — Addressing and routing](../decisions/0003-addressing-and-routing.md):
-  string addresses over `Metadata.sender` / `recipient`,
-  broker-mediated routing, and undeliverable handling via `Error`.
+    string addresses over `Metadata.sender` / `recipient`,
+    broker-mediated routing, and undeliverable handling via `Error`.
 - [ADR 0004 — Delivery semantics](../decisions/0004-delivery-semantics.md):
-  at-most-once delivery, per-endpoint FIFO ordering, and a no-retry
-  baseline failure policy.
+    at-most-once delivery, per-endpoint FIFO ordering, and a no-retry
+    baseline failure policy.
 - [ADR 0005 — HTTP+JSON network transport](../decisions/0005-http-json-transport.md):
-  a stdlib HTTP+JSON transport implementing the ADR 0002 interface for
-  distributed agents.
+    a stdlib HTTP+JSON transport implementing the ADR 0002 interface for
+    distributed agents.
 
 The concrete network transport that implements the ADR 0002 interface is
 described in its own design note:

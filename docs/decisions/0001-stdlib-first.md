@@ -19,18 +19,18 @@ standard library genuinely cannot meet the need, and each such addition
 must be justified.
 
 - Runtime dependencies are kept empty unless and until a concrete need
-  is demonstrated.
+    is demonstrated.
 - Development tooling (`ruff`, `mypy`, `pytest`) is allowed and managed
-  in the dev dependency group.
+    in the dev dependency group.
 - `uv` manages the environment and a committed `uv.lock` pins all
-  versions for reproducible installs (`uv sync --frozen`).
+    versions for reproducible installs (`uv sync --frozen`).
 
 ## Consequences
 
 - Future serialization and protocol decisions start from the assumption
-  that stdlib facilities (e.g. `json`, `struct`, `asyncio`) are the
-  default choice.
+    that stdlib facilities (e.g. `json`, `struct`, `asyncio`) are the
+    default choice.
 - Any proposal to add a runtime dependency should reference and update
-  this decision.
+    this decision.
 - The dependency surface stays small, which simplifies security review
-  and long-term maintenance.
+    and long-term maintenance.

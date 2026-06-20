@@ -26,25 +26,25 @@ class Transport(ABC):
 ## Components
 
 - **`Endpoint`** — a `kw_only` dataclass describing where an agent listens:
-  `agent_id`, `host`, `port`, `scheme` (default `http`), and `path`
-  (default `/messages`). Its `url` / `health_url` properties keep
-  endpoints URL-shaped.
+    `agent_id`, `host`, `port`, `scheme` (default `http`), and `path`
+    (default `/messages`). Its `url` / `health_url` properties keep
+    endpoints URL-shaped.
 - **`Registry`** — a thread-safe, in-memory map of `agent_id` to
-  `Endpoint` for registration and discovery (`register`, `unregister`,
-  `lookup`, `list_agents`). Unknown agents raise `AgentNotFoundError`.
+    `Endpoint` for registration and discovery (`register`, `unregister`,
+    `lookup`, `list_agents`). Unknown agents raise `AgentNotFoundError`.
 - **`TransportServer`** — wraps `http.server.ThreadingHTTPServer`. `POST`
-  to the message path deserializes the body, dispatches to a user-supplied
-  `handler(message) -> Message | None`, and returns the serialized reply
-  (`204` for notifications). `GET /health` returns `200` with a small JSON
-  status body. Binds `port=0` for an ephemeral test port and exposes the
-  actual bound `port`.
+    to the message path deserializes the body, dispatches to a user-supplied
+    `handler(message) -> Message | None`, and returns the serialized reply
+    (`204` for notifications). `GET /health` returns `200` with a small JSON
+    status body. Binds `port=0` for an ephemeral test port and exposes the
+    actual bound `port`.
 - **`TransportClient`** — uses `http.client` with per-request timeouts.
-  `send` serializes a message, POSTs it, and deserializes any reply;
-  `health_check` GETs `/health`. Socket/HTTP/timeout failures surface as
-  `TransportError` subclasses (`TransportTimeoutError` for timeouts).
+    `send` serializes a message, POSTs it, and deserializes any reply;
+    `health_check` GETs `/health`. Socket/HTTP/timeout failures surface as
+    `TransportError` subclasses (`TransportTimeoutError` for timeouts).
 - **`Router`** — ties registry + client + retry policy together. `route`
-  reads `Metadata.recipient`, looks the endpoint up in the registry, and
-  delivers via the client with retry + timeout.
+    reads `Metadata.recipient`, looks the endpoint up in the registry, and
+    delivers via the client with retry + timeout.
 
 ## Retry and timeout model
 

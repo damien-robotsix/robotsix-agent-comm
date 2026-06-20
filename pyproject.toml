@@ -38,6 +38,7 @@ dev = [
     "pre-commit",
     "vulture",
     "trustme",
+    "mdformat-mkdocs",
 ]
 docs = [
     "mkdocs",
@@ -92,3 +93,6 @@ relative_files = true
 
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
+
+[tool.mdformat]
+exclude = ["^\\.pytest_cache/", "^templates/"]

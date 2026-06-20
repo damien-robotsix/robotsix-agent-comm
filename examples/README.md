@@ -11,12 +11,12 @@ python examples/error_handling.py
 ```
 
 - [`request_response.py`](request_response.py) — register two agents and
-  send a request that awaits a correlated response.
+    send a request that awaits a correlated response.
 - [`notification_listener.py`](notification_listener.py) — fire-and-forget
-  notifications received via a callback and via the `receive_message` pull
-  queue.
+    notifications received via a callback and via the `receive_message` pull
+    queue.
 - [`error_handling.py`](error_handling.py) — catching `AgentNotFoundError`
-  for unknown recipients, inspecting an `Error` reply, and the default
-  retry policy.
+    for unknown recipients, inspecting an `Error` reply, and the default
+    retry policy.
 
 See the [SDK tutorial](../docs/tutorials/index.md) for a full walkthrough.
