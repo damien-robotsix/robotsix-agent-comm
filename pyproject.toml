@@ -57,10 +57,13 @@ line-length = 88
 extend-exclude = ["templates"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = ["E", "F", "I", "UP", "B", "SIM", "S"]
 
 [tool.ruff.lint.per-file-ignores]
 "vulture_whitelist.py" = ["B018", "F821"]
+"tests/**" = ["S101", "S104", "S105", "S106", "S108"]
+"src/robotsix_agent_comm/broker/config.py" = ["S104"]
+"src/robotsix_agent_comm/broker/server.py" = ["S101"]
 
 [tool.mypy]
 python_version = "3.12"

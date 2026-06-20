@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import logging
 import ssl
 from typing import Any
 from urllib.parse import urlencode
@@ -33,6 +34,8 @@ from .errors import (
     TransportTimeoutError,
 )
 from .registry import Registry
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # NetworkedBrokerTransport
@@ -173,7 +176,7 @@ class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
         except (ProtocolError, json.JSONDecodeError, AgentNotFoundError, DeliveryError):
             raise
         except Exception:
-            pass
+            logger.debug("failed to parse error envelope from broker", exc_info=True)
 
         raise TransportError(f"broker returned HTTP {status}: {data}")
 
