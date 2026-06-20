@@ -67,6 +67,7 @@ modules:
     paths:
       - src/robotsix_agent_comm/sdk/*.py
       - tests/sdk/*.py
+      - docs/sdk/*.md
       - examples/error_handling.py
       - examples/notification_listener.py
       - examples/request_response.py

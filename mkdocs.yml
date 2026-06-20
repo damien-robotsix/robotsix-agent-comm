@@ -18,7 +18,7 @@ nav:
   - Broker deployment: broker/deployment.md
   - Design: design/index.md
   - API reference: api/index.md
-  - Tutorials: tutorials/index.md
+  - SDK tutorial: sdk/tutorial.md
   - Publishing:
       - PyPI publishing standards: publishing/index.md
       - Pre-publication checklist: publishing/checklist.md
