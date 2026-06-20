@@ -10,8 +10,8 @@ following sections:
 - [API reference](api/index.md) — reference for the public API.
 - [Tutorials](tutorials/index.md) — task-oriented guides.
 - [Publishing](publishing/index.md) — PyPI publishing standards and the
-  pre-publication checklist.
+    pre-publication checklist.
 - [Decisions](decisions/0001-stdlib-first.md) — Architecture Decision
-  Records (ADRs).
+    Records (ADRs).
 - [Contributing](../CONTRIBUTING.md) — development setup, coding
-  conventions, and how to contribute.
+    conventions, and how to contribute.

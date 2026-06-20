@@ -16,6 +16,15 @@ repos:
         args: [--fix]
       - id: ruff-format
 
+  - repo: https://github.com/hukkin/mdformat
+    rev: "1.0.0"
+    hooks:
+      - id: mdformat
+        additional_dependencies:
+          - mdformat-mkdocs
+        args: [--number]
+        exclude: "^templates/|\\.pytest_cache/"
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.19.1
     hooks:

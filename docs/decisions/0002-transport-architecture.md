@@ -25,24 +25,24 @@ default first transport: a **stdlib in-process transport** built on
 `asyncio` / `queue`.
 
 - The transport's responsibility is narrow: move serialized `Message`
-  envelopes between endpoints. It does not resolve addresses (that is
-  the broker's job) and does not interpret message bodies.
+    envelopes between endpoints. It does not resolve addresses (that is
+    the broker's job) and does not interpret message bodies.
 - The first implementation is in-process and uses standard-library
-  primitives only — `asyncio.Queue` / `queue.Queue` for handoff and
-  `asyncio` for concurrency — directly honouring ADR 0001. No runtime
-  dependency is added.
+    primitives only — `asyncio.Queue` / `queue.Queue` for handoff and
+    `asyncio` for concurrency — directly honouring ADR 0001. No runtime
+    dependency is added.
 - Future transports (e.g. inter-process or network) implement the same
-  interface, so the broker and client API are written once against the
-  abstraction.
+    interface, so the broker and client API are written once against the
+    abstraction.
 
 ## Consequences
 
 - The broker/router and client API code (later epic children) program
-  to the transport interface, not to a concrete queue, keeping the
-  layering clean.
+    to the transport interface, not to a concrete queue, keeping the
+    layering clean.
 - The baseline transport's guarantees (at-most-once, per-endpoint FIFO,
-  no retries) follow from the chosen stdlib primitives; see ADR 0004.
+    no retries) follow from the chosen stdlib primitives; see ADR 0004.
 - Adding a richer transport later is an additive change behind the same
-  interface and does not touch the protocol envelope.
+    interface and does not touch the protocol envelope.
 - Any transport that needs a third-party dependency must reference and
-  update ADR 0001 before being adopted.
+    update ADR 0001 before being adopted.

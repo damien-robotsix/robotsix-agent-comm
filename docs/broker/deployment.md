@@ -2,13 +2,13 @@
 
 The `robotsix-broker` is a **standalone, long-running daemon** that
 provides agent registration, discovery, and message-routing services to
-the robotsix ecosystem.  This guide covers configuration, TLS
+the robotsix ecosystem. This guide covers configuration, TLS
 provisioning, and containerised deployment.
 
 See [ADR 0006](../decisions/0006-broker-server-architecture.md) for the
 architecture and security model.
 
----
+______________________________________________________________________
 
 ## Quickstart (Docker Compose)
 
@@ -38,7 +38,7 @@ docker compose up --build
 
 The broker listens on `https://localhost:8443`.
 
----
+______________________________________________________________________
 
 ## Environment variables
 
@@ -46,29 +46,29 @@ Every variable uses the `ROBOTSIX_BROKER_` prefix (ADR 0006 §3.1).
 
 ### Listen address
 
-| Variable | Meaning | Default |
-|---|---|---|
+| Variable               | Meaning           | Default   |
+| ---------------------- | ----------------- | --------- |
 | `ROBOTSIX_BROKER_HOST` | Bind host address | `0.0.0.0` |
-| `ROBOTSIX_BROKER_PORT` | TCP port (int) | `8443` |
+| `ROBOTSIX_BROKER_PORT` | TCP port (int)    | `8443`    |
 
 ### Mode
 
-| Variable | Meaning | Default |
-|---|---|---|
+| Variable              | Meaning                           | Default        |
+| --------------------- | --------------------------------- | -------------- |
 | `ROBOTSIX_BROKER_ENV` | `"production"` or `"development"` | `"production"` |
 
 **Production** mode enforces TLS and per-agent authentication (see
-[Security model](#security-model)).  **Development** mode relaxes those
+[Security model](#security-model)). **Development** mode relaxes those
 requirements but emits loud warnings so an insecure boot is never
 silent.
 
 ### TLS
 
-| Variable | Meaning | Default |
-|---|---|---|
-| `ROBOTSIX_BROKER_TLS_CERT` | Path to server certificate PEM | unset |
-| `ROBOTSIX_BROKER_TLS_KEY` | Path to server private-key PEM | unset |
-| `ROBOTSIX_BROKER_TLS_CA` | Path to CA bundle PEM (mTLS) | unset |
+| Variable                              | Meaning                        | Default |
+| ------------------------------------- | ------------------------------ | ------- |
+| `ROBOTSIX_BROKER_TLS_CERT`            | Path to server certificate PEM | unset   |
+| `ROBOTSIX_BROKER_TLS_KEY`             | Path to server private-key PEM | unset   |
+| `ROBOTSIX_BROKER_TLS_CA`              | Path to CA bundle PEM (mTLS)   | unset   |
 | `ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT` | Enable mTLS (`1`/`true`/`yes`) | `false` |
 
 When `REQUIRE_CLIENT_CERT` is truthy, `TLS_CA` **must** be set and the
@@ -76,10 +76,10 @@ file must exist — mutual TLS needs a trust anchor.
 
 ### Agent credentials
 
-| Variable | Meaning | Default |
-|---|---|---|
-| `ROBOTSIX_BROKER_AGENT_TOKENS_FILE` | Path to JSON file `{"agent_id": "token", ...}` | unset |
-| `ROBOTSIX_BROKER_AGENT_TOKENS` | Inline fallback `id=token,id=token` | unset |
+| Variable                            | Meaning                                        | Default |
+| ----------------------------------- | ---------------------------------------------- | ------- |
+| `ROBOTSIX_BROKER_AGENT_TOKENS_FILE` | Path to JSON file `{"agent_id": "token", ...}` | unset   |
+| `ROBOTSIX_BROKER_AGENT_TOKENS`      | Inline fallback `id=token,id=token`            | unset   |
 
 **Precedence:** when both are set, `AGENT_TOKENS_FILE` wins.
 
@@ -100,24 +100,24 @@ agent-1=shared-secret-one,agent-2=shared-secret-two
 
 ### Tuning
 
-| Variable | Meaning | Default |
-|---|---|---|
-| `ROBOTSIX_BROKER_TTL_SECONDS` | Registration TTL (int) | server default (60) |
-| `ROBOTSIX_BROKER_RATE_LIMIT` | Max requests/agent/second (float; 0 = off) | server default (0) |
-| `ROBOTSIX_BROKER_MAX_BODY_SIZE` | Max HTTP body bytes (int) | server default (1 MiB) |
+| Variable                        | Meaning                                    | Default                |
+| ------------------------------- | ------------------------------------------ | ---------------------- |
+| `ROBOTSIX_BROKER_TTL_SECONDS`   | Registration TTL (int)                     | server default (60)    |
+| `ROBOTSIX_BROKER_RATE_LIMIT`    | Max requests/agent/second (float; 0 = off) | server default (0)     |
+| `ROBOTSIX_BROKER_MAX_BODY_SIZE` | Max HTTP body bytes (int)                  | server default (1 MiB) |
 
 ### Audit
 
-| Variable | Meaning | Default |
-|---|---|---|
-| `ROBOTSIX_BROKER_AUDIT_LOG` | Path to JSON-lines audit file | stdout |
+| Variable                    | Meaning                       | Default |
+| --------------------------- | ----------------------------- | ------- |
+| `ROBOTSIX_BROKER_AUDIT_LOG` | Path to JSON-lines audit file | stdout  |
 
----
+______________________________________________________________________
 
 ## TLS certificate provisioning
 
 The broker requires a **server certificate** and **private key** for
-TLS.  For mutual TLS (mTLS) you also need a **CA bundle** that can
+TLS. For mutual TLS (mTLS) you also need a **CA bundle** that can
 validate client certificates.
 
 ### Self-signed (development / testing)
@@ -143,7 +143,7 @@ Mount the certificate and key into the container (e.g. via Docker
 secrets or a read-only bind mount) and point the env vars at the
 mounted paths.
 
----
+______________________________________________________________________
 
 ## Agent credential provisioning
 
@@ -162,22 +162,22 @@ Mount it into the container and set:
 ROBOTSIX_BROKER_AGENT_TOKENS_FILE=/etc/robotsix/broker/agent-tokens.json
 ```
 
----
+______________________________________________________________________
 
 ## Production vs development
 
-| Feature | Production (`ROBOTSIX_BROKER_ENV=production`) | Development (`ROBOTSIX_BROKER_ENV=development`) |
-|---|---|---|
-| TLS | **Required** — missing cert/key aborts startup | Allowed to be absent; warning is emitted |
-| Agent auth | **Required** — at least one token pair | Allowed to be absent; warning is emitted |
-| Plaintext / anonymous | **Never reachable** | Reachable with loud warnings |
+| Feature               | Production (`ROBOTSIX_BROKER_ENV=production`)  | Development (`ROBOTSIX_BROKER_ENV=development`) |
+| --------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| TLS                   | **Required** — missing cert/key aborts startup | Allowed to be absent; warning is emitted        |
+| Agent auth            | **Required** — at least one token pair         | Allowed to be absent; warning is emitted        |
+| Plaintext / anonymous | **Never reachable**                            | Reachable with loud warnings                    |
 
 The security invariant: **in production, no plaintext or anonymous-auth
-code path is reachable**.  The `BrokerConfig` validator enforces this
+code path is reachable**. The `BrokerConfig` validator enforces this
 at startup — it raises `ValueError` (converted to a non-zero exit code
 by the entrypoint) before the server socket is created.
 
----
+______________________________________________________________________
 
 ## Running directly (without Docker)
 
@@ -188,7 +188,7 @@ python -m robotsix_agent_comm.broker
 robotsix-broker
 ```
 
----
+______________________________________________________________________
 
 ## Docker image
 

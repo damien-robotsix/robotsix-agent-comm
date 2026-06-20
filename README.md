@@ -60,18 +60,18 @@ uv run python examples/request_response.py
 More examples live under [`examples/`](examples/):
 
 - [`notification_listener.py`](examples/notification_listener.py) —
-  fire-and-forget notifications with callback and pull APIs.
+    fire-and-forget notifications with callback and pull APIs.
 - [`error_handling.py`](examples/error_handling.py) — catching
-  `AgentNotFoundError`, inspecting `Error` replies, and the default retry
-  policy.
+    `AgentNotFoundError`, inspecting `Error` replies, and the default retry
+    policy.
 
 ## Package structure
 
-| Package | Description |
-|---|---|
-| `robotsix_agent_comm.protocol` | Typed message definitions (`Request`, `Response`, `Notification`, `Error`), serialization, and validation — stdlib-only. |
+| Package                         | Description                                                                                                                 |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `robotsix_agent_comm.protocol`  | Typed message definitions (`Request`, `Response`, `Notification`, `Error`), serialization, and validation — stdlib-only.    |
 | `robotsix_agent_comm.transport` | HTTP+JSON transport layer: `Registry`, `TransportServer`/`TransportClient`, `RetryPolicy`, and `Router` — also stdlib-only. |
-| `robotsix_agent_comm.sdk` | High-level `Agent` client combining protocol + transport into a synchronous request-response and pub-sub API. |
+| `robotsix_agent_comm.sdk`       | High-level `Agent` client combining protocol + transport into a synchronous request-response and pub-sub API.               |
 
 ## Configuration
 
@@ -80,32 +80,32 @@ Everything is configured through constructor parameters.
 
 ### `Agent`
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `agent_id` | `str` | *(required)* | Unique identifier for this agent. |
-| `registry` | `Registry` | *(required)* | Shared in-memory registry for endpoint discovery. |
-| `host` | `str` | `"127.0.0.1"` | Host address the agent's transport server binds to. |
-| `port` | `int` | `0` | Port the transport server binds to (0 = OS picks). |
-| `retry_policy` | `RetryPolicy \| None` | `RetryPolicy(max_attempts=3, base_delay=0.1, max_delay=2.0)` | Retry configuration for outbound messages. |
-| `timeout` | `float` | `5.0` | Default timeout (seconds) for request-response. |
+| Parameter      | Type                  | Default                                                      | Description                                         |
+| -------------- | --------------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| `agent_id`     | `str`                 | *(required)*                                                 | Unique identifier for this agent.                   |
+| `registry`     | `Registry`            | *(required)*                                                 | Shared in-memory registry for endpoint discovery.   |
+| `host`         | `str`                 | `"127.0.0.1"`                                                | Host address the agent's transport server binds to. |
+| `port`         | `int`                 | `0`                                                          | Port the transport server binds to (0 = OS picks).  |
+| `retry_policy` | `RetryPolicy \| None` | `RetryPolicy(max_attempts=3, base_delay=0.1, max_delay=2.0)` | Retry configuration for outbound messages.          |
+| `timeout`      | `float`               | `5.0`                                                        | Default timeout (seconds) for request-response.     |
 
 ### `TransportServer`
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `handler` | `MessageHandler` | *(required)* | Callback invoked with each deserialized inbound message. |
-| `host` | `str` | `"127.0.0.1"` | Host address to bind. |
-| `port` | `int` | `0` | Port to bind (0 = OS picks). |
-| `message_path` | `str` | `"/messages"` | URL path on which POSTed messages are received. |
+| Parameter      | Type             | Default       | Description                                              |
+| -------------- | ---------------- | ------------- | -------------------------------------------------------- |
+| `handler`      | `MessageHandler` | *(required)*  | Callback invoked with each deserialized inbound message. |
+| `host`         | `str`            | `"127.0.0.1"` | Host address to bind.                                    |
+| `port`         | `int`            | `0`           | Port to bind (0 = OS picks).                             |
+| `message_path` | `str`            | `"/messages"` | URL path on which POSTed messages are received.          |
 
 ### `RetryPolicy`
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `max_attempts` | `int` | *(required)* | Maximum number of delivery attempts (including the first). |
-| `base_delay` | `float` | *(required)* | Initial backoff delay in seconds. |
-| `max_delay` | `float` | *(required)* | Maximum backoff delay (capped). |
-| `backoff_factor` | `float` | `2.0` | Multiplier applied after each attempt. |
+| Parameter        | Type    | Default      | Description                                                |
+| ---------------- | ------- | ------------ | ---------------------------------------------------------- |
+| `max_attempts`   | `int`   | *(required)* | Maximum number of delivery attempts (including the first). |
+| `base_delay`     | `float` | *(required)* | Initial backoff delay in seconds.                          |
+| `max_delay`      | `float` | *(required)* | Maximum backoff delay (capped).                            |
+| `backoff_factor` | `float` | `2.0`        | Multiplier applied after each attempt.                     |
 
 ## Development
 
