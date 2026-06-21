@@ -7,8 +7,10 @@ not failures of the message envelope itself.
 
 from __future__ import annotations
 
+from robotsix_agent_comm.errors import RobotsixAgentCommError
 
-class TransportError(Exception):
+
+class TransportError(RobotsixAgentCommError):
     """Base class for all transport-level errors."""
 
 

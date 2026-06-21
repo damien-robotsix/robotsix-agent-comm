@@ -15,6 +15,7 @@ modules:
       don't belong to any single module.
     paths:
       - src/robotsix_agent_comm/__init__.py
+      - src/robotsix_agent_comm/errors.py
       - src/robotsix_agent_comm/py.typed
       - tests/__init__.py
       - tests/test_smoke.py
