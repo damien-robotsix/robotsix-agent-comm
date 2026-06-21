@@ -1,5 +1,7 @@
 # robotsix-agent-comm
 
+[![codecov](https://codecov.io/gh/damien-robotsix/robotsix-agent-comm/branch/main/graph/badge.svg)](https://codecov.io/gh/damien-robotsix/robotsix-agent-comm)
+
 **Agent communication stack for the robotsix ecosystem** — a Python library
 providing a typed message protocol, an HTTP+JSON network transport, and a
 high-level agent SDK.
