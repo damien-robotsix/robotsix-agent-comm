@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from typing import Any
 
 import pytest
@@ -33,7 +34,7 @@ def cert_and_token_files(tmp_path: Any) -> dict[str, Any]:
 
 
 @pytest.fixture
-def tls_auth_broker(tmp_path: Any) -> tuple[Any, str]:
+def tls_auth_broker(tmp_path: Any) -> Generator[tuple[Any, str], None, None]:
     """Build and start a TLS+auth BrokerServer; stop on teardown.
 
     Yields ``(broker, ca_path)`` so tests can use the broker instance
