@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from robotsix_agent_comm.errors import RobotsixAgentCommError
+
 from .messages import PROTOCOL_VERSION, Message, MessageType
 
 REQUIRED_ENVELOPE_FIELDS = (
@@ -25,7 +27,7 @@ REQUIRED_ENVELOPE_FIELDS = (
 )
 
 
-class ProtocolError(Exception):
+class ProtocolError(RobotsixAgentCommError):
     """Base class for all protocol-level errors."""
 
 
