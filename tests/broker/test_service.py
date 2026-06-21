@@ -102,135 +102,87 @@ class TestAuthenticatedTLSClient:
     and accepts authenticated ones — the security invariant that
     no anonymous path is reachable in production."""
 
-    def test_authenticated_request_accepted(self, tmp_path: Any) -> None:
-        ca_path, cert_path, key_path = _write_certs_to_dir(str(tmp_path))
+    def test_authenticated_request_accepted(self, tls_auth_broker: Any) -> None:
+        broker, ca_path = tls_auth_broker
 
-        config = BrokerConfig(
-            host="127.0.0.1",
-            port=0,
-            tls_cert=cert_path,
-            tls_key=key_path,
-            agent_tokens={"agent-a": "tok-a"},
+        # Build a client TLS context that trusts the CA.
+        client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        client_ctx.load_verify_locations(ca_path)
+
+        # Authenticated request.
+        conn = http.client.HTTPSConnection(
+            broker.host, broker.port, timeout=5.0, context=client_ctx
         )
-        broker = build_broker(config)
-        broker.start()
         try:
-            # Build a client TLS context that trusts the CA.
-            client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            client_ctx.load_verify_locations(ca_path)
-
-            # Authenticated request.
-            conn = http.client.HTTPSConnection(
-                broker.host, broker.port, timeout=5.0, context=client_ctx
-            )
-            try:
-                headers = {
-                    "Authorization": "Bearer tok-a",
-                }
-                conn.request("GET", "/health", headers=headers)
-                resp = conn.getresponse()
-                assert resp.status == 200
-                data = json.loads(resp.read().decode())
-                assert data == {"status": "ok"}
-            finally:
-                conn.close()
+            headers = {
+                "Authorization": "Bearer tok-a",
+            }
+            conn.request("GET", "/health", headers=headers)
+            resp = conn.getresponse()
+            assert resp.status == 200
+            data = json.loads(resp.read().decode())
+            assert data == {"status": "ok"}
         finally:
-            broker.stop()
+            conn.close()
 
-    def test_unauthenticated_request_rejected_401(self, tmp_path: Any) -> None:
-        ca_path, cert_path, key_path = _write_certs_to_dir(str(tmp_path))
+    def test_unauthenticated_request_rejected_401(self, tls_auth_broker: Any) -> None:
+        broker, ca_path = tls_auth_broker
 
-        config = BrokerConfig(
-            host="127.0.0.1",
-            port=0,
-            tls_cert=cert_path,
-            tls_key=key_path,
-            agent_tokens={"agent-a": "tok-a"},
+        client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        client_ctx.load_verify_locations(ca_path)
+
+        # No Authorization header — should be rejected.
+        conn = http.client.HTTPSConnection(
+            broker.host, broker.port, timeout=5.0, context=client_ctx
         )
-        broker = build_broker(config)
-        broker.start()
         try:
-            client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            client_ctx.load_verify_locations(ca_path)
-
-            # No Authorization header — should be rejected.
-            conn = http.client.HTTPSConnection(
-                broker.host, broker.port, timeout=5.0, context=client_ctx
-            )
-            try:
-                conn.request("GET", "/health")
-                resp = conn.getresponse()
-                assert resp.status == 401
-            finally:
-                conn.close()
+            conn.request("GET", "/health")
+            resp = conn.getresponse()
+            assert resp.status == 401
         finally:
-            broker.stop()
+            conn.close()
 
-    def test_invalid_token_rejected_401(self, tmp_path: Any) -> None:
-        ca_path, cert_path, key_path = _write_certs_to_dir(str(tmp_path))
+    def test_invalid_token_rejected_401(self, tls_auth_broker: Any) -> None:
+        broker, ca_path = tls_auth_broker
 
-        config = BrokerConfig(
-            host="127.0.0.1",
-            port=0,
-            tls_cert=cert_path,
-            tls_key=key_path,
-            agent_tokens={"agent-a": "tok-a"},
+        client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        client_ctx.load_verify_locations(ca_path)
+
+        conn = http.client.HTTPSConnection(
+            broker.host, broker.port, timeout=5.0, context=client_ctx
         )
-        broker = build_broker(config)
-        broker.start()
         try:
-            client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            client_ctx.load_verify_locations(ca_path)
-
-            conn = http.client.HTTPSConnection(
-                broker.host, broker.port, timeout=5.0, context=client_ctx
-            )
-            try:
-                headers = {"Authorization": "Bearer wrong-token"}
-                conn.request("GET", "/health", headers=headers)
-                resp = conn.getresponse()
-                assert resp.status == 401
-            finally:
-                conn.close()
+            headers = {"Authorization": "Bearer wrong-token"}
+            conn.request("GET", "/health", headers=headers)
+            resp = conn.getresponse()
+            assert resp.status == 401
         finally:
-            broker.stop()
+            conn.close()
 
-    def test_register_with_valid_token_succeeds(self, tmp_path: Any) -> None:
-        ca_path, cert_path, key_path = _write_certs_to_dir(str(tmp_path))
+    def test_register_with_valid_token_succeeds(self, tls_auth_broker: Any) -> None:
+        broker, ca_path = tls_auth_broker
 
-        config = BrokerConfig(
-            host="127.0.0.1",
-            port=0,
-            tls_cert=cert_path,
-            tls_key=key_path,
-            agent_tokens={"agent-a": "tok-a"},
+        client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        client_ctx.load_verify_locations(ca_path)
+
+        conn = http.client.HTTPSConnection(
+            broker.host, broker.port, timeout=5.0, context=client_ctx
         )
-        broker = build_broker(config)
-        broker.start()
         try:
-            client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            client_ctx.load_verify_locations(ca_path)
-
-            conn = http.client.HTTPSConnection(
-                broker.host, broker.port, timeout=5.0, context=client_ctx
+            body = json.dumps(
+                {"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000}
             )
-            try:
-                body = json.dumps(
-                    {"agent_id": "agent-a", "host": "127.0.0.1", "port": 9000}
-                )
-                headers = {
-                    "Authorization": "Bearer tok-a",
-                    "Content-Type": "application/json",
-                }
-                conn.request("POST", "/agents", body=body, headers=headers)
-                resp = conn.getresponse()
-                assert resp.status == 201
-                data = json.loads(resp.read().decode())
-                assert data["agent_id"] == "agent-a"
-            finally:
-                conn.close()
+            headers = {
+                "Authorization": "Bearer tok-a",
+                "Content-Type": "application/json",
+            }
+            conn.request("POST", "/agents", body=body, headers=headers)
+            resp = conn.getresponse()
+            assert resp.status == 201
+            data = json.loads(resp.read().decode())
+            assert data["agent_id"] == "agent-a"
         finally:
-            broker.stop()
+            conn.close()
 
 
 # ---------------------------------------------------------------------------
