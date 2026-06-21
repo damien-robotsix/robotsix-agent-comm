@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from typing import Any
 
 import pytest
@@ -30,3 +31,27 @@ def cert_and_token_files(tmp_path: Any) -> dict[str, Any]:
         "key": key,
         "token_file": token_file,
     }
+
+
+@pytest.fixture
+def tls_auth_broker(tmp_path: Any) -> Generator[tuple[Any, str], None, None]:
+    """Build and start a TLS+auth BrokerServer; stop on teardown.
+
+    Yields ``(broker, ca_path)`` so tests can use the broker instance
+    and build a client TLS context that trusts the CA.
+    """
+    from robotsix_agent_comm.broker import BrokerConfig, build_broker
+    from tests.helpers import _write_certs_to_dir
+
+    ca_path, cert_path, key_path = _write_certs_to_dir(str(tmp_path))
+    config = BrokerConfig(
+        host="127.0.0.1",
+        port=0,
+        tls_cert=cert_path,
+        tls_key=key_path,
+        agent_tokens={"agent-a": "tok-a"},
+    )
+    broker = build_broker(config)
+    broker.start()
+    yield broker, ca_path
+    broker.stop()
