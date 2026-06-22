@@ -10,7 +10,7 @@ import http.client
 import json
 import ssl
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -27,22 +27,7 @@ from robotsix_agent_comm.protocol import (
     serialize,
 )
 from robotsix_agent_comm.transport import TransportServer
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _echo_handler(
-    received: list[Message],
-) -> Callable[[Message], Message | None]:
-    def handler(message: Message) -> Message | None:
-        received.append(message)
-        if isinstance(message, Request):
-            return Response.to(message, body={"echo": message.body})
-        return None
-
-    return handler
+from tests.helpers import _echo_handler
 
 
 def _json_request(

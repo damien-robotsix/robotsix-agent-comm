@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import ssl
 import time
-from collections.abc import Callable, Generator
+from collections.abc import Generator
 
 import pytest
 
@@ -31,21 +31,7 @@ from robotsix_agent_comm.transport.brokered import (
     NetworkedBrokerTransport,
     create_transport_pair,
 )
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _echo_handler(received: list[Message]) -> Callable[[Message], Message | None]:
-    def handler(message: Message) -> Message | None:
-        received.append(message)
-        if isinstance(message, Request):
-            return Response.to(message, body={"echo": message.body})
-        return None
-
-    return handler
-
+from tests.helpers import _echo_handler
 
 # ---------------------------------------------------------------------------
 # Fixtures
