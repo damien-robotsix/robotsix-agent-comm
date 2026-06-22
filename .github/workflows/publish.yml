@@ -164,7 +164,25 @@ jobs:
         run: uv build
       - name: Validate artifacts
         run: uv run --frozen --with twine twine check dist/*
+      - name: Check if version already exists on TestPyPI
+        id: check-testpypi
+        run: |
+          VERSION=$(uv run --frozen python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')
+          PACKAGE=$(uv run --frozen python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["name"])')
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://test.pypi.org/pypi/${PACKAGE}/${VERSION}/json")
+          echo "http_code=${HTTP_CODE}" >> "$GITHUB_OUTPUT"
+          if [ "${HTTP_CODE}" = "200" ]; then
+            echo "Version ${VERSION} of ${PACKAGE} already exists on TestPyPI — skipping publish"
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+          elif [ "${HTTP_CODE}" = "404" ]; then
+            echo "Version ${VERSION} of ${PACKAGE} not found on TestPyPI — will publish"
+            echo "skip_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Unexpected HTTP ${HTTP_CODE} from TestPyPI API — proceeding with publish"
+            echo "skip_publish=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish to TestPyPI (Trusted Publishing)
+        if: steps.check-testpypi.outputs.skip_publish != 'true'
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
         with:
           repository-url: https://test.pypi.org/legacy/
