@@ -8,6 +8,7 @@ handling, health-check behaviour) without a running server.
 from __future__ import annotations
 
 import http.client
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,7 +26,7 @@ from robotsix_agent_comm.transport.errors import TransportError, TransportTimeou
 
 def mock_http_connection(
     status: int, body_bytes: bytes, *, conn_class_name: str = "HTTPConnection"
-):
+) -> tuple[MagicMock, Any]:
     """Create a mock HTTP connection and a patcher for http.client.
 
     Returns ``(mock_conn, patcher)`` where *patcher* is a context manager
