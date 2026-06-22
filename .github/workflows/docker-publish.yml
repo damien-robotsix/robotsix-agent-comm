@@ -16,5 +16,5 @@ jobs:
       packages: write
       id-token: write
       attestations: write
-    uses: damien-robotsix/robotsix-mill/.github/workflows/docker-release.yml@90fcbcb32974e45c86e798f6da435e430e276a99  # main
+    uses: damien-robotsix/robotsix-mill/.github/workflows/docker-release.yml@10a15c23d6c9103cd72eafe0186dbdf9714377b7  # main
     secrets: inherit
