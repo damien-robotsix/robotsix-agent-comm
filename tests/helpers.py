@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
+
+from robotsix_agent_comm.protocol import Message, Request, Response
 
 
 def _write_certs_to_dir(tmpdir: str) -> tuple[str, str, str]:
@@ -29,3 +32,15 @@ def _write_certs_to_dir(tmpdir: str) -> tuple[str, str, str]:
         f.write(server_cert.private_key_pem.bytes())
 
     return ca_path, cert_path, key_path
+
+
+def _echo_handler(
+    received: list[Message],
+) -> Callable[[Message], Message | None]:
+    def handler(message: Message) -> Message | None:
+        received.append(message)
+        if isinstance(message, Request):
+            return Response.to(message, body={"echo": message.body})
+        return None
+
+    return handler
