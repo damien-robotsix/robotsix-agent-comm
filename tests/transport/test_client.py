@@ -8,6 +8,7 @@ handling, health-check behaviour) without a running server.
 from __future__ import annotations
 
 import http.client
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,6 +22,25 @@ from robotsix_agent_comm.protocol import (
 from robotsix_agent_comm.transport.client import TransportClient
 from robotsix_agent_comm.transport.endpoints import HEALTH_PATH, Endpoint
 from robotsix_agent_comm.transport.errors import TransportError, TransportTimeoutError
+
+
+def mock_http_connection(
+    status: int, body_bytes: bytes, *, conn_class_name: str = "HTTPConnection"
+) -> tuple[MagicMock, Any]:
+    """Create a mock HTTP connection and a patcher for http.client.
+
+    Returns ``(mock_conn, patcher)`` where *patcher* is a context manager
+    that patches *conn_class_name* on ``http.client`` to return *mock_conn*.
+    Callers can customize *mock_conn* (e.g. set ``request.side_effect``)
+    before entering the patcher.
+    """
+    mock_conn = MagicMock()
+    mock_response = MagicMock()
+    mock_response.status = status
+    mock_response.read.return_value = body_bytes
+    mock_conn.getresponse.return_value = mock_response
+    patcher = patch.object(http.client, conn_class_name, return_value=mock_conn)
+    return mock_conn, patcher
 
 
 @pytest.fixture
@@ -54,13 +74,9 @@ def test_send_returns_deserialized_response(
     )
     response_data = serialize(reply).encode("utf-8")
 
-    mock_conn = MagicMock()
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = response_data
-    mock_conn.getresponse.return_value = mock_response
+    mock_conn, patcher = mock_http_connection(200, response_data)
 
-    with patch.object(http.client, "HTTPConnection", return_value=mock_conn):
+    with patcher:
         result = client.send(message, endpoint, timeout=5.0)
 
     assert result is not None
@@ -73,13 +89,9 @@ def test_send_204_returns_none(
     client: TransportClient, endpoint: Endpoint, message: Notification
 ) -> None:
     """204 No Content returns None (fire-and-forget / notification)."""
-    mock_conn = MagicMock()
-    mock_response = MagicMock()
-    mock_response.status = 204
-    mock_response.read.return_value = b""
-    mock_conn.getresponse.return_value = mock_response
+    mock_conn, patcher = mock_http_connection(204, b"")
 
-    with patch.object(http.client, "HTTPConnection", return_value=mock_conn):
+    with patcher:
         result = client.send(message, endpoint, timeout=5.0)
 
     assert result is None
@@ -90,13 +102,9 @@ def test_send_empty_body_returns_none(
     client: TransportClient, endpoint: Endpoint, message: Notification
 ) -> None:
     """200 with empty body returns None."""
-    mock_conn = MagicMock()
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = b""
-    mock_conn.getresponse.return_value = mock_response
+    mock_conn, patcher = mock_http_connection(200, b"")
 
-    with patch.object(http.client, "HTTPConnection", return_value=mock_conn):
+    with patcher:
         result = client.send(message, endpoint, timeout=5.0)
 
     assert result is None
@@ -107,11 +115,11 @@ def test_send_timeout_raises_transport_timeout_error(
     client: TransportClient, endpoint: Endpoint, message: Notification
 ) -> None:
     """TimeoutError is caught and re-raised as TransportTimeoutError."""
-    mock_conn = MagicMock()
+    mock_conn, patcher = mock_http_connection(200, b"")
     mock_conn.request.side_effect = TimeoutError("timed out")
 
     with (
-        patch.object(http.client, "HTTPConnection", return_value=mock_conn),
+        patcher,
         pytest.raises(TransportTimeoutError) as excinfo,
     ):
         client.send(message, endpoint, timeout=5.0)
@@ -124,11 +132,11 @@ def test_send_oserror_raises_transport_error(
     client: TransportClient, endpoint: Endpoint, message: Notification
 ) -> None:
     """OSError (e.g. connection refused) is caught and re-raised as TransportError."""
-    mock_conn = MagicMock()
+    mock_conn, patcher = mock_http_connection(200, b"")
     mock_conn.request.side_effect = OSError("connection refused")
 
     with (
-        patch.object(http.client, "HTTPConnection", return_value=mock_conn),
+        patcher,
         pytest.raises(TransportError) as excinfo,
     ):
         client.send(message, endpoint, timeout=5.0)
@@ -142,14 +150,10 @@ def test_send_http_400_raises_transport_error(
     client: TransportClient, endpoint: Endpoint, message: Notification
 ) -> None:
     """HTTP status >= 400 raises TransportError."""
-    mock_conn = MagicMock()
-    mock_response = MagicMock()
-    mock_response.status = 500
-    mock_response.read.return_value = b"Internal Server Error"
-    mock_conn.getresponse.return_value = mock_response
+    mock_conn, patcher = mock_http_connection(500, b"Internal Server Error")
 
     with (
-        patch.object(http.client, "HTTPConnection", return_value=mock_conn),
+        patcher,
         pytest.raises(TransportError) as excinfo,
     ):
         client.send(message, endpoint, timeout=5.0)
@@ -162,14 +166,10 @@ def test_send_malformed_response_raises_transport_error(
     client: TransportClient, endpoint: Endpoint, message: Notification
 ) -> None:
     """Malformed JSON in a 200 response raises TransportError wrapping ProtocolError."""
-    mock_conn = MagicMock()
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = b"not json"
-    mock_conn.getresponse.return_value = mock_response
+    mock_conn, patcher = mock_http_connection(200, b"not json")
 
     with (
-        patch.object(http.client, "HTTPConnection", return_value=mock_conn),
+        patcher,
         pytest.raises(TransportError) as excinfo,
     ):
         client.send(message, endpoint, timeout=5.0)
@@ -191,15 +191,11 @@ def test_send_uses_https_connection_when_scheme_is_https(
     )
     response_data = serialize(reply).encode("utf-8")
 
-    mock_conn = MagicMock()
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = response_data
-    mock_conn.getresponse.return_value = mock_response
+    mock_conn, patcher = mock_http_connection(
+        200, response_data, conn_class_name="HTTPSConnection"
+    )
 
-    with patch.object(
-        http.client, "HTTPSConnection", return_value=mock_conn
-    ) as mock_https:
+    with patcher as mock_https:
         client.send(message, ep, timeout=5.0)
 
     mock_https.assert_called_once_with("127.0.0.1", 443, timeout=5.0)
@@ -213,13 +209,9 @@ def test_health_check_returns_true_on_200(
     client: TransportClient, endpoint: Endpoint
 ) -> None:
     """GET /health 200 → True."""
-    mock_conn = MagicMock()
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = b""
-    mock_conn.getresponse.return_value = mock_response
+    mock_conn, patcher = mock_http_connection(200, b"")
 
-    with patch.object(http.client, "HTTPConnection", return_value=mock_conn):
+    with patcher:
         result = client.health_check(endpoint, timeout=5.0)
 
     assert result is True
@@ -231,10 +223,10 @@ def test_health_check_returns_false_on_oserror(
     client: TransportClient, endpoint: Endpoint
 ) -> None:
     """OSError during health check returns False rather than raising."""
-    mock_conn = MagicMock()
+    mock_conn, patcher = mock_http_connection(200, b"")
     mock_conn.request.side_effect = OSError("connection refused")
 
-    with patch.object(http.client, "HTTPConnection", return_value=mock_conn):
+    with patcher:
         result = client.health_check(endpoint, timeout=5.0)
 
     assert result is False
@@ -245,10 +237,10 @@ def test_health_check_timeout_returns_false(
     client: TransportClient, endpoint: Endpoint
 ) -> None:
     """TimeoutError (an OSError subclass) is caught and returns False."""
-    mock_conn = MagicMock()
+    mock_conn, patcher = mock_http_connection(200, b"")
     mock_conn.request.side_effect = TimeoutError("timed out")
 
-    with patch.object(http.client, "HTTPConnection", return_value=mock_conn):
+    with patcher:
         result = client.health_check(endpoint, timeout=5.0)
 
     assert result is False
