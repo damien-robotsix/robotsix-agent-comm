@@ -206,7 +206,7 @@ Every agent that talks to the broker **MUST** be configured with:
     `https://broker.example.com:8443`. Configured via the environment
     variable `ROBOTSIX_BROKER_URL`.
 
-2. **Auth token** — the credential the agent presents to authenticate.
+1. **Auth token** — the credential the agent presents to authenticate.
     Configured via the environment variable `ROBOTSIX_BROKER_TOKEN`.
 
 These environment variables are the **canonical** configuration

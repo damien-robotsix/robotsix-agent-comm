@@ -11,14 +11,14 @@ a cookiecutter — there is no generator tool to install (honoring the
 stdlib-first ADR 0001). To start a new package:
 
 1. Copy this directory to a new repository.
-2. Rename `src/package_name/` to your real package name and update
-   `[tool.hatch.build.targets.wheel]` `packages`, `[tool.coverage.run]`
-   `source`, and the mkdocstrings paths accordingly.
-3. Replace every placeholder token — `package_name`,
-   `Package description`, and any `your-org` / author placeholders — in
-   `pyproject.toml`, `mkdocs.yml`, `README.md`, and `CONTRIBUTING.md`.
-4. Run the [pre-publication checklist](../../docs/publishing/checklist.md)
-   before publishing.
+1. Rename `src/package_name/` to your real package name and update
+    `[tool.hatch.build.targets.wheel]` `packages`, `[tool.coverage.run]`
+    `source`, and the mkdocstrings paths accordingly.
+1. Replace every placeholder token — `package_name`,
+    `Package description`, and any `your-org` / author placeholders — in
+    `pyproject.toml`, `mkdocs.yml`, `README.md`, and `CONTRIBUTING.md`.
+1. Run the [pre-publication checklist](../../docs/publishing/checklist.md)
+    before publishing.
 
 ## Overview
 
