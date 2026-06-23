@@ -27,7 +27,6 @@ from robotsix_agent_comm.protocol import (
     serialize,
 )
 from robotsix_agent_comm.transport import TransportServer
-from tests.helpers import _echo_handler
 
 
 def _json_request(
@@ -80,32 +79,6 @@ def _json_request(
         except json.JSONDecodeError:
             parsed = data
     return status, parsed
-
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def broker() -> Iterator[BrokerServer]:
-    server = BrokerServer(host="127.0.0.1", port=0)
-    server.start()
-    try:
-        yield server
-    finally:
-        server.stop()
-
-
-@pytest.fixture
-def agent_server() -> Iterator[tuple[TransportServer, list[Message]]]:
-    received: list[Message] = []
-    server = TransportServer(_echo_handler(received), host="127.0.0.1", port=0)
-    server.start()
-    try:
-        yield server, received
-    finally:
-        server.stop()
 
 
 # ---------------------------------------------------------------------------

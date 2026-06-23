@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Created `tests/conftest.py` with shared `broker` and `agent_server`
+    fixtures, eliminating triplicate definitions across broker and SDK
+    test files.
+
 - Enabled ruff docstring linting rules (D-prefix) following the Google
     convention, with per-file ignores for D10 codes in tests and
     vulture_whitelist, and D107 in broker/server.py.

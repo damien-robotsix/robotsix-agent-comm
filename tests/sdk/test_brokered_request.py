@@ -2,23 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
-
 import pytest
 
 from robotsix_agent_comm.broker import BrokerServer
 from robotsix_agent_comm.protocol import Error, Message, Request, Response
 from robotsix_agent_comm.sdk import BrokeredAgent, BrokeredRequester
-
-
-@pytest.fixture
-def broker() -> Generator[BrokerServer, None, None]:
-    server = BrokerServer(host="127.0.0.1", port=0)
-    server.start()
-    try:
-        yield server
-    finally:
-        server.stop()
 
 
 def _responder(agent_id: str, broker: BrokerServer, **kw: object) -> BrokeredAgent:

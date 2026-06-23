@@ -31,33 +31,6 @@ from robotsix_agent_comm.transport.brokered import (
     NetworkedBrokerTransport,
     create_transport_pair,
 )
-from tests.helpers import _echo_handler
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def broker() -> Generator[BrokerServer, None, None]:
-    server = BrokerServer(host="127.0.0.1", port=0)
-    server.start()
-    try:
-        yield server
-    finally:
-        server.stop()
-
-
-@pytest.fixture
-def agent_server() -> Generator[tuple[TransportServer, list[Message]], None, None]:
-    received: list[Message] = []
-    server = TransportServer(_echo_handler(received), host="127.0.0.1", port=0)
-    server.start()
-    try:
-        yield server, received
-    finally:
-        server.stop()
-
 
 # ---------------------------------------------------------------------------
 # Tests – BrokeredRegistry + NetworkedBrokerTransport (low-level)

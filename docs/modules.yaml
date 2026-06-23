@@ -19,6 +19,7 @@ modules:
       - src/robotsix_agent_comm/py.typed
       - tests/__init__.py
       - tests/test_smoke.py
+      - tests/conftest.py
       - tests/helpers.py
       - tests/test_end_to_end.py
       - docs/index.md
