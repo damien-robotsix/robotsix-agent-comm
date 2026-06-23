@@ -1667,7 +1667,7 @@ class TestAuditLogging:
         # _make_handler uses a MagicMock for _audit_logger by default.
         # But the real _AuditLogger(None) writes to stdout.
         # Test that the real implementation does not crash.
-        from robotsix_agent_comm.broker.server import _AuditLogger
+        from robotsix_agent_comm.broker._audit import _AuditLogger
 
         logger = _AuditLogger(None)
         # Should not raise.
