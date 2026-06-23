@@ -23,12 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - `AGENT.md` — project overview for AI coding agents covering repo identity,
-  key directories, build/test/lint commands, environment variables, periodic
-  workflows, and notable omissions.
+    key directories, build/test/lint commands, environment variables, periodic
+    workflows, and notable omissions.
 
 - `robotsix_agent_comm.sdk.reply.reply_text()`: a pure, dependency-free
     extractor that returns the `"reply"` string from a brokered response
     body with a configurable fallback.
+
 - `robotsix_agent_comm.sdk.brokered_request.BrokeredRequester`: a one-shot,
     per-call helper that encapsulates the brokered request lifecycle
     (transport pair, agent, send, error unwrap, reply extraction) so

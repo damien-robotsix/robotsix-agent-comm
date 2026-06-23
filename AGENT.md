@@ -10,16 +10,16 @@ directory, no Langfuse integration, and no persistent data directory.
 
 ## Key directories
 
-| Directory | Purpose |
-|---|---|
-| `src/robotsix_agent_comm/sdk/` | Consumer API — the `Agent` class developers use to build agents |
-| `src/robotsix_agent_comm/broker/` | Broker server — authenticates agents and relays messages (CLI: `robotsix-broker`) |
-| `src/robotsix_agent_comm/protocol/` | Typed message schemas (`Request`, `Response`, `Message`) |
-| `src/robotsix_agent_comm/transport/` | Low-level HTTP+JSON transport and agent registry |
-| `docs/` | Documentation site (MkDocs), including ADRs under `docs/decisions/` |
-| `examples/` | Runnable examples (e.g. `request_response.py`) |
-| `templates/` | Jinja2 templates (broker) |
-| `tests/` | Pytest suite |
+| Directory                            | Purpose                                                                           |
+| ------------------------------------ | --------------------------------------------------------------------------------- |
+| `src/robotsix_agent_comm/sdk/`       | Consumer API — the `Agent` class developers use to build agents                   |
+| `src/robotsix_agent_comm/broker/`    | Broker server — authenticates agents and relays messages (CLI: `robotsix-broker`) |
+| `src/robotsix_agent_comm/protocol/`  | Typed message schemas (`Request`, `Response`, `Message`)                          |
+| `src/robotsix_agent_comm/transport/` | Low-level HTTP+JSON transport and agent registry                                  |
+| `docs/`                              | Documentation site (MkDocs), including ADRs under `docs/decisions/`               |
+| `examples/`                          | Runnable examples (e.g. `request_response.py`)                                    |
+| `templates/`                         | Jinja2 templates (broker)                                                         |
+| `tests/`                             | Pytest suite                                                                      |
 
 ## Build, test, lint
 
@@ -44,44 +44,44 @@ trufflehog secrets scan.
 
 ### General (`.env.example`)
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `LLM_API_KEY` | — | LLM provider API key |
-| `LLM_MODEL` | `gpt-4o-mini` | LLM model name |
-| `LLM_BASE_URL` | — | Custom LLM base URL |
-| `SERVER_HOST` | `127.0.0.1` | Chat SSE server listen address |
-| `SERVER_PORT` | `8000` | Chat SSE server listen port |
-| `LOG_LEVEL` | `INFO` | Logging level |
+| Variable       | Default       | Purpose                        |
+| -------------- | ------------- | ------------------------------ |
+| `LLM_API_KEY`  | —             | LLM provider API key           |
+| `LLM_MODEL`    | `gpt-4o-mini` | LLM model name                 |
+| `LLM_BASE_URL` | —             | Custom LLM base URL            |
+| `SERVER_HOST`  | `127.0.0.1`   | Chat SSE server listen address |
+| `SERVER_PORT`  | `8000`        | Chat SSE server listen port    |
+| `LOG_LEVEL`    | `INFO`        | Logging level                  |
 
 ### Broker (`.env.broker.example`)
 
 All prefixed `ROBOTSIX_BROKER_` (per ADR 0006 §3.1).
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `ROBOTSIX_BROKER_HOST` | `0.0.0.0` | Broker listen address |
-| `ROBOTSIX_BROKER_PORT` | `8443` | Broker listen port |
-| `ROBOTSIX_BROKER_ENV` | `production` | Deployment environment |
-| `ROBOTSIX_BROKER_TLS_CERT` | `/etc/robotsix/tls/server.pem` | TLS certificate path |
-| `ROBOTSIX_BROKER_TLS_KEY` | `/etc/robotsix/tls/server.key` | TLS private key path |
-| `ROBOTSIX_BROKER_TLS_CA` | `/etc/robotsix/tls/ca.pem` | TLS CA bundle (mTLS) |
-| `ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT` | `false` | Enable mutual TLS |
-| `ROBOTSIX_BROKER_AGENT_TOKENS_FILE` | `/etc/robotsix/broker/agent-tokens.json` | Agent token store (file) |
-| `ROBOTSIX_BROKER_AGENT_TOKENS` | — | Agent token store (inline JSON, fallback) |
-| `ROBOTSIX_BROKER_TTL_SECONDS` | `60` | Agent registration TTL |
-| `ROBOTSIX_BROKER_RATE_LIMIT` | `0` (off) | Message rate limit per agent |
-| `ROBOTSIX_BROKER_MAX_BODY_SIZE` | `1_048_576` (1 MiB) | Max request body size |
-| `ROBOTSIX_BROKER_AUDIT_LOG` | stdout | Audit log destination (path or `-` for stdout) |
+| Variable                              | Default                                  | Purpose                                        |
+| ------------------------------------- | ---------------------------------------- | ---------------------------------------------- |
+| `ROBOTSIX_BROKER_HOST`                | `0.0.0.0`                                | Broker listen address                          |
+| `ROBOTSIX_BROKER_PORT`                | `8443`                                   | Broker listen port                             |
+| `ROBOTSIX_BROKER_ENV`                 | `production`                             | Deployment environment                         |
+| `ROBOTSIX_BROKER_TLS_CERT`            | `/etc/robotsix/tls/server.pem`           | TLS certificate path                           |
+| `ROBOTSIX_BROKER_TLS_KEY`             | `/etc/robotsix/tls/server.key`           | TLS private key path                           |
+| `ROBOTSIX_BROKER_TLS_CA`              | `/etc/robotsix/tls/ca.pem`               | TLS CA bundle (mTLS)                           |
+| `ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT` | `false`                                  | Enable mutual TLS                              |
+| `ROBOTSIX_BROKER_AGENT_TOKENS_FILE`   | `/etc/robotsix/broker/agent-tokens.json` | Agent token store (file)                       |
+| `ROBOTSIX_BROKER_AGENT_TOKENS`        | —                                        | Agent token store (inline JSON, fallback)      |
+| `ROBOTSIX_BROKER_TTL_SECONDS`         | `60`                                     | Agent registration TTL                         |
+| `ROBOTSIX_BROKER_RATE_LIMIT`          | `0` (off)                                | Message rate limit per agent                   |
+| `ROBOTSIX_BROKER_MAX_BODY_SIZE`       | `1_048_576` (1 MiB)                      | Max request body size                          |
+| `ROBOTSIX_BROKER_AUDIT_LOG`           | stdout                                   | Audit log destination (path or `-` for stdout) |
 
 ## Periodic workflows
 
 ### GitHub Actions (weekly, Monday 06:00 UTC)
 
-| Workflow | File | Purpose |
-|---|---|---|
-| **Audit** | `audit.yml` | `pip-audit` CVE scan on dependencies |
-| **CodeQL** | `codeql.yml` | GitHub CodeQL SAST analysis |
-| **Deps Bump** | `deps-bump.yml` | Automated dependency bump PRs |
+| Workflow      | File            | Purpose                              |
+| ------------- | --------------- | ------------------------------------ |
+| **Audit**     | `audit.yml`     | `pip-audit` CVE scan on dependencies |
+| **CodeQL**    | `codeql.yml`    | GitHub CodeQL SAST analysis          |
+| **Deps Bump** | `deps-bump.yml` | Automated dependency bump PRs        |
 
 ### robotsix-mill periodic configs (9 enabled)
 
@@ -94,11 +94,11 @@ for this repo:
 ## Notable omissions
 
 - **No Langfuse** — the broker is a generic message router; observability
-  is left to the agents that connect to it.
+    is left to the agents that connect to it.
 - **No `agent_check`** — agents register dynamically via `POST /agents`;
-  there are no hardcoded agents to check.
+    there are no hardcoded agents to check.
 - **No persistent data directory** — the broker keeps no persistent state
-  beyond an optional JSON-lines audit log.
+    beyond an optional JSON-lines audit log.
 - **No `agent_definitions/`** — this repo is not an agent.
 
 ## Docker
