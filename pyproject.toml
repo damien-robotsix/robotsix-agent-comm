@@ -62,7 +62,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "S", "D"]
 
 [tool.ruff.lint.per-file-ignores]
 "vulture_whitelist.py" = ["B018", "F821", "D10"]
-"tests/**" = ["S101", "S104", "S105", "S106", "S108", "D10"]
+"tests/**" = ["S101", "S104", "S105", "S106", "S108", "D10", "D205", "D403", "D415"]
 "src/robotsix_agent_comm/broker/config.py" = ["S104"]
 "src/robotsix_agent_comm/broker/server.py" = ["S101", "D107"]
 

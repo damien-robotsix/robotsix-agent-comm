@@ -17,6 +17,7 @@ class Registry:
     """Thread-safe, in-memory map of ``agent_id`` to :class:`Endpoint`."""
 
     def __init__(self) -> None:
+        """Initialize an empty thread-safe registry."""
         self._lock = threading.Lock()
         self._endpoints: dict[str, Endpoint] = {}
 

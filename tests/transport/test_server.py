@@ -153,7 +153,8 @@ class TestMessageRequestHandler:
 
     def test_do_post_protocol_error_during_deserialize_returns_400(self) -> None:
         """A valid JSON document that is not a valid protocol message
-        raises ProtocolError → 400 response."""
+        raises ProtocolError → 400 response.
+        """
         # Valid JSON, but missing required envelope fields → ProtocolError
         bad_json = json.dumps({"not": "a valid envelope"}).encode("utf-8")
 
@@ -289,7 +290,7 @@ class TestTransportServerLifecycle:
         # No thread to join — _thread is None, nothing to assert
 
     def test_context_manager_starts_and_stops(self) -> None:
-        """with block calls start() on enter and stop() on exit."""
+        """With block calls start() on enter and stop() on exit."""
         server = MagicMock(spec=_MessageHTTPServer)
         ts = TransportServer(MagicMock())
         ts._server.server_close()

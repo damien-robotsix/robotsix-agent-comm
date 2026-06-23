@@ -22,6 +22,7 @@ from robotsix_agent_comm.transport import AgentNotFoundError, Registry
 
 
 def main() -> None:
+    """Run the example."""
     registry = Registry()
 
     service = Agent("service", registry)

@@ -222,9 +222,12 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         return agent_id
 
     def _check_rate_limit(self, agent_id: str) -> bool:
-        """Check the rate limit for *agent_id*.  Writes 429 and returns
-        ``False`` when the limit is exceeded.  Always returns ``True``
-        when rate limiting is disabled (``rate_limit_per_second <= 0``)."""
+        """Check the rate limit for *agent_id*.
+
+        Writes 429 and returns ``False`` when the limit is exceeded.
+        Always returns ``True`` when rate limiting is disabled
+        (``rate_limit_per_second <= 0``).
+        """
         server = self._server()
         if server.rate_limit_per_second <= 0:
             return True
@@ -664,8 +667,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def _auto_register_mailbox(self, agent_id: str) -> None:
-        """(Re)create a mailbox registration for a polling pull agent the broker
-        has no record of — e.g. after a restart cleared the in-memory registry.
+        """Re-create a mailbox registration for a polling pull agent.
+
+        The broker has no record of this agent — e.g. after a restart
+        cleared the in-memory registry.
 
         Mirrors the mailbox path of ``POST /agents`` (idempotent): registry
         entry + empty queue + default TTL/heartbeat. Each lock is taken
@@ -969,8 +974,10 @@ class BrokerServer:
                 server.mailbox_cond.notify_all()
 
     def __enter__(self) -> BrokerServer:
+        """Enter the runtime context, starting the server."""
         self.start()
         return self
 
     def __exit__(self, *exc: object) -> None:
+        """Exit the runtime context, stopping the server."""
         self.stop()

@@ -17,6 +17,7 @@ from robotsix_agent_comm.transport import Registry
 
 
 def main() -> None:
+    """Run the example."""
     registry = Registry()
 
     listener = Agent("listener", registry)

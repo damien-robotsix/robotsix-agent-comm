@@ -69,6 +69,7 @@ class BrokeredAgent:
         on_request: RequestHandler | None = None,
         on_notification: NotificationHandler | None = None,
     ) -> None:
+        """Initialize the brokered agent with broker connection settings."""
         if ssl_context is None and tls_ca:
             ssl_context = ssl.create_default_context(cafile=tls_ca)
 
@@ -141,10 +142,12 @@ class BrokeredAgent:
         logger.info("BrokeredAgent %r stopped", self.agent_id)
 
     def __enter__(self) -> BrokeredAgent:
+        """Enter the runtime context, starting the agent."""
         self.start()
         return self
 
     def __exit__(self, *exc: object) -> None:
+        """Exit the runtime context, stopping the agent."""
         self.stop()
 
     def serve_forever(self) -> None:

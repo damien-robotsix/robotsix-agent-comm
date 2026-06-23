@@ -1176,7 +1176,8 @@ class TestBrokerAuditLogging:
 
     def test_audit_disabled_when_path_none(self) -> None:
         """When audit_log_path is None, the server starts and stops
-        without errors (audit logger writes to stdout silently)."""
+        without errors (audit logger writes to stdout silently).
+        """
         broker = BrokerServer(host="127.0.0.1", port=0)  # audit_log_path=None
         broker.start()
         try:

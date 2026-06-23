@@ -100,7 +100,8 @@ class TestBuildBroker:
 class TestAuthenticatedTLSClient:
     """Prove that a secured broker rejects unauthenticated requests
     and accepts authenticated ones — the security invariant that
-    no anonymous path is reachable in production."""
+    no anonymous path is reachable in production.
+    """
 
     def test_authenticated_request_accepted(self, tls_auth_broker: Any) -> None:
         broker, ca_path = tls_auth_broker

@@ -91,6 +91,7 @@ class TransportServer:
         port: int = 0,
         message_path: str = DEFAULT_MESSAGE_PATH,
     ) -> None:
+        """Initialize the transport server with handler and network settings."""
         self._server = _MessageHTTPServer((host, port), _MessageRequestHandler)
         self._server.message_handler = handler
         self._server.message_path = message_path
@@ -123,8 +124,10 @@ class TransportServer:
             self._thread = None
 
     def __enter__(self) -> TransportServer:
+        """Enter the runtime context, starting the server."""
         self.start()
         return self
 
     def __exit__(self, *exc: object) -> None:
+        """Exit the runtime context, stopping the server."""
         self.stop()
