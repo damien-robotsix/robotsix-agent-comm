@@ -259,6 +259,17 @@ class Agent:
     def __exit__(self, *exc: object) -> None:
         self.stop()
 
+    # -- helpers -----------------------------------------------------------
+
+    def _build_metadata_and_body(
+        self, recipient: str, body: dict[str, Any] | None, extra: dict[str, Any]
+    ) -> tuple[Metadata, dict[str, Any]]:
+        """Return metadata and body-dict for a message to ``recipient``."""
+        return (
+            Metadata.create(sender=self.agent_id, recipient=recipient, **extra),
+            dict(body) if body is not None else {},
+        )
+
     # -- sending ----------------------------------------------------------
 
     def send_request(
@@ -276,12 +287,8 @@ class Agent:
             DeliveryError: if delivery fails or no reply is returned.
             TransportTimeoutError: if the request exceeds its timeout.
         """
-        request = Request(
-            metadata=Metadata.create(
-                sender=self.agent_id, recipient=recipient, **extra
-            ),
-            body=dict(body) if body is not None else {},
-        )
+        metadata, body_dict = self._build_metadata_and_body(recipient, body, extra)
+        request = Request(metadata=metadata, body=body_dict)
         if self._pull:
             return self._send_request_pull(request, recipient, timeout)
         reply = self._router.route(request, timeout=timeout)
@@ -328,10 +335,6 @@ class Agent:
             AgentNotFoundError: if ``recipient`` is not registered.
             DeliveryError: if delivery fails after retries.
         """
-        notification = Notification(
-            metadata=Metadata.create(
-                sender=self.agent_id, recipient=recipient, **extra
-            ),
-            body=dict(body) if body is not None else {},
-        )
+        metadata, body_dict = self._build_metadata_and_body(recipient, body, extra)
+        notification = Notification(metadata=metadata, body=body_dict)
         self._router.route(notification)
