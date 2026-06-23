@@ -706,7 +706,8 @@ class TestCalendarDispatchEndToEnd:
         self, calendar_dispatch_broker: tuple[BrokerServer, str, str, str]
     ) -> None:
         """Producer sends calendar-dispatch Request; consumer echoes a
-        calendar-shaped Response."""
+        calendar-shaped Response.
+        """
         broker, ca_path, _cert_path, _key_path = calendar_dispatch_broker
 
         ctx = multiprocessing.get_context("spawn")

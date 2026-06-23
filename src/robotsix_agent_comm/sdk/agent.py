@@ -74,6 +74,7 @@ class Agent:
         transport: Transport | None = None,
         pull: bool = False,
     ) -> None:
+        """Initialize the agent with transport and registry bindings."""
         self.agent_id = agent_id
         self._registry = registry
         self._host = host
@@ -253,10 +254,12 @@ class Agent:
                 )
 
     def __enter__(self) -> Agent:
+        """Enter the runtime context, starting the agent."""
         self.start()
         return self
 
     def __exit__(self, *exc: object) -> None:
+        """Exit the runtime context, stopping the agent."""
         self.stop()
 
     # -- helpers -----------------------------------------------------------
@@ -299,8 +302,10 @@ class Agent:
     def _send_request_pull(
         self, request: Request, recipient: str, timeout: float | None
     ) -> Message:
-        """Pull-mode request: POST it, then wait for the correlated reply that
-        the receive-loop delivers from this agent's own mailbox."""
+        """Pull-mode request: POST it, then wait for the correlated reply.
+
+        The receive-loop delivers the reply from this agent's own mailbox.
+        """
         key = request.message_id
         event = threading.Event()
         slot: list[Message] = []

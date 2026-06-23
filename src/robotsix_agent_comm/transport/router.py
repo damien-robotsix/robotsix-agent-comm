@@ -28,6 +28,7 @@ class Router:
         *,
         timeout: float = 5.0,
     ) -> None:
+        """Initialize the message router with transport and retry policy."""
         self._registry = registry
         self._client = client
         self._retry_policy = retry_policy

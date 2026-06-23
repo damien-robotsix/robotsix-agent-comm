@@ -210,7 +210,8 @@ def test_route_explicit_none_timeout_uses_default() -> None:
 
 def test_route_delivery_failure_exhausts_retries() -> None:
     """When the client always fails, retries are exhausted and
-    DeliveryError is raised."""
+    DeliveryError is raised.
+    """
     error = TransportError("connection refused")
     client = _FailingClient(error=error)
     registry = _registry(_endpoint("agent-a"))

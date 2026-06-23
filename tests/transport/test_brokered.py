@@ -140,7 +140,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_posts_to_messages_with_json_body(self) -> None:
         """``send()`` POSTs to ``/messages`` with the serialized message
-        and ``Content-Type: application/json``."""
+        and ``Content-Type: application/json``.
+        """
         request = _request_msg("agent-a")
         expected_body = serialize(request).encode("utf-8")
 
@@ -210,7 +211,8 @@ class TestNetworkedBrokerTransportSend:
     def test_send_200_empty_body_raises_transport_error(self) -> None:
         """A 200 with an empty (non-JSON) body cannot be deserialized, so
         :class:`TransportError` is raised (not ``None`` — the ``not data``
-        guard is *after* the ``status == 200`` branch)."""
+        guard is *after* the ``status == 200`` branch).
+        """
         fake_resp = _FakeHTTPResponse(200, b"")
 
         with _patch_http(response=fake_resp):
@@ -220,7 +222,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_raises_agent_not_found_on_404_unknown_recipient(self) -> None:
         """HTTP 404 with error code ``unknown_recipient`` →
-        :class:`AgentNotFoundError`."""
+        :class:`AgentNotFoundError`.
+        """
         request = _request_msg("ghost")
         error_envelope = Error.to(
             request,
@@ -236,7 +239,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_raises_delivery_error_on_502_delivery_failed(self) -> None:
         """HTTP 502 with error code ``delivery_failed`` →
-        :class:`DeliveryError`."""
+        :class:`DeliveryError`.
+        """
         request = _request_msg("agent-a")
         error_envelope = Error.to(
             request,
@@ -274,7 +278,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_raises_transport_error_on_403(self) -> None:
         """A 4xx response that is not a recognised error envelope raises
-        :class:`TransportError`."""
+        :class:`TransportError`.
+        """
         junk_body = serialize(
             Notification(
                 metadata=Metadata.create(sender="x", recipient="y"),
@@ -290,7 +295,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_raises_transport_timeout_on_timeouterror(self) -> None:
         """When ``request()`` raises :class:`TimeoutError`, the transport
-        raises :class:`TransportTimeoutError`."""
+        raises :class:`TransportTimeoutError`.
+        """
         with _patch_http(side_effect=TimeoutError("timed out")):
             transport = NetworkedBrokerTransport("localhost", 8000)
             with pytest.raises(TransportTimeoutError, match="timed out"):
@@ -298,7 +304,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_raises_transport_error_on_oserror(self) -> None:
         """When ``request()`` raises :class:`OSError` (not TimeoutError),
-        the transport raises :class:`TransportError`."""
+        the transport raises :class:`TransportError`.
+        """
         with _patch_http(side_effect=OSError("connection refused")):
             transport = NetworkedBrokerTransport("localhost", 8000)
             with pytest.raises(TransportError, match="failed to reach broker"):
@@ -306,7 +313,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_raises_transport_error_on_invalid_json_in_200(self) -> None:
         """When the 200 response body cannot be deserialized,
-        :class:`TransportError` is raised."""
+        :class:`TransportError` is raised.
+        """
         fake_resp = _FakeHTTPResponse(200, b"not valid json {{{")
 
         with _patch_http(response=fake_resp):
@@ -318,7 +326,8 @@ class TestNetworkedBrokerTransportSend:
         """A 404 whose body is not valid JSON at all causes the
         ``deserialize`` call to raise :class:`ProtocolError`, which is
         re-raised by the error-handling block (the generic
-        ``TransportError`` is never reached)."""
+        ``TransportError`` is never reached).
+        """
         fake_resp = _FakeHTTPResponse(404, b"just some text")
 
         with _patch_http(response=fake_resp):
@@ -328,7 +337,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_404_error_envelope_wrong_code_raises_transport_error(self) -> None:
         """A 404 whose Error envelope has an unrecognised code raises
-        :class:`TransportError`."""
+        :class:`TransportError`.
+        """
         request = _request_msg("ghost")
         error_envelope = Error.to(
             request,
@@ -344,7 +354,8 @@ class TestNetworkedBrokerTransportSend:
 
     def test_send_ignores_endpoint_routes_via_broker(self) -> None:
         """The *endpoint* argument is ignored — the transport always POSTs
-        to the broker's ``/messages`` regardless of the endpoint fields."""
+        to the broker's ``/messages`` regardless of the endpoint fields.
+        """
         request = _request_msg("agent-x")
         reply = Response.to(request, body={"ok": True})
         fake_resp = _FakeHTTPResponse(200, serialize(reply).encode("utf-8"))
@@ -415,7 +426,8 @@ class TestNetworkedBrokerTransportHttps:
 
     def test_https_scheme_uses_httpsconnection(self) -> None:
         """When ``scheme="https"`` the transport creates an
-        ``HTTPSConnection`` instead of ``HTTPConnection``."""
+        ``HTTPSConnection`` instead of ``HTTPConnection``.
+        """
         request = _request_msg("agent-a")
         reply = Response.to(request, body={"echo": "pong"})
         fake_resp = _FakeHTTPResponse(200, serialize(reply).encode("utf-8"))
@@ -442,7 +454,8 @@ class TestBrokeredRegistryRegister:
 
     def test_register_posts_to_agents_with_correct_json(self) -> None:
         """``register()`` POSTs to ``/agents`` with the endpoint fields
-        serialised as JSON."""
+        serialised as JSON.
+        """
         fake_resp = _FakeHTTPResponse(201)
 
         with _patch_http(response=fake_resp) as mock_conn_cls:
@@ -562,7 +575,8 @@ class TestBrokeredRegistryLookup:
 
     def test_lookup_gets_agents_and_finds_target(self) -> None:
         """``lookup()`` GETs ``/agents`` and returns the matching
-        :class:`Endpoint`."""
+        :class:`Endpoint`.
+        """
         agents_payload = {
             "agents": [
                 {"agent_id": "agent-1", "host": "h1", "port": 1},
@@ -584,7 +598,8 @@ class TestBrokeredRegistryLookup:
 
     def test_lookup_raises_agent_not_found_when_absent(self) -> None:
         """When the agent list does not contain the requested ID,
-        :class:`AgentNotFoundError` is raised."""
+        :class:`AgentNotFoundError` is raised.
+        """
         agents_payload = {
             "agents": [
                 {"agent_id": "agent-1", "host": "h1", "port": 1},
@@ -622,7 +637,8 @@ class TestBrokeredRegistryListAgents:
 
     def test_list_agents_returns_all_endpoints(self) -> None:
         """``list_agents()`` returns a list of :class:`Endpoint` objects
-        with correct agent IDs and placeholder host/port."""
+        with correct agent IDs and placeholder host/port.
+        """
         agents_payload = {
             "agents": [
                 {"agent_id": "agent-1", "host": "h1", "port": 1},
@@ -705,7 +721,8 @@ class TestBrokeredRegistryErrors:
 
     def test_lookup_non_200_status_raises_transport_error(self) -> None:
         """When ``GET /agents`` returns a non-200 status, ``lookup()``
-        raises :class:`TransportError`."""
+        raises :class:`TransportError`.
+        """
         fake_resp = _FakeHTTPResponse(500, b"boom")
 
         with _patch_http(response=fake_resp):
@@ -715,7 +732,8 @@ class TestBrokeredRegistryErrors:
 
     def test_list_agents_non_200_status_raises_transport_error(self) -> None:
         """When ``GET /agents`` returns a non-200 status, ``list_agents()``
-        raises :class:`TransportError`."""
+        raises :class:`TransportError`.
+        """
         fake_resp = _FakeHTTPResponse(503, b"unavailable")
 
         with _patch_http(response=fake_resp):
@@ -748,7 +766,8 @@ class TestBrokeredRegistryErrors:
         """When the response body is not valid JSON, ``_request`` catches
         ``json.JSONDecodeError`` and stores the raw string.  ``list_agents``
         guards with ``isinstance(parsed, dict)`` so it falls back to an
-        empty list."""
+        empty list.
+        """
         fake_resp = _FakeHTTPResponse(200, b"not json at all")
 
         with _patch_http(response=fake_resp):
@@ -760,7 +779,8 @@ class TestBrokeredRegistryErrors:
     def test_lookup_bad_json_raises_agent_not_found(self) -> None:
         """When the response body is not valid JSON, ``_request`` stores
         the raw string.  ``lookup`` guards with ``isinstance(parsed, dict)``
-        so the agent list is empty → :class:`AgentNotFoundError`."""
+        so the agent list is empty → :class:`AgentNotFoundError`.
+        """
         fake_resp = _FakeHTTPResponse(200, b"garbage")
 
         with _patch_http(response=fake_resp):
@@ -809,7 +829,8 @@ class TestCreateTransportPair:
 
     def test_brokered_mode_returns_brokered_pair(self) -> None:
         """``mode="brokered"`` returns
-        ``(BrokeredRegistry, NetworkedBrokerTransport)``."""
+        ``(BrokeredRegistry, NetworkedBrokerTransport)``.
+        """
         reg, transport = create_transport_pair(
             "brokered", broker_host="bhost", broker_port=9999, broker_scheme="http"
         )
@@ -970,7 +991,8 @@ class TestBrokeredRegistryAuthHeader:
 
 class TestCreateTransportPairWithToken:
     """``create_transport_pair`` forwards ``broker_token`` and
-    ``broker_ssl_context`` to the brokered pair."""
+    ``broker_ssl_context`` to the brokered pair.
+    """
 
     def test_brokered_mode_passes_token(self) -> None:
         reg, transport = create_transport_pair(

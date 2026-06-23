@@ -308,7 +308,8 @@ class TestBrokeredAuthIntegration:
         self, broker_with_auth: BrokerServer
     ) -> None:
         """Register with bad token is fire-and-forget but the agent
-        is not actually registered — verified via a valid-token lookup."""
+        is not actually registered — verified via a valid-token lookup.
+        """
         # Attempt registration with a bad token.
         bad_registry = BrokeredRegistry(
             broker_with_auth.host, broker_with_auth.port, agent_token="bad-token"

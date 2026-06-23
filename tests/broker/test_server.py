@@ -802,7 +802,8 @@ def _auth_headers(
     token: str | None = None, body_bytes: bytes | None = None
 ) -> MagicMock:
     """Return a ``headers`` mock that returns *token* for ``Authorization``
-    and the correct ``Content-Length`` for *body_bytes*."""
+    and the correct ``Content-Length`` for *body_bytes*.
+    """
     headers = MagicMock()
 
     def _get(key: str, default: str = "") -> str:
@@ -1654,7 +1655,8 @@ class TestAuditLogging:
         """401 auth failures do not reach the handler's audit logging
         because _authenticate returns early.  The spec says we don't
         need to log auth failures — those happen before the handler
-        logic.  Verify that a 401 is returned without crash."""
+        logic.  Verify that a 401 is returned without crash.
+        """
         tokens = {"agent-a": "tok-a"}
         server = _make_server_with_tokens(tokens)
         handler = _make_handler(path="/agents", server=server)

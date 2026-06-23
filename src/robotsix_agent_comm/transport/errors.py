@@ -34,6 +34,7 @@ class DeliveryError(TransportError):
     """
 
     def __init__(self, message: str, *, cause: BaseException | None = None) -> None:
+        """Initialize the transport error with an optional cause."""
         super().__init__(message)
         self.cause = cause
 

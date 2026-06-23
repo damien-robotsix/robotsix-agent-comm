@@ -55,6 +55,7 @@ class BrokeredRequester:
         timeout: float = 30.0,
         default_reply: str = "",
     ) -> None:
+        """Initialize the brokered request with broker connection settings."""
         self.agent_id = agent_id
         self.target_agent_id = target_agent_id
         self._broker_host = broker_host
