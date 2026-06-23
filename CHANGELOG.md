@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Extracted `_TokenBucket` and `_AuditLogger` helpers from `broker/server.py`
+  into dedicated `broker/_rate_limit.py` and `broker/_audit.py` modules for
+  improved cohesion and independent testability.
+
 ### Added
 
 - `robotsix_agent_comm.sdk.reply.reply_text()`: a pure, dependency-free
