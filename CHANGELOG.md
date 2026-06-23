@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Extracted `_TokenBucket` and `_AuditLogger` helpers from `broker/server.py`
     into dedicated `broker/_rate_limit.py` and `broker/_audit.py` modules for
     improved cohesion and independent testability.
+- `Agent._build_metadata_and_body()`: extracted shared message-construction
+    logic from `send_request` and `send_notification` into a private helper.
 
 ### Added
 
