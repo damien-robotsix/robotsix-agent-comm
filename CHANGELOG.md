@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `robotsix_agent_comm.sdk.reply.reply_text()`: a pure, dependency-free
+  extractor that returns the ``"reply"`` string from a brokered response
+  body with a configurable fallback.
+- `robotsix_agent_comm.sdk.brokered_request.BrokeredRequester`: a one-shot,
+  per-call helper that encapsulates the brokered request lifecycle
+  (transport pair, agent, send, error unwrap, reply extraction) so
+  consumers no longer need to open-code it.
+
 ## [0.1.0] - 2026-06-14
 
 ### Added

@@ -10,10 +10,14 @@ from __future__ import annotations
 
 from .agent import Agent, NotificationHandler, RequestHandler
 from .brokered import BrokeredAgent
+from .brokered_request import BrokeredRequester
+from .reply import reply_text
 
 __all__ = [
     "Agent",
     "BrokeredAgent",
+    "BrokeredRequester",
     "NotificationHandler",
     "RequestHandler",
+    "reply_text",
 ]
