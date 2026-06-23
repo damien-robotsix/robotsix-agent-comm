@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
-
-- `AGENT.md` — project overview for AI coding agents covering repo identity,
-  key directories, build/test/lint commands, environment variables, periodic
-  workflows, and notable omissions.
-
 ### Changed
 
 - Enabled ruff docstring linting rules (D-prefix) following the Google
@@ -27,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     logic from `send_request` and `send_notification` into a private helper.
 
 ### Added
+
+- `AGENT.md` — project overview for AI coding agents covering repo identity,
+  key directories, build/test/lint commands, environment variables, periodic
+  workflows, and notable omissions.
 
 - `robotsix_agent_comm.sdk.reply.reply_text()`: a pure, dependency-free
     extractor that returns the `"reply"` string from a brokered response
