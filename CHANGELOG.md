@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Enabled ruff docstring linting rules (D-prefix) following the Google
+    convention, with per-file ignores for D10 codes in tests and
+    vulture_whitelist, and D107 in broker/server.py.
+
 - Extracted `_TokenBucket` and `_AuditLogger` helpers from `broker/server.py`
     into dedicated `broker/_rate_limit.py` and `broker/_audit.py` modules for
     improved cohesion and independent testability.
