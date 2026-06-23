@@ -395,13 +395,14 @@ def _calendar_dispatch_producer(
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def secured_broker() -> Generator[tuple[BrokerServer, str, str, str], None, None]:
-    """Start a TLS+auth BrokerServer and return it along with cert paths.
+def _make_tls_broker(
+    prefix: str, tokens: dict[str, str]
+) -> Generator[tuple[BrokerServer, str, str, str], None, None]:
+    """Shared helper: start a TLS+auth BrokerServer and yield it with cert paths.
 
     Yields ``(broker, ca_cert_path, server_cert_path, server_key_path)``.
     """
-    tmpdir = tempfile.mkdtemp(prefix="e2e_tls_")
+    tmpdir = tempfile.mkdtemp(prefix=prefix)
     ca_path, cert_path, key_path = _write_certs_to_dir(tmpdir)
 
     server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -411,23 +412,34 @@ def secured_broker() -> Generator[tuple[BrokerServer, str, str, str], None, None
         host="127.0.0.1",
         port=0,
         ssl_context=server_ctx,
-        agent_tokens={
-            "agent-a": "tok-a",
-            "agent-b": "tok-b",
-            "agent-admin": "tok-admin",
-        },
+        agent_tokens=tokens,
     )
     broker.start()
     try:
         yield broker, ca_path, cert_path, key_path
     finally:
         broker.stop()
-        # Clean up temp cert files.
         for p in (ca_path, cert_path, key_path):
             if os.path.exists(p):
                 os.unlink(p)
         with contextlib.suppress(OSError):
             os.rmdir(tmpdir)
+
+
+@pytest.fixture
+def secured_broker() -> Generator[tuple[BrokerServer, str, str, str], None, None]:
+    """Start a TLS+auth BrokerServer for secured-agent end-to-end tests.
+
+    Yields ``(broker, ca_cert_path, server_cert_path, server_key_path)``.
+    """
+    yield from _make_tls_broker(
+        "e2e_tls_",
+        {
+            "agent-a": "tok-a",
+            "agent-b": "tok-b",
+            "agent-admin": "tok-admin",
+        },
+    )
 
 
 @pytest.fixture
@@ -437,33 +449,14 @@ def calendar_dispatch_broker() -> Generator[
     """Start a TLS+auth BrokerServer for calendar-dispatch end-to-end tests.
 
     Yields ``(broker, ca_cert_path, server_cert_path, server_key_path)``.
-    Uses tokens for ``auto-mail`` and ``calendar-agent``.
     """
-    tmpdir = tempfile.mkdtemp(prefix="cal_dispatch_tls_")
-    ca_path, cert_path, key_path = _write_certs_to_dir(tmpdir)
-
-    server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    server_ctx.load_cert_chain(cert_path, key_path)
-
-    broker = BrokerServer(
-        host="127.0.0.1",
-        port=0,
-        ssl_context=server_ctx,
-        agent_tokens={
+    yield from _make_tls_broker(
+        "cal_dispatch_tls_",
+        {
             "auto-mail": "tok-auto-mail",
             "calendar-agent": "tok-calendar-agent",
         },
     )
-    broker.start()
-    try:
-        yield broker, ca_path, cert_path, key_path
-    finally:
-        broker.stop()
-        for p in (ca_path, cert_path, key_path):
-            if os.path.exists(p):
-                os.unlink(p)
-        with contextlib.suppress(OSError):
-            os.rmdir(tmpdir)
 
 
 # ---------------------------------------------------------------------------
