@@ -7,6 +7,7 @@ from collections.abc import Generator
 import pytest
 
 from robotsix_agent_comm.broker import BrokerServer
+from robotsix_agent_comm.protocol import Message
 from robotsix_agent_comm.transport import TransportServer
 from tests.helpers import _echo_handler
 
@@ -23,9 +24,9 @@ def broker() -> Generator[BrokerServer, None, None]:
 
 
 @pytest.fixture
-def agent_server() -> Generator[tuple[TransportServer, list], None, None]:
+def agent_server() -> Generator[tuple[TransportServer, list[Message]], None, None]:
     """Start a TransportServer with an echo handler on an ephemeral port."""
-    received: list = []
+    received: list[Message] = []
     server = TransportServer(_echo_handler(received), host="127.0.0.1", port=0)
     server.start()
     try:

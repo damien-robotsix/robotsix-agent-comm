@@ -16,13 +16,13 @@ rights. CI **cannot** perform them — they are manual, human steps.
 1. **Create the GitHub Environments.** In the repository settings,
     create two environments named exactly `pypi` and `testpypi`. Add any
     desired protection rules (e.g. required reviewers for `pypi`).
-1. **Configure the PyPI Trusted Publisher.** On
+2. **Configure the PyPI Trusted Publisher.** On
     [PyPI](https://pypi.org/manage/account/publishing/), add a new
     *pending* (or project) trusted publisher pointing at:
     - Repository: `robotsix-agent-comm` (owner `robotsix`)
     - Workflow: `publish.yml`
     - Environment: `pypi`
-1. **Configure the TestPyPI Trusted Publisher.** Repeat the previous
+3. **Configure the TestPyPI Trusted Publisher.** Repeat the previous
     step on [TestPyPI](https://test.pypi.org/manage/account/publishing/)
     with the `testpypi` environment.
 
@@ -43,7 +43,7 @@ cannot perform them.
     `404 Not Found` on the project page means the name is free; an
     existing project means the name is taken and must be resolved before
     continuing.
-1. **Register a *pending* trusted publisher.** Because the project does
+2. **Register a *pending* trusted publisher.** Because the project does
     not exist yet, use PyPI's
     [pending publisher](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
     flow rather than a project-scoped one: the *pending* publisher
@@ -51,7 +51,7 @@ cannot perform them.
     first upload, which creates the project, after which PyPI converts it
     into a normal project publisher automatically. Configure the pending
     publisher on both PyPI and TestPyPI.
-1. **Dry-run to TestPyPI first.** Trigger the `Publish` workflow
+3. **Dry-run to TestPyPI first.** Trigger the `Publish` workflow
     manually (`workflow_dispatch`) with the `testpypi` target and confirm
     the build, `twine check`, and TestPyPI upload all succeed **before**
     pushing the first real `vX.Y.Z` tag. This validates the pending
@@ -64,16 +64,16 @@ cannot perform them.
     `## [Unreleased]` entries into a new `## [X.Y.Z]` section and leave a
     fresh empty `Unreleased` section above it.
 
-1. **Bump the version.** Set `[project].version` in `pyproject.toml` to
+2. **Bump the version.** Set `[project].version` in `pyproject.toml` to
     `X.Y.Z`. This is the single source of truth for the version; the
     workflow's tag/version guard fails the build if the tag and this
     value disagree.
 
-1. **Dry-run to TestPyPI.** Trigger the `Publish` workflow manually
+3. **Dry-run to TestPyPI.** Trigger the `Publish` workflow manually
     (`workflow_dispatch`) with the `testpypi` target and confirm the
     build, `twine check`, and TestPyPI upload all succeed.
 
-1. **Tag and push.** Create and push the release tag:
+4. **Tag and push.** Create and push the release tag:
 
     ```bash
     git tag vX.Y.Z
@@ -93,7 +93,7 @@ network and cannot run in the sandbox.
     [PyPI project page](https://pypi.org/project/robotsix-agent-comm/)
     and verify the new version is live and shows the expected metadata.
 
-1. **Install into a clean virtual environment.** From a fresh venv,
+2. **Install into a clean virtual environment.** From a fresh venv,
     install the published distribution and run an import smoke check:
 
     ```bash
@@ -105,7 +105,7 @@ network and cannot run in the sandbox.
     A clean install plus a successful import confirms the wheel is
     complete and importable.
 
-1. **Confirm the tag and GitHub Release.** Verify the `vX.Y.Z` git tag
+3. **Confirm the tag and GitHub Release.** Verify the `vX.Y.Z` git tag
     exists on the remote and that the auto-generated GitHub Release was
     created with the extracted `## [X.Y.Z]` changelog notes.
 

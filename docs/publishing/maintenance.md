@@ -104,15 +104,15 @@ Prefer the **warn-before-remove** deprecation path over abrupt removal:
         ...
     ```
 
-1. **Document.** Record the deprecation in `CHANGELOG.md` under a
+2. **Document.** Record the deprecation in `CHANGELOG.md` under a
     `Deprecated` heading, naming the symbol and its replacement.
 
-1. **Keep for ≥1 minor release.** Leave the deprecated symbol in place
+3. **Keep for ≥1 minor release.** Leave the deprecated symbol in place
     for at least one minor release before removing it, so downstream
     users have a version where both the warning and the replacement
     coexist.
 
-1. **Remove.** Only then remove the symbol — that removal is a breaking
+4. **Remove.** Only then remove the symbol — that removal is a breaking
     change and goes under `Removed` in the CHANGELOG with the
     corresponding MAJOR bump.
 
@@ -189,20 +189,20 @@ Security issues are handled privately and on an expedited timeline:
     private vulnerability reporting (Security → "Report a vulnerability")
     rather than public issues, so a fix can ship before disclosure.
     Direct reporters there from the README/SECURITY policy.
-1. **Triage & severity.** Confirm the report, assess severity and
+2. **Triage & severity.** Confirm the report, assess severity and
     affected versions (CVSS-style: impact × exploitability), and
     reproduce privately. Decide the lowest release type that ships the
     fix safely.
-1. **Coordinated fix, then release.** Develop the fix on a private
+3. **Coordinated fix, then release.** Develop the fix on a private
     branch, then publish an **expedited PATCH** (or MINOR if the fix
     needs an additive API change) through the normal
     [release flow](releasing.md#per-release-steps). Do not disclose
     details until the fixed version is on PyPI.
-1. **Publish a GitHub Security Advisory (GHSA).** Publish the advisory
+4. **Publish a GitHub Security Advisory (GHSA).** Publish the advisory
     (and request a CVE if warranted) once the fix is released, crediting
     the reporter. **Creating/publishing the GHSA is an operator step** —
     it requires repo-admin access.
-1. **CHANGELOG.** Note the fix in `CHANGELOG.md` under a `Security`
+5. **CHANGELOG.** Note the fix in `CHANGELOG.md` under a `Security`
     heading, referencing the advisory ID once published.
 
 ## Deprecating / retiring a package
@@ -222,10 +222,10 @@ direction.
     `Deprecated` entry in `CHANGELOG.md` (point to the replacement and
     the end-of-maintenance date), then publish that final version
     through the normal [release flow](releasing.md).
-1. **Archive the repository.** Set the GitHub repo to archived
+2. **Archive the repository.** Set the GitHub repo to archived
     (read-only) so it is clearly unmaintained. **Operator step**
     (repo-admin).
-1. **PyPI-side actions.** Optionally mark the PyPI project as
+3. **PyPI-side actions.** Optionally mark the PyPI project as
     inactive/deprecated, or yank specific releases that are known-broken
     (yanking hides a release from new resolutions without deleting it).
     **These are operator steps** requiring PyPI account access — document
