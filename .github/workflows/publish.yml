@@ -54,6 +54,7 @@ jobs:
   # notes — we create the GitHub Release ourselves in the
   # github-release job below.
   # ------------------------------------------------------------------
+  # environment for OIDC trusted publishing is declared inside the reusable python-release.yml; it cannot be set on a reusable-calling job
   release:
     needs: verify-tag
     if: |
@@ -63,7 +64,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    environment: pypi
     uses: damien-robotsix/robotsix-mill/.github/workflows/python-release.yml@90fcbcb32974e45c86e798f6da435e430e276a99  # main
     with:
       python-version: "3.12"
