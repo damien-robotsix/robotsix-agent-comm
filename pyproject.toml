@@ -65,6 +65,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "S", "D"]
 "tests/**" = ["S101", "S104", "S105", "S106", "S108", "D10", "D205", "D403", "D415"]
 "src/robotsix_agent_comm/broker/config.py" = ["S104"]
 "src/robotsix_agent_comm/broker/server.py" = ["S101", "D107"]
+"src/robotsix_agent_comm/broker/_dashboard.py" = ["E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `last_seen_seconds_ago`, `ttl_seconds`, `status`, and `mailbox`
     for each registered agent.
 
+- Broker: monitoring dashboard at `GET /dashboard` (and `GET /`) serving
+    a self-contained HTML page with registered-agents table, live message
+    traffic table, and filter/search controls (agent, topic, time window).
+    Gated by `ROBOTSIX_BROKER_DASHBOARD_ENABLED` (default off). Browser
+    auth uses a `?token=` query parameter validated against the existing
+    bearer-token store; the `Authorization` header remains authoritative.
+
 - `AGENT.md` — project overview for AI coding agents covering repo identity,
     key directories, build/test/lint commands, environment variables, periodic
     workflows, and notable omissions.
