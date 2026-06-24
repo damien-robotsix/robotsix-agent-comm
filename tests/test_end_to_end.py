@@ -19,6 +19,7 @@ import tempfile
 import time
 import traceback
 from collections.abc import Generator
+from multiprocessing.process import BaseProcess
 from typing import Any
 
 import pytest
@@ -391,6 +392,46 @@ def _calendar_dispatch_producer(
 
 
 # ---------------------------------------------------------------------------
+# Shared results-collection helper
+# ---------------------------------------------------------------------------
+
+
+def _collect_results(
+    procs: list[BaseProcess],
+    ready_events: list[multiprocessing.synchronize.Event],
+    result_queue: multiprocessing.Queue[dict[str, Any]],
+    start_event: multiprocessing.synchronize.Event,
+    timeout: float = 20,
+    n_results: int = 2,
+) -> list[dict[str, Any]]:
+    """Wait for ready events, signal start, collect results, and clean up.
+
+    Returns the collected results list.
+    """
+    try:
+        for ev in ready_events:
+            ev.wait(timeout=15)
+        time.sleep(0.2)
+        start_event.set()
+
+        results: list[dict[str, Any]] = []
+        deadline = time.monotonic() + timeout
+        while len(results) < n_results and time.monotonic() < deadline:
+            with contextlib.suppress(Exception):
+                results.append(result_queue.get(timeout=1.0))
+
+        assert len(results) == n_results, (
+            f"Expected {n_results} results, got {len(results)}: {results}"
+        )
+        return results
+    finally:
+        for p in procs:
+            if p.is_alive():
+                p.terminate()
+                p.join(timeout=5)
+
+
+# ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
@@ -512,51 +553,30 @@ class TestEndToEndSecured:
         proc_a.start()
         proc_b.start()
 
-        try:
-            # Wait for both agents to register.
-            ready_a.wait(timeout=15)
-            ready_b.wait(timeout=15)
+        results = _collect_results(
+            [proc_a, proc_b], [ready_a, ready_b], result_queue, start_event
+        )
 
-            # Give them a moment to settle, then signal to proceed.
-            time.sleep(0.2)
-            start_event.set()
-
-            # Collect results.
-            results: list[dict[str, Any]] = []
-            deadline = time.monotonic() + 20
-            while len(results) < 2 and time.monotonic() < deadline:
-                with contextlib.suppress(Exception):
-                    results.append(result_queue.get(timeout=1.0))
-
-            assert len(results) == 2, (
-                f"Expected 2 results, got {len(results)}: {results}"
+        for r in results:
+            assert r["status"] == "ok", (
+                f"Agent {r.get('agent_id')} failed: {r.get('traceback', '')}"
+            )
+            assert r["discovery_ok"], (
+                f"Agent {r['agent_id']} discovery failed: did not see both agents"
+            )
+            assert r["reply_ok"], (
+                f"Agent {r['agent_id']} did not receive expected echo reply"
             )
 
-            for r in results:
-                assert r["status"] == "ok", (
-                    f"Agent {r.get('agent_id')} failed: {r.get('traceback', '')}"
-                )
-                assert r["discovery_ok"], (
-                    f"Agent {r['agent_id']} discovery failed: did not see both agents"
-                )
-                assert r["reply_ok"], (
-                    f"Agent {r['agent_id']} did not receive expected echo reply"
-                )
-
-            # Each agent should have received the other's notification + request.
-            for r in results:
-                other = "agent-b" if r["agent_id"] == "agent-a" else "agent-a"
-                assert f"hello-from-{other}" in r["received_events"], (
-                    f"Agent {r['agent_id']} did not receive notification from {other}"
-                )
-                assert f"ping-from-{other}" in r["received_requests"], (
-                    f"Agent {r['agent_id']} did not receive request from {other}"
-                )
-        finally:
-            for p in (proc_a, proc_b):
-                if p.is_alive():
-                    p.terminate()
-                    p.join(timeout=5)
+        # Each agent should have received the other's notification + request.
+        for r in results:
+            other = "agent-b" if r["agent_id"] == "agent-a" else "agent-a"
+            assert f"hello-from-{other}" in r["received_events"], (
+                f"Agent {r['agent_id']} did not receive notification from {other}"
+            )
+            assert f"ping-from-{other}" in r["received_requests"], (
+                f"Agent {r['agent_id']} did not receive request from {other}"
+            )
 
     def test_auth_failure_invalid_token_rejected(
         self, secured_broker: tuple[BrokerServer, str, str, str]
@@ -744,45 +764,28 @@ class TestCalendarDispatchEndToEnd:
         proc_consumer.start()
         proc_producer.start()
 
-        try:
-            ready_consumer.wait(timeout=15)
-            ready_producer.wait(timeout=15)
+        results = _collect_results(
+            [proc_consumer, proc_producer],
+            [ready_consumer, ready_producer],
+            result_queue,
+            start_event,
+        )
 
-            time.sleep(0.2)
-            start_event.set()
-
-            results: list[dict[str, Any]] = []
-            deadline = time.monotonic() + 20
-            while len(results) < 2 and time.monotonic() < deadline:
-                with contextlib.suppress(Exception):
-                    results.append(result_queue.get(timeout=1.0))
-
-            assert len(results) == 2, (
-                f"Expected 2 results, got {len(results)}: {results}"
+        for r in results:
+            assert r["status"] == "ok", (
+                f"Agent {r.get('agent_id')} failed: {r.get('traceback', '')}"
             )
 
-            for r in results:
-                assert r["status"] == "ok", (
-                    f"Agent {r.get('agent_id')} failed: {r.get('traceback', '')}"
-                )
+        consumer_result = next(r for r in results if r["agent_id"] == "calendar-agent")
+        producer_result = next(r for r in results if r["agent_id"] == "auto-mail")
 
-            consumer_result = next(
-                r for r in results if r["agent_id"] == "calendar-agent"
-            )
-            producer_result = next(r for r in results if r["agent_id"] == "auto-mail")
-
-            assert consumer_result["dispatch_received"], (
-                "Consumer did not receive the calendar-dispatch request"
-            )
-            reply_body = producer_result.get("reply_body")
-            assert producer_result["reply_ok"], (
-                f"Producer did not receive expected response: {reply_body}"
-            )
-        finally:
-            for p in (proc_consumer, proc_producer):
-                if p.is_alive():
-                    p.terminate()
-                    p.join(timeout=5)
+        assert consumer_result["dispatch_received"], (
+            "Consumer did not receive the calendar-dispatch request"
+        )
+        reply_body = producer_result.get("reply_body")
+        assert producer_result["reply_ok"], (
+            f"Producer did not receive expected response: {reply_body}"
+        )
 
     def test_plaintext_rejected_by_tls_broker(
         self, calendar_dispatch_broker: tuple[BrokerServer, str, str, str]
