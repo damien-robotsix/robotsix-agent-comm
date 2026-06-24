@@ -9,7 +9,7 @@ import pytest
 from robotsix_agent_comm.broker import BrokerServer
 from robotsix_agent_comm.protocol import Request
 from robotsix_agent_comm.sdk import discover_agents
-from robotsix_agent_comm.sdk.responder import BrokeredResponder
+from robotsix_agent_comm.sdk.responder import BUILTIN_HANDLERS, BrokeredResponder
 from robotsix_agent_comm.transport.errors import TransportError
 
 # ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ def test_discover_single_responder(broker: BrokerServer) -> None:
         assert len(result) == 1
         info = result[0]
         assert info.agent_id == "alpha"
-        assert info.supported_kinds == sorted(["config-get", "config-set", "monitor"])
+        assert info.supported_kinds == sorted(BUILTIN_HANDLERS.keys())
     finally:
         responder.stop()
 
@@ -97,13 +97,11 @@ def test_discover_multiple_responders(broker: BrokerServer) -> None:
         by_id = {info.agent_id: info for info in result}
 
         # Agent A: exactly the three builtins.
-        assert by_id["agent-a"].supported_kinds == sorted(
-            ["config-get", "config-set", "monitor"]
-        )
+        assert by_id["agent-a"].supported_kinds == sorted(BUILTIN_HANDLERS.keys())
 
         # Agent B: builtins + custom-echo.
         assert by_id["agent-b"].supported_kinds == sorted(
-            ["config-get", "config-set", "custom-echo", "monitor"]
+            set(BUILTIN_HANDLERS.keys()) | {"custom-echo"}
         )
     finally:
         r_a.stop()
