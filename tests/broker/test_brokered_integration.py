@@ -352,7 +352,7 @@ class TestBrokeredAuthIntegration:
         )
         assert result is True
 
-    def test_health_check_without_token_returns_false(
+    def test_health_check_without_token_returns_true(
         self, broker_with_auth: BrokerServer
     ) -> None:
         transport = NetworkedBrokerTransport(
@@ -361,7 +361,7 @@ class TestBrokeredAuthIntegration:
         result = transport.health_check(
             Endpoint(agent_id="agent-a", host="127.0.0.1", port=9000), timeout=5.0
         )
-        assert result is False
+        assert result is True
 
     def test_two_agents_with_auth_request_reply(
         self, broker_with_auth: BrokerServer

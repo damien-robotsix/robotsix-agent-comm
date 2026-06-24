@@ -24,6 +24,13 @@ services:
       # ROBOTSIX_BROKER_MAX_BODY_SIZE: "1048576"
       # ROBOTSIX_BROKER_AUDIT_LOG: "/var/log/robotsix-broker/audit.log"
 
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, ssl; ctx = ssl._create_unverified_context(); urllib.request.urlopen('https://localhost:8443/health', context=ctx)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
     volumes:
       # Mount TLS material read-only.
       - ./tls:/etc/robotsix/tls:ro

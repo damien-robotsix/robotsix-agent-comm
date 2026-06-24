@@ -301,6 +301,12 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         return agent_id
 
     def do_GET(self) -> None:  # noqa: N802
+        # Health probe is intentionally unauthenticated so Docker HEALTHCHECK
+        # and external liveness monitors can reach it without a bearer token.
+        if self.path == HEALTH_PATH:
+            self._write_json(200, {"status": "ok"})
+            return
+
         # Routes that accept a ?token= query param for browser access.
         _dashboard_reading_paths = frozenset({"/dashboard", "/", "/agents", "/traffic"})
         parsed_path = urlsplit(self.path).path
@@ -310,10 +316,6 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             allow_query_token=allow_query_token
         )
         if agent_id is None:
-            return
-
-        if self.path == HEALTH_PATH:
-            self._write_json(200, {"status": "ok"})
             return
 
         if parsed_path == "/agents":

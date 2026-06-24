@@ -133,11 +133,13 @@ class TestAuthenticatedTLSClient:
         client_ctx.load_verify_locations(ca_path)
 
         # No Authorization header — should be rejected.
+        # /health is intentionally unauthenticated (Docker HEALTHCHECK);
+        # use /messages which still requires authentication.
         conn = http.client.HTTPSConnection(
             broker.host, broker.port, timeout=5.0, context=client_ctx
         )
         try:
-            conn.request("GET", "/health")
+            conn.request("GET", "/messages")
             resp = conn.getresponse()
             assert resp.status == 401
         finally:
@@ -154,7 +156,7 @@ class TestAuthenticatedTLSClient:
         )
         try:
             headers = {"Authorization": "Bearer wrong-token"}
-            conn.request("GET", "/health", headers=headers)
+            conn.request("GET", "/messages", headers=headers)
             resp = conn.getresponse()
             assert resp.status == 401
         finally:

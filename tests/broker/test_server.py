@@ -1004,12 +1004,10 @@ class TestAuth:
     ) -> None:
         handler = self._build_handler(tokens, make_headers, path=HEALTH_PATH)
         handler.do_GET()
-        if expect_success:
-            handler.send_response.assert_called_once_with(200)
-            assert _body_written(handler) == {"status": "ok"}
-        else:
-            handler.send_response.assert_called_once_with(401)
-            assert error_substr in _body_written(handler)["error"]
+        # /health is always unauthenticated — regardless of auth config or
+        # the presence/validity of an Authorization header.
+        handler.send_response.assert_called_once_with(200)
+        assert _body_written(handler) == {"status": "ok"}
 
     # -- GET /agents --------------------------------------------------------
 
