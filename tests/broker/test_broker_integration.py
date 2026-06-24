@@ -796,12 +796,12 @@ def broker_with_auth() -> Iterator[BrokerServer]:
 class TestBrokerAuthIntegration:
     """Integration tests for bearer-token authentication."""
 
-    def test_health_without_token_returns_401(
+    def test_health_without_token_returns_200(
         self, broker_with_auth: BrokerServer
     ) -> None:
         status, body = _json_request("GET", broker_with_auth, "/health")
-        assert status == 401
-        assert "Authorization" in body["error"]
+        assert status == 200
+        assert body["status"] == "ok"
 
     def test_agents_without_token_returns_401(
         self, broker_with_auth: BrokerServer

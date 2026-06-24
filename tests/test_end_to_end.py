@@ -825,7 +825,7 @@ class TestCalendarDispatchEndToEnd:
             broker.host, broker.port, timeout=5.0, context=client_ctx
         )
         try:
-            conn.request("GET", "/health")
+            conn.request("GET", "/agents")
             resp = conn.getresponse()
             assert resp.status == 401, (
                 f"Expected 401 for anonymous request, got {resp.status}"
