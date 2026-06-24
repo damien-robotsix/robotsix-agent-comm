@@ -417,6 +417,155 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
     # Operation handlers
     # ------------------------------------------------------------------
 
+    def _validate_register_payload(
+        self, data: dict[str, object], authenticated_agent_id: str
+    ) -> dict[str, object] | None:
+        """Validate register payload fields and return a dict of parsed values.
+
+        Returns ``None`` on any validation failure (the error response is
+        already written via ``_reject``).
+        """
+        agent_id = data.get("agent_id")
+        host = data.get("host")
+        port = data.get("port")
+
+        # Mailbox (pull) agents have no dialable listener; the broker queues
+        # their messages for GET /messages. host/port are then optional.
+        mailbox_flag = bool(data.get("mailbox", False))
+        if mailbox_flag:
+            host = host if isinstance(host, str) and host else "mailbox"
+            port = port if isinstance(port, int) and 1 <= port <= 65535 else 0
+
+        if not isinstance(agent_id, str) or not agent_id:
+            self._reject(400, "agent_id is required and must be a non-empty string")
+            return None
+
+        if len(agent_id) > 255:
+            self._reject(
+                400,
+                "agent_id must not exceed 255 characters",
+                agent_id=agent_id,
+            )
+            return None
+
+        # When auth is enabled, the body agent_id must match the token.
+        if authenticated_agent_id != "" and agent_id != authenticated_agent_id:
+            self._reject(
+                403,
+                "agent_id does not match token",
+                agent_id=authenticated_agent_id,
+            )
+            return None
+
+        if not mailbox_flag:
+            if not isinstance(host, str) or not host:
+                self._reject(
+                    400,
+                    "host is required and must be a non-empty string",
+                    agent_id=agent_id,
+                )
+                return None
+
+            if len(host) > 253:
+                self._reject(
+                    400,
+                    "host must not exceed 253 characters",
+                    agent_id=agent_id,
+                )
+                return None
+
+            if not isinstance(port, int):
+                self._reject(
+                    400,
+                    "port is required and must be an integer",
+                    agent_id=agent_id,
+                )
+                return None
+
+            if not 1 <= port <= 65535:
+                self._reject(
+                    400,
+                    "port must be between 1 and 65535",
+                    agent_id=agent_id,
+                )
+                return None
+
+        # -- scheme validation --
+        if "scheme" in data:
+            scheme_raw = data["scheme"]
+            if not isinstance(scheme_raw, str) or scheme_raw not in ("http", "https"):
+                self._reject(
+                    400,
+                    "scheme must be 'http' or 'https'",
+                    agent_id=agent_id,
+                )
+                return None
+            scheme = scheme_raw
+        else:
+            scheme = "http"
+
+        # -- path validation --
+        if "path" in data:
+            path_raw = data["path"]
+            if not isinstance(path_raw, str) or not path_raw.startswith("/"):
+                self._reject(
+                    400,
+                    "path must be a string starting with '/'",
+                    agent_id=agent_id,
+                )
+                return None
+            path = path_raw
+        else:
+            path = "/messages"
+
+        # -- capabilities validation --
+        capabilities = data.get("capabilities")
+        caps: dict[str, object] = {}
+        if "capabilities" in data:
+            if not isinstance(capabilities, dict):
+                self._reject(
+                    400,
+                    "capabilities must be a JSON object",
+                    agent_id=agent_id,
+                )
+                return None
+            caps = dict(capabilities)
+        # else: caps remains {}
+
+        # -- ttl_seconds validation --
+        ttl_val = data.get("ttl_seconds")
+        if "ttl_seconds" in data and (not isinstance(ttl_val, int) or ttl_val < 0):
+            self._reject(
+                400,
+                "ttl_seconds must be a non-negative integer",
+                agent_id=agent_id,
+            )
+            return None
+
+        # Determine whether this is a new registration or an update.
+        server = self._server()
+        try:
+            server.registry.lookup(agent_id)
+            is_new = False
+        except AgentNotFoundError:
+            is_new = True
+
+        # narrow for the type checker
+        assert isinstance(host, str)
+        assert isinstance(port, int)
+
+        return {
+            "agent_id": agent_id,
+            "host": host,
+            "port": port,
+            "scheme": scheme,
+            "path": path,
+            "caps": caps,
+            "ttl_val": ttl_val,
+            "mailbox_flag": mailbox_flag,
+            "is_new": is_new,
+        }
+
     def _handle_register(self) -> None:
         """Handle ``POST /agents`` — register or update an agent."""
         raw = self._read_body()
@@ -433,117 +582,19 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self._reject(400, "body must be a JSON object")
             return
 
-        agent_id = data.get("agent_id")
-        host = data.get("host")
-        port = data.get("port")
-        server = self._server()
-
-        # Mailbox (pull) agents have no dialable listener; the broker queues
-        # their messages for GET /messages. host/port are then optional.
-        mailbox_flag = bool(data.get("mailbox", False))
-        if mailbox_flag:
-            host = host if isinstance(host, str) and host else "mailbox"
-            port = port if isinstance(port, int) and 1 <= port <= 65535 else 0
-
-        if not isinstance(agent_id, str) or not agent_id:
-            self._reject(400, "agent_id is required and must be a non-empty string")
+        validated = self._validate_register_payload(data, self._authenticated_agent_id)
+        if validated is None:
             return
 
-        if len(agent_id) > 255:
-            self._reject(
-                400,
-                "agent_id must not exceed 255 characters",
-                agent_id=agent_id,
-            )
-            return
-
-        # When auth is enabled, the body agent_id must match the token.
-        if (
-            self._authenticated_agent_id != ""
-            and agent_id != self._authenticated_agent_id
-        ):
-            self._reject(
-                403,
-                "agent_id does not match token",
-                agent_id=self._authenticated_agent_id,
-            )
-            return
-
-        if not mailbox_flag:
-            if not isinstance(host, str) or not host:
-                self._reject(
-                    400,
-                    "host is required and must be a non-empty string",
-                    agent_id=agent_id,
-                )
-                return
-
-            if len(host) > 253:
-                self._reject(
-                    400,
-                    "host must not exceed 253 characters",
-                    agent_id=agent_id,
-                )
-                return
-
-            if not isinstance(port, int):
-                self._reject(
-                    400,
-                    "port is required and must be an integer",
-                    agent_id=agent_id,
-                )
-                return
-
-            if not 1 <= port <= 65535:
-                self._reject(
-                    400,
-                    "port must be between 1 and 65535",
-                    agent_id=agent_id,
-                )
-                return
-
-        # -- scheme validation --
-        if "scheme" in data:
-            scheme_raw = data["scheme"]
-            if not isinstance(scheme_raw, str) or scheme_raw not in ("http", "https"):
-                self._reject(
-                    400,
-                    "scheme must be 'http' or 'https'",
-                    agent_id=agent_id,
-                )
-                return
-            scheme = scheme_raw
-        else:
-            scheme = "http"
-
-        # -- path validation --
-        if "path" in data:
-            path_raw = data["path"]
-            if not isinstance(path_raw, str) or not path_raw.startswith("/"):
-                self._reject(
-                    400,
-                    "path must be a string starting with '/'",
-                    agent_id=agent_id,
-                )
-                return
-            path = path_raw
-        else:
-            path = "/messages"
-
-        # -- capabilities validation --
-        capabilities = data.get("capabilities")
-        caps: dict[str, object] = {}
-        if "capabilities" in data:
-            if not isinstance(capabilities, dict):
-                self._reject(
-                    400,
-                    "capabilities must be a JSON object",
-                    agent_id=agent_id,
-                )
-                return
-            caps = dict(capabilities)
-        else:
-            caps = {}
+        agent_id = cast(str, validated["agent_id"])
+        host = cast(str, validated["host"])
+        port = cast(int, validated["port"])
+        scheme = cast(str, validated["scheme"])
+        path = cast(str, validated["path"])
+        caps = cast("dict[str, object]", validated["caps"])
+        ttl_val = validated["ttl_val"]
+        mailbox_flag = cast(bool, validated["mailbox_flag"])
+        is_new = cast(bool, validated["is_new"])
 
         # host/port are validated str/int for endpoint agents, and defaulted to
         # str/int above for mailbox agents — narrow for the type checker.
@@ -558,23 +609,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             mailbox=mailbox_flag,
         )
 
-        # -- ttl_seconds validation (before registration so we can reject) --
-        ttl_val = data.get("ttl_seconds")
-        if "ttl_seconds" in data and (not isinstance(ttl_val, int) or ttl_val < 0):
-            self._reject(
-                400,
-                "ttl_seconds must be a non-negative integer",
-                agent_id=agent_id,
-            )
-            return
-
-        # Determine whether this is a new registration or an update.
-        try:
-            server.registry.lookup(agent_id)
-            is_new = False
-        except AgentNotFoundError:
-            is_new = True
-
+        server = self._server()
         server.registry.register(endpoint)
 
         if mailbox_flag:
