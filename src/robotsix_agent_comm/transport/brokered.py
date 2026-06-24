@@ -24,7 +24,7 @@ from urllib.parse import urlencode
 from ..protocol import Message, ProtocolError, deserialize, serialize
 from .base import Transport
 from .client import TransportClient
-from .endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH, Endpoint
+from .endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH, AgentInfo, Endpoint
 from .errors import (
     DELIVERY_FAILED,
     UNKNOWN_RECIPIENT,
@@ -314,15 +314,24 @@ class BrokeredRegistry(_BrokerConnectionMixin):
                 parsed = data
         return status, parsed
 
-    def register(self, endpoint: Endpoint) -> None:
-        """Register *endpoint* with the broker via ``POST /agents``."""
+    def register(
+        self,
+        endpoint: Endpoint,
+        *,
+        capabilities: dict[str, object] | None = None,
+    ) -> None:
+        """Register *endpoint* with the broker via ``POST /agents``.
+
+        *capabilities* are advertised to the broker and served to callers
+        via ``GET /agents`` and :meth:`discover_agents`.
+        """
         body: dict[str, Any] = {
             "agent_id": endpoint.agent_id,
             "host": endpoint.host,
             "port": endpoint.port,
             "scheme": endpoint.scheme,
             "path": endpoint.path,
-            "capabilities": {},
+            "capabilities": dict(capabilities or {}),
             "mailbox": endpoint.mailbox,
         }
         # ttl_seconds is omitted so the broker uses its default.
@@ -379,6 +388,27 @@ class BrokeredRegistry(_BrokerConnectionMixin):
                         agent_id=str(agent_id),
                         host="broker",
                         port=self._broker_port,
+                    )
+                )
+        return result
+
+    def discover_agents(self) -> list[AgentInfo]:
+        """Return all agents registered on the broker with their capabilities."""
+        status, parsed = self._request("GET", "/agents")
+        if status != 200:
+            raise TransportError(f"broker GET /agents returned HTTP {status}: {parsed}")
+        agents: list[dict[str, Any]] = (
+            parsed.get("agents", []) if isinstance(parsed, dict) else []
+        )
+        result: list[AgentInfo] = []
+        for entry in agents:
+            if isinstance(entry, dict):
+                agent_id = str(entry.get("agent_id", ""))
+                caps = entry.get("capabilities", {})
+                result.append(
+                    AgentInfo(
+                        agent_id=agent_id,
+                        capabilities=dict(caps) if isinstance(caps, dict) else {},
                     )
                 )
         return result

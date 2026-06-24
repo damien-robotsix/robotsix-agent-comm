@@ -7,7 +7,7 @@ without changing this layer (that traversal is out of scope today).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 #: Default route on which an agent receives messages.
 DEFAULT_MESSAGE_PATH = "/messages"
@@ -47,3 +47,21 @@ class Endpoint:
     def health_url(self) -> str:
         """Return the full URL of this endpoint's health route."""
         return f"{self.base_url}{HEALTH_PATH}"
+
+
+@dataclass(frozen=True, kw_only=True)
+class AgentInfo:
+    """Discovery result carrying an agent's id and its registered capabilities.
+
+    Returned by :meth:`BrokeredRegistry.discover_agents` and the convenience
+    function :func:`~robotsix_agent_comm.sdk.discovery.discover_agents`.
+    """
+
+    agent_id: str
+    capabilities: dict[str, object] = field(default_factory=dict)
+
+    @property
+    def supported_kinds(self) -> list[str]:
+        """Request kinds this agent advertised, extracted from capabilities."""
+        raw = self.capabilities.get("supported_kinds", [])
+        return list(raw) if isinstance(raw, list) else []

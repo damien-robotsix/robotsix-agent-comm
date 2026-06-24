@@ -186,6 +186,12 @@ class BrokeredResponder(BrokeredAgent):
             def my_echo(request, params):
                 ...
 
+        .. note::
+
+            Handlers registered **after** :meth:`start` is called are **not**
+            reflected in the capabilities advertised to the broker.  Restart
+            the responder for them to appear in discovery results.
+
         Returns *handler* (or the decorator when *handler* is ``None``).
         """
         if handler is None:
@@ -200,6 +206,20 @@ class BrokeredResponder(BrokeredAgent):
 
         self._extra_handlers[kind] = handler
         return handler
+
+    @property
+    def supported_kinds(self) -> list[str]:
+        """All request kinds this responder handles, including builtins and custom."""
+        return sorted(set(self._BUILTIN_HANDLERS) | set(self._extra_handlers))
+
+    def _registration_capabilities(self) -> dict[str, object]:
+        """Advertise *supported_kinds* so the broker exposes them via discovery.
+
+        Capabilities are snapshotted when :meth:`start` is called.  Handlers
+        registered via :meth:`register_handler` **after** ``start()`` are
+        **not** reflected at the broker until the responder is restarted.
+        """
+        return {"supported_kinds": self.supported_kinds}
 
     # ------------------------------------------------------------------
     # Built-in handler methods (override in subclass)

@@ -20,7 +20,7 @@ from .brokered import (
     create_transport_pair,
 )
 from .client import TransportClient
-from .endpoints import Endpoint
+from .endpoints import AgentInfo, Endpoint
 from .errors import (
     DELIVERY_FAILED,
     UNKNOWN_RECIPIENT,
@@ -35,6 +35,7 @@ from .router import Router
 from .server import TransportServer
 
 __all__ = [
+    "AgentInfo",
     "AgentNotFoundError",
     "BrokeredRegistry",
     "DELIVERY_FAILED",
