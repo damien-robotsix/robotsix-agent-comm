@@ -857,7 +857,10 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         limit: int | None = None
         try:
             limit = int(query.get("limit", [""])[0])
-            limit = min(limit, server.traffic_buffer.maxlen or 1000)
+            if limit <= 0:
+                limit = None  # negative/zero → ignore (semantically invalid)
+            else:
+                limit = min(limit, server.traffic_buffer.maxlen or 1000)
         except (ValueError, TypeError):
             pass
 

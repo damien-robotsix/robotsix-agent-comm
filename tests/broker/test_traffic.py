@@ -346,6 +346,25 @@ class TestTrafficFilters:
         records = _traffic(broker, limit="abc")
         assert len(records) == 1
 
+    def test_negative_limit_ignored(self, broker: BrokerServer) -> None:
+        _register_agent(broker, "alice", mailbox=True)
+        _register_agent(broker, "bob", mailbox=True)
+        for i in range(5):
+            _send_message(broker, "alice", "bob", {"n": i})
+
+        records = _traffic(broker, limit="-3")
+        # Negative limit is semantically invalid → ignored, returns all.
+        assert len(records) == 5
+
+    def test_zero_limit_ignored(self, broker: BrokerServer) -> None:
+        _register_agent(broker, "alice", mailbox=True)
+        _register_agent(broker, "bob", mailbox=True)
+        _send_message(broker, "alice", "bob")
+
+        records = _traffic(broker, limit="0")
+        # Zero limit is semantically invalid → ignored, returns all.
+        assert len(records) == 1
+
 
 # ---------------------------------------------------------------------------
 # Auth on /traffic
