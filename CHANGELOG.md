@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Export `BUILTIN_HANDLERS` (public alias for the built-in handler kind→method mapping)
-  from `responder.py` so tests can reference it instead of hardcoding kind strings.
+    from `responder.py` so tests can reference it instead of hardcoding kind strings.
 
 - Broker: embedded traffic recorder (bounded, thread-safe ring buffer) and
     `GET /traffic` JSON endpoint with `agent`, `topic`, `since`,
