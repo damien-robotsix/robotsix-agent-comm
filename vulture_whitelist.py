@@ -20,3 +20,7 @@ send_notification
 send_request
 argv
 frame
+handle_config_get
+handle_config_set
+handle_monitor
+register_handler
