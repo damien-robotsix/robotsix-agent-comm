@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from collections import deque
 from typing import Any
 from unittest.mock import MagicMock, call, patch
 
@@ -17,7 +18,6 @@ import pytest
 
 from robotsix_agent_comm.broker.server import (
     BrokerServer,
-    _BrokerHTTPServer,
     _BrokerRequestHandler,
 )
 from robotsix_agent_comm.protocol import (
@@ -65,7 +65,7 @@ def _make_handler(**kwargs: Any) -> Any:
     if server is None:
         import threading as _threading
 
-        server = MagicMock(spec=_BrokerHTTPServer)
+        server = MagicMock()
         server.registry = Registry()
         server.capabilities_lock = _threading.Lock()
         server.capabilities = {}
@@ -83,6 +83,8 @@ def _make_handler(**kwargs: Any) -> Any:
         server._audit_logger = kwargs.get("_audit_logger", MagicMock())
         server.mailboxes = {}
         server.mailbox_cond = _threading.Condition()
+        server.traffic_buffer = kwargs.get("traffic_buffer", deque(maxlen=1000))
+        server.traffic_lock = _threading.Lock()
     handler.server = server
 
     return handler
@@ -316,6 +318,89 @@ class TestDiscoveryEndpoint:
         assert by_id["agent-1"] == {"role": "worker"}
         assert by_id["agent-2"] == {"role": "dispatcher", "zone": "east"}
 
+    def test_agents_include_enriched_fields(self) -> None:
+        """Enriched fields: last_seen_seconds_ago, ttl_seconds, status, mailbox."""
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps(
+                {
+                    "agent_id": "agent-e",
+                    "host": "127.0.0.1",
+                    "port": 9010,
+                    "capabilities": {"role": "worker"},
+                    "ttl_seconds": 120,
+                }
+            ),
+        )
+        handler.do_POST()
+        handler.send_response.reset_mock()
+        handler.wfile.write.reset_mock()
+
+        handler.do_GET()
+        result = _body_written(handler)
+        agents = result["agents"]
+        assert len(agents) == 1
+        a = agents[0]
+        assert a["agent_id"] == "agent-e"
+        assert a["capabilities"] == {"role": "worker"}
+        assert isinstance(a["last_seen_seconds_ago"], float)
+        assert a["last_seen_seconds_ago"] >= 0
+        assert a["ttl_seconds"] == 120
+        assert a["status"] == "active"
+        assert a["mailbox"] is False
+
+    def test_agents_include_mailbox_flag(self) -> None:
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps(
+                {
+                    "agent_id": "agent-mbox",
+                    "host": "127.0.0.1",
+                    "port": 9011,
+                    "mailbox": True,
+                }
+            ),
+        )
+        handler.do_POST()
+        handler.send_response.reset_mock()
+        handler.wfile.write.reset_mock()
+
+        handler.do_GET()
+        result = _body_written(handler)
+        agents = result["agents"]
+        assert len(agents) == 1
+        assert agents[0]["mailbox"] is True
+        assert agents[0]["agent_id"] == "agent-mbox"
+
+    def test_agents_status_stale_after_ttl_expiry(self) -> None:
+        handler = _make_handler()
+        _set_body(
+            handler,
+            json.dumps(
+                {
+                    "agent_id": "agent-s",
+                    "host": "127.0.0.1",
+                    "port": 9012,
+                    "ttl_seconds": 30,
+                }
+            ),
+        )
+        handler.do_POST()
+        handler.send_response.reset_mock()
+        handler.wfile.write.reset_mock()
+
+        # Artificially age the heartbeat past the TTL.
+        server = handler.server
+        with server.heartbeat_lock:
+            server.last_heartbeat["agent-s"] -= 999.0
+
+        handler.do_GET()
+        result = _body_written(handler)
+        agents = result["agents"]
+        assert agents[0]["status"] == "stale"
+
 
 # ---------------------------------------------------------------------------
 # POST /messages — send
@@ -326,7 +411,7 @@ def _server_with_router(router_mock: Any) -> Any:
     """Build a mock server that carries a stubbed router."""
     import threading as _threading
 
-    server = MagicMock(spec=_BrokerHTTPServer)
+    server = MagicMock()
     server.registry = Registry()
     server.capabilities_lock = _threading.Lock()
     server.capabilities = {}
@@ -500,7 +585,7 @@ class TestUnknownPaths:
 
 class TestBrokerServerLifecycle:
     def test_start_creates_daemon_thread(self) -> None:
-        mock_http = MagicMock(spec=_BrokerHTTPServer)
+        mock_http = MagicMock()
         bs = BrokerServer()
         bs._server.server_close()  # release real socket
         bs._server = mock_http
@@ -517,7 +602,7 @@ class TestBrokerServerLifecycle:
         assert sweep_call[1]["target"].__name__ == "_sweep_loop"
 
     def test_start_idempotent(self) -> None:
-        mock_http = MagicMock(spec=_BrokerHTTPServer)
+        mock_http = MagicMock()
         bs = BrokerServer()
         bs._server.server_close()
         bs._server = mock_http
@@ -531,7 +616,7 @@ class TestBrokerServerLifecycle:
         assert mock_thread_cls.call_count == 2
 
     def test_stop_shuts_down_and_joins(self) -> None:
-        mock_http = MagicMock(spec=_BrokerHTTPServer)
+        mock_http = MagicMock()
         bs = BrokerServer()
         bs._server.server_close()
         bs._server = mock_http
@@ -547,7 +632,7 @@ class TestBrokerServerLifecycle:
         assert bs._thread is None
 
     def test_stop_when_not_started_is_safe(self) -> None:
-        mock_http = MagicMock(spec=_BrokerHTTPServer)
+        mock_http = MagicMock()
         bs = BrokerServer()
         bs._server.server_close()
         bs._server = mock_http
@@ -558,7 +643,7 @@ class TestBrokerServerLifecycle:
         mock_http.server_close.assert_called_once()
 
     def test_context_manager_starts_and_stops(self) -> None:
-        mock_http = MagicMock(spec=_BrokerHTTPServer)
+        mock_http = MagicMock()
         bs = BrokerServer()
         bs._server.server_close()
         bs._server = mock_http
@@ -821,7 +906,7 @@ def _make_server_with_tokens(tokens: dict[str, str]) -> Any:
     """Create a mock server with auth enabled and the given token mapping."""
     import threading as _threading
 
-    server = MagicMock(spec=_BrokerHTTPServer)
+    server = MagicMock()
     server.registry = Registry()
     server.capabilities_lock = _threading.Lock()
     server.capabilities = {}
