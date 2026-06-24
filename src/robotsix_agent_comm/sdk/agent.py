@@ -11,6 +11,7 @@ of scope.
 
 from __future__ import annotations
 
+import concurrent.futures
 import contextlib
 import logging
 import queue
@@ -73,14 +74,31 @@ class Agent:
         timeout: float = 5.0,
         transport: Transport | None = None,
         pull: bool = False,
+        max_handler_workers: int = 4,
     ) -> None:
-        """Initialize the agent with transport and registry bindings."""
+        """Initialize the agent with transport and registry bindings.
+
+        Args:
+            agent_id: This agent's id.
+            registry: Shared registry (in-process or brokered).
+            host: Host for the local ``TransportServer`` (non-pull mode).
+            port: Port for the local ``TransportServer`` (non-pull mode).
+            retry_policy: Optional retry policy for the router.
+            timeout: Per-request timeout (seconds).
+            transport: Optional transport (default: ``TransportClient``).
+            pull: When ``True``, use mailbox/pull mode (NAT-safe).
+            max_handler_workers: Maximum number of worker threads in the
+                handler pool (pull mode only).  Handlers that run longer than
+                the broker's mailbox TTL won't block heartbeat polls, so the
+                agent stays registered.  Defaults to 4.
+        """
         self.agent_id = agent_id
         self._registry = registry
         self._host = host
         self._port = port
         self._timeout = timeout
         self._pull = pull
+        self._max_handler_workers = max_handler_workers
         if retry_policy is None:
             retry_policy = RetryPolicy(max_attempts=3, base_delay=0.1, max_delay=2.0)
         self._client = transport if transport is not None else TransportClient()
@@ -94,6 +112,7 @@ class Agent:
         self._request_handler: RequestHandler | None = None
         self._notification_handler: NotificationHandler | None = None
         self._inbox: queue.Queue[Message] = queue.Queue()
+        self._handler_pool: concurrent.futures.ThreadPoolExecutor | None = None
 
     # -- receiving (callbacks) --------------------------------------------
 
@@ -164,6 +183,10 @@ class Agent:
                 Endpoint(agent_id=self.agent_id, host="mailbox", port=0, mailbox=True),
                 capabilities=caps,
             )
+            self._handler_pool = concurrent.futures.ThreadPoolExecutor(
+                max_workers=self._max_handler_workers,
+                thread_name_prefix=f"agent-{self.agent_id}-handler",
+            )
             self._recv_stop.clear()
             thread = threading.Thread(target=self._recv_loop, daemon=True)
             thread.start()
@@ -185,6 +208,14 @@ class Agent:
             if self._recv_thread is None:
                 return
             self._recv_stop.set()
+            # Shut down the handler pool: capture the reference, clear the
+            # attribute so in-flight _dispatch_pull calls see None and drop
+            # messages rather than hitting a closed executor, then cancel
+            # queued tasks without waiting for running handlers.
+            pool = self._handler_pool
+            self._handler_pool = None
+            if pool is not None:
+                pool.shutdown(wait=False, cancel_futures=True)
             with contextlib.suppress(AgentNotFoundError):
                 self._registry.unregister(self.agent_id)
             self._recv_thread.join(timeout=2.0)
@@ -224,7 +255,14 @@ class Agent:
                     logger.exception("error dispatching polled message")
 
     def _dispatch_pull(self, message: Message) -> None:
-        """Route a polled message: resolve a pending reply, or handle it."""
+        """Route a polled message: resolve a pending reply, or handle it.
+
+        The waiter (correlation_id) path is kept inline on the poll thread
+        so that a pending ``send_request`` unblocks promptly.  Everything
+        else — calling the user handler and POSTing the reply — is offloaded
+        to the bounded handler pool so a long-running handler never blocks
+        the poll loop and the broker heartbeat stays fresh.
+        """
         corr = message.correlation_id
         if corr is not None:
             with self._waiters_lock:
@@ -234,6 +272,23 @@ class Agent:
                 slot.append(message)
                 event.set()
                 return
+        pool = self._handler_pool
+        if pool is not None:
+            pool.submit(self._run_handler, message)
+        else:
+            # Pool already shut down (agent stopping) — drop the message
+            # rather than risk a RuntimeError from a closed executor.
+            logger.debug(
+                "handler pool unavailable for %s; message dropped",
+                type(message).__name__,
+            )
+
+    def _run_handler(self, message: Message) -> None:
+        """Handle *message* via the user callback and POST any reply.
+
+        This runs on a worker thread from the handler pool so the poll
+        loop stays unblocked while a handler executes.
+        """
         try:
             reply = self._handle(message)
         except Exception:  # noqa: BLE001 — surface as an Error, never crash

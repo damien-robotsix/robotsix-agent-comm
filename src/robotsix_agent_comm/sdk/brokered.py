@@ -50,6 +50,7 @@ class BrokeredAgent:
         on_request: Optional inbound-request handler (returns a reply
             :class:`Message`).
         on_notification: Optional inbound-notification handler.
+        max_handler_workers: Maximum handler pool threads (default 4).
 
     Use it as a context manager, or call :meth:`start`/:meth:`stop`. For a
     long-lived service, :meth:`serve_forever` blocks until ``SIGTERM``/``SIGINT``.
@@ -68,6 +69,7 @@ class BrokeredAgent:
         timeout: float = 30.0,
         on_request: RequestHandler | None = None,
         on_notification: NotificationHandler | None = None,
+        max_handler_workers: int = 4,
     ) -> None:
         """Initialize the brokered agent with broker connection settings."""
         if ssl_context is None and tls_ca:
@@ -83,7 +85,12 @@ class BrokeredAgent:
             broker_token=broker_token,
         )
         self._agent = Agent(
-            agent_id, registry, transport=transport, pull=True, timeout=timeout
+            agent_id,
+            registry,
+            transport=transport,
+            pull=True,
+            timeout=timeout,
+            max_handler_workers=max_handler_workers,
         )
         if on_request is not None:
             self._agent.on_request(on_request)

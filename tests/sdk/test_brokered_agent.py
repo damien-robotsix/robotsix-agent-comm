@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import json
 import threading
+import time
 from collections.abc import Generator
 
 import pytest
 
 from robotsix_agent_comm.broker import BrokerServer
-from robotsix_agent_comm.protocol import Message, Request, Response
+from robotsix_agent_comm.protocol import Message, Metadata, Request, Response
 from robotsix_agent_comm.sdk import BrokeredAgent
+from robotsix_agent_comm.transport import Endpoint
+from robotsix_agent_comm.transport.brokered import (
+    NetworkedBrokerTransport,
+)
 
 
 @pytest.fixture
@@ -117,3 +123,129 @@ def test_tls_ca_builds_ssl_context(broker: BrokerServer, tmp_path: object) -> No
         tls_ca=str(ca),
     )
     assert agent.agent_id == "tls-client"
+
+
+def test_handler_offloaded_poll_thread_not_blocked() -> None:
+    """A slow handler must not block the poll thread, preventing eviction.
+
+    Regression: the pull receive-loop dispatched handlers inline on the poll
+    thread, so a handler running longer than the broker TTL starved the
+    heartbeat → the broker evicted the mailbox → a concurrent ``send`` got
+    ``404 unknown recipient``.  Now handlers are offloaded to a worker pool,
+    the poll thread returns immediately, and the heartbeat stays fresh.
+    """
+    ttl = 1.0
+    sweep = 0.2
+    grace = 2.0  # enough to absorb the sleep below
+    broker = BrokerServer(
+        host="127.0.0.1",
+        port=0,
+        ttl_seconds=int(ttl),
+        sweep_interval_seconds=sweep,
+        mailbox_grace_seconds=grace,
+    )
+    broker.start()
+    try:
+        # -- responder with a handler that sleeps well past the TTL --
+        handler_started = threading.Event()
+        handler_done = threading.Event()
+
+        def slow_handler(request: Request) -> Message:
+            handler_started.set()
+            time.sleep(3.0)  # 3× the TTL
+            handler_done.set()
+            return Response.to(request, body={"slow": True})
+
+        responder = BrokeredAgent(
+            "responder",
+            broker_host=broker.host,
+            broker_port=broker.port,
+            broker_scheme="http",
+            broker_token=None,
+            timeout=10.0,
+            on_request=slow_handler,
+        )
+
+        requester = BrokeredAgent(
+            "requester",
+            broker_host=broker.host,
+            broker_port=broker.port,
+            broker_scheme="http",
+            broker_token=None,
+            timeout=10.0,
+        )
+
+        with responder, requester:
+            # Fire the first request in a background thread so we can
+            # observe state while the handler sleeps.
+            reply_holder: list[Message] = []
+
+            def _send_first() -> None:
+                reply_holder.append(
+                    requester.send_request(
+                        "responder", {"action": "first"}, timeout=10.0
+                    )
+                )
+
+            t = threading.Thread(target=_send_first, daemon=True)
+            t.start()
+
+            # Wait until the handler is definitely sleeping.
+            assert handler_started.wait(5.0), "handler did not start"
+
+            # Let the TTL elapse + at least one sweep run.
+            time.sleep(ttl + sweep + 0.3)
+
+            # (a) Responder must still be visible — no eviction.
+            agents_before = _get_agents(broker)
+            assert any(a.get("agent_id") == "responder" for a in agents_before), (
+                f"responder evicted! agents={agents_before}"
+            )
+
+            # (b) A second inbound message sent during the sleep is
+            # delivered (queued in mailbox, 202), not 404.
+            transport = NetworkedBrokerTransport(broker.host, broker.port)
+            second = Request(
+                metadata=Metadata.create(sender="requester", recipient="responder"),
+                body={"action": "second"},
+            )
+            # send returns None for 202 (queued) — no DeliveryError means
+            # the recipient was found.
+            result = transport.send(
+                second,
+                Endpoint(agent_id="responder", host="broker", port=0),
+                timeout=5.0,
+            )
+            # 202 → None from NetworkedBrokerTransport.send
+            assert result is None, f"expected 202 queued, got {result}"
+
+            # Wait for the first handler to finish.
+            t.join(timeout=10.0)
+            assert not t.is_alive(), "first request hung"
+            assert handler_done.is_set(), "handler did not complete"
+            assert len(reply_holder) == 1
+            assert reply_holder[0].body == {"slow": True}
+
+            # After the handler finishes, the responder is still there.
+            agents_after = _get_agents(broker)
+            assert any(a.get("agent_id") == "responder" for a in agents_after), (
+                f"responder evicted after handler! agents={agents_after}"
+            )
+    finally:
+        broker.stop()
+
+
+def _get_agents(broker: BrokerServer) -> list[dict[str, object]]:
+    """Return the agent list from the broker's ``GET /agents``."""
+    import http.client
+
+    conn = http.client.HTTPConnection(broker.host, broker.port, timeout=5.0)
+    try:
+        conn.request("GET", "/agents")
+        resp = conn.getresponse()
+        data = resp.read().decode("utf-8")
+        parsed = json.loads(data) if data else {}
+        agents = parsed.get("agents", []) if isinstance(parsed, dict) else []
+        return agents
+    finally:
+        conn.close()

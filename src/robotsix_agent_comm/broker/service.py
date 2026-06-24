@@ -55,6 +55,8 @@ def build_broker(config: BrokerConfig) -> BrokerServer:
         kwargs["max_body_size"] = config.max_body_size
     if config.audit_log is not None:
         kwargs["audit_log_path"] = config.audit_log
+    if config.mailbox_grace_seconds is not None:
+        kwargs["mailbox_grace_seconds"] = config.mailbox_grace_seconds
 
     return BrokerServer(**kwargs)
 
