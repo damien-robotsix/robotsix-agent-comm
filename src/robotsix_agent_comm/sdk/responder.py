@@ -67,7 +67,7 @@ from __future__ import annotations
 import logging
 import ssl
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, cast, overload
 
 from ..protocol import Error, Message, Request, Response
 from .brokered import BrokeredAgent
@@ -147,6 +147,23 @@ class BrokeredResponder(BrokeredAgent):
     # ------------------------------------------------------------------
     # Registry for additional (non-built-in) kinds
     # ------------------------------------------------------------------
+
+    @overload
+    def register_handler(
+        self,
+        kind: str,
+        handler: Callable[[Request, dict[str, Any]], dict[str, Any]],
+    ) -> Callable[[Request, dict[str, Any]], dict[str, Any]]: ...
+
+    @overload
+    def register_handler(
+        self,
+        kind: str,
+        handler: None = None,
+    ) -> Callable[
+        [Callable[[Request, dict[str, Any]], dict[str, Any]]],
+        Callable[[Request, dict[str, Any]], dict[str, Any]],
+    ]: ...
 
     def register_handler(
         self,

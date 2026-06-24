@@ -43,7 +43,7 @@ def _requester(
 
 def _request(requester: BrokeredAgent, recipient: str, body: Any) -> Message:
     """Send a request and return the reply Message."""
-    return requester.send_request(recipient, body, timeout=5.0)  # type: ignore[arg-type]
+    return requester.send_request(recipient, body, timeout=5.0)
 
 
 # ---------------------------------------------------------------------------
@@ -181,7 +181,7 @@ def test_malformed_body_not_a_dict(broker: BrokerServer) -> None:
         metadata=Metadata.create(sender="q", recipient="r"),
         body=["not", "a", "dict"],  # type: ignore[arg-type]
     )
-    reply = responder._dispatch(request)  # type: ignore[arg-type]
+    reply = responder._dispatch(request)
 
     assert isinstance(reply, Error)
     assert reply.body.get("code") == "invalid_request"
