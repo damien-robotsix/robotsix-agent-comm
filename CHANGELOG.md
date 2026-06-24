@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Broker: embedded traffic recorder (bounded, thread-safe ring buffer) and
-    ``GET /traffic`` JSON endpoint with ``agent``, ``topic``, ``since``,
-    ``until``, and ``limit`` query filters.  ``GET /agents`` now includes
-    ``last_seen_seconds_ago``, ``ttl_seconds``, ``status``, and ``mailbox``
+    `GET /traffic` JSON endpoint with `agent`, `topic`, `since`,
+    `until`, and `limit` query filters. `GET /agents` now includes
+    `last_seen_seconds_ago`, `ttl_seconds`, `status`, and `mailbox`
     for each registered agent.
 
 - `AGENT.md` — project overview for AI coding agents covering repo identity,
