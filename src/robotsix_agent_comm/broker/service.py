@@ -57,6 +57,7 @@ def build_broker(config: BrokerConfig) -> BrokerServer:
         kwargs["audit_log_path"] = config.audit_log
     if config.mailbox_grace_seconds is not None:
         kwargs["mailbox_grace_seconds"] = config.mailbox_grace_seconds
+    kwargs["dashboard_enabled"] = config.dashboard_enabled
 
     return BrokerServer(**kwargs)
 

@@ -37,6 +37,7 @@ from ..transport import (
 )
 from ..transport.endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH
 from ._audit import _AuditLogger
+from ._dashboard import DASHBOARD_HTML
 from ._rate_limit import _TokenBucket
 
 #: Upper bound on a single ``GET /messages`` long-poll hold (seconds).
@@ -91,6 +92,8 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
 
     # Mailbox grace period (defense-in-depth against poll gaps)
     mailbox_grace_seconds: float
+    # Dashboard enable flag
+    dashboard_enabled: bool
 
 
 # ---------------------------------------------------------------------------
@@ -201,13 +204,18 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             return (204, None)
         return (200, serialize(reply))
 
-    def _authenticate(self) -> str | None:
+    def _authenticate(self, allow_query_token: bool = False) -> str | None:
         """Validate the ``Authorization: Bearer <token>`` header.
 
         Returns the authenticated ``agent_id`` on success, or the
         sentinel ``""`` when authentication is disabled
         (``server.agent_tokens is None``).  Writes a ``401`` JSON
         error response and returns ``None`` on failure.
+
+        When *allow_query_token* is ``True`` and no ``Authorization``
+        header is present, falls back to a ``?token=<tok>`` query
+        parameter — this is intended for browser-based dashboard
+        access where custom headers cannot be set.
         """
         server = self._server()
 
@@ -216,17 +224,29 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             return ""
 
         auth_header = self.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
-            self._write_error(401, "missing or invalid Authorization header")
-            return None
+        if auth_header:
+            # Header present — use it authoritatively.
+            if not auth_header.startswith("Bearer "):
+                self._write_error(401, "missing or invalid Authorization header")
+                return None
+            token = auth_header[len("Bearer ") :]
+            agent_id = server._token_to_agent.get(token)
+            if agent_id is None:
+                self._write_error(401, "invalid token")
+                return None
+            return agent_id
 
-        token = auth_header[len("Bearer ") :]
+        # No Authorization header — optionally fall back to query param.
+        if allow_query_token:
+            query = parse_qs(urlsplit(self.path).query)
+            token = query.get("token", [""])[0]
+            if token:
+                agent_id = server._token_to_agent.get(token)
+                if agent_id is not None:
+                    return agent_id
 
-        agent_id = server._token_to_agent.get(token)
-        if agent_id is None:
-            self._write_error(401, "invalid token")
-            return None
-        return agent_id
+        self._write_error(401, "missing or invalid Authorization header")
+        return None
 
     def _check_rate_limit(self, agent_id: str) -> bool:
         """Check the rate limit for *agent_id*.
@@ -263,12 +283,14 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
     # HTTP method dispatchers
     # ------------------------------------------------------------------
 
-    def _authenticated_and_rate_limited(self) -> str | None:
+    def _authenticated_and_rate_limited(
+        self, allow_query_token: bool = False
+    ) -> str | None:
         """Check authentication and rate limit.
 
         Return agent_id if allowed, else None.
         """
-        agent_id = self._authenticate()
+        agent_id = self._authenticate(allow_query_token=allow_query_token)
         if agent_id is None:
             return None
         self._authenticated_agent_id = agent_id
@@ -279,7 +301,14 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         return agent_id
 
     def do_GET(self) -> None:  # noqa: N802
-        agent_id = self._authenticated_and_rate_limited()
+        # Routes that accept a ?token= query param for browser access.
+        _dashboard_reading_paths = frozenset({"/dashboard", "/", "/agents", "/traffic"})
+        parsed_path = urlsplit(self.path).path
+        allow_query_token = parsed_path in _dashboard_reading_paths
+
+        agent_id = self._authenticated_and_rate_limited(
+            allow_query_token=allow_query_token
+        )
         if agent_id is None:
             return
 
@@ -287,7 +316,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self._write_json(200, {"status": "ok"})
             return
 
-        if self.path == "/agents":
+        if parsed_path == "/agents":
             server = self._server()
             now_monotonic = time.monotonic()
 
@@ -342,6 +371,17 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
 
         if urlsplit(self.path).path == DEFAULT_MESSAGE_PATH:
             self._handle_poll(agent_id)
+            return
+
+        # -- Dashboard routes (only when enabled) -----------------------
+        server = self._server()
+        if server.dashboard_enabled and parsed_path in (
+            "/dashboard",
+            "/",
+        ):
+            self._write_serialized(
+                200, DASHBOARD_HTML, content_type="text/html; charset=utf-8"
+            )
             return
 
         self._write_error(404, "not found")
@@ -927,6 +967,10 @@ class BrokerServer:
             (the default) authentication is disabled and all requests are
             accepted.  When a dict (including an empty one) every request
             must carry a valid ``Authorization: Bearer <token>`` header.
+        dashboard_enabled:
+            When ``True``, serves the monitoring dashboard at
+            ``GET /dashboard`` (and ``GET /``).  Defaults to ``False``
+            for production safety.
     """
 
     def __init__(
@@ -946,6 +990,7 @@ class BrokerServer:
         audit_log_path: str | None = None,
         traffic_buffer_size: int = 1000,
         mailbox_grace_seconds: float = _MAX_POLL_WAIT_SECONDS,
+        dashboard_enabled: bool = False,
     ) -> None:
         # -- Validate require_client_cert before binding a socket --
         if require_client_cert and ssl_context is None:
@@ -1002,6 +1047,8 @@ class BrokerServer:
 
         # -- Mailbox grace period (defense-in-depth against poll gaps) --
         self._server.mailbox_grace_seconds = mailbox_grace_seconds
+        # -- Dashboard enable flag --
+        self._server.dashboard_enabled = dashboard_enabled
 
         # -- Router for message delivery --
         retry_policy = (

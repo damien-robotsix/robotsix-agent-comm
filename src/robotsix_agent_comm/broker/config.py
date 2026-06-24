@@ -88,6 +88,9 @@ class BrokerConfig:
     # Audit
     audit_log: str | None = None
 
+    # Dashboard
+    dashboard_enabled: bool = False
+
     # -- Factory ---------------------------------------------------------
 
     @classmethod
@@ -129,6 +132,7 @@ class BrokerConfig:
         raw_body = _get("ROBOTSIX_BROKER_MAX_BODY_SIZE")
         raw_audit = _get("ROBOTSIX_BROKER_AUDIT_LOG")
         raw_mailbox_grace = _get("ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS")
+        raw_dashboard = _get("ROBOTSIX_BROKER_DASHBOARD_ENABLED")
 
         # -- Auth: resolve tokens (file wins over inline) -----------------
         agent_tokens: dict[str, str] | None = None
@@ -188,6 +192,7 @@ class BrokerConfig:
             mailbox_grace_seconds=(
                 float(raw_mailbox_grace) if raw_mailbox_grace else None
             ),
+            dashboard_enabled=_parse_bool(raw_dashboard) if raw_dashboard else False,
         )
 
         config.validate()
