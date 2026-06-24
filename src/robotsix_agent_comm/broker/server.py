@@ -89,6 +89,9 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
     traffic_buffer: deque[dict[str, object]]
     traffic_lock: threading.Lock
 
+    # Mailbox grace period (defense-in-depth against poll gaps)
+    mailbox_grace_seconds: float
+
 
 # ---------------------------------------------------------------------------
 # Private request handler
@@ -942,6 +945,7 @@ class BrokerServer:
         rate_limit_per_second: float = 0.0,
         audit_log_path: str | None = None,
         traffic_buffer_size: int = 1000,
+        mailbox_grace_seconds: float = _MAX_POLL_WAIT_SECONDS,
     ) -> None:
         # -- Validate require_client_cert before binding a socket --
         if require_client_cert and ssl_context is None:
@@ -995,6 +999,9 @@ class BrokerServer:
         # -- Traffic ring buffer (monitoring data layer) --
         self._server.traffic_buffer = deque(maxlen=traffic_buffer_size)
         self._server.traffic_lock = threading.Lock()
+
+        # -- Mailbox grace period (defense-in-depth against poll gaps) --
+        self._server.mailbox_grace_seconds = mailbox_grace_seconds
 
         # -- Router for message delivery --
         retry_policy = (
@@ -1063,7 +1070,13 @@ class BrokerServer:
             self._sweep_once()
 
     def _sweep_once(self) -> None:
-        """Evict every agent whose TTL has elapsed since last heartbeat."""
+        """Evict every agent whose TTL has elapsed since last heartbeat.
+
+        Mailbox (pull) agents get an extra grace window
+        (``mailbox_grace_seconds``) on top of their TTL as defense-in-depth
+        against brief poll gaps — a handler that blocks the poll thread for
+        longer than the TTL would otherwise cause a spurious eviction.
+        """
         server = self._server
         now = time.monotonic()
 
@@ -1086,8 +1099,13 @@ class BrokerServer:
             if ttl <= 0:
                 continue
 
+            # Mailbox agents get an extra grace window so a single slow poll
+            # (e.g. a handler that briefly starved the poll thread) does not
+            # evict them.  Non-mailbox agents use the raw TTL.
+            grace = server.mailbox_grace_seconds if endpoint.mailbox else 0.0
+
             # Not expired yet.
-            if now - last_hb <= ttl:
+            if now - last_hb <= ttl + grace:
                 continue
 
             # Evict: registry, capabilities, heartbeat bookkeeping.
