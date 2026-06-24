@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Broker: extracted ``_validate_register_payload`` method from ``_handle_register``,
+    reducing the longest function in the codebase from ~186 lines to ~70 lines of
+    orchestration. Validation is now a pure data-in/data-out helper.
+
 ### Added
 
 - Export `BUILTIN_HANDLERS` (public alias for the built-in handler kind→method mapping)
