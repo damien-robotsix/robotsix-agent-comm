@@ -85,6 +85,10 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
     mailboxes: dict[str, deque[str]]
     mailbox_cond: threading.Condition
 
+    # Traffic ring buffer (monitoring data layer)
+    traffic_buffer: deque[dict[str, object]]
+    traffic_lock: threading.Lock
+
 
 # ---------------------------------------------------------------------------
 # Private request handler
@@ -282,12 +286,55 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
 
         if self.path == "/agents":
             server = self._server()
+            now_monotonic = time.monotonic()
+
+            # Snapshot heartbeat state under heartbeat_lock.
+            with server.heartbeat_lock:
+                hb_snapshot = dict(server.last_heartbeat)
+                ttl_snapshot = dict(server.ttl_seconds)
+
             with server.capabilities_lock:
-                agents = [
-                    {"agent_id": agent_id, "capabilities": dict(caps)}
-                    for agent_id, caps in server.capabilities.items()
-                ]
+                agents = []
+                for agent_id, caps in server.capabilities.items():
+                    entry: dict[str, object] = {
+                        "agent_id": agent_id,
+                        "capabilities": dict(caps),
+                    }
+
+                    # Last-seen age (monotonic clock).
+                    last_hb = hb_snapshot.get(agent_id)
+                    if last_hb is not None:
+                        entry["last_seen_seconds_ago"] = now_monotonic - last_hb
+                    else:
+                        entry["last_seen_seconds_ago"] = None
+
+                    # TTL.
+                    ttl = ttl_snapshot.get(agent_id)
+                    entry["ttl_seconds"] = ttl
+
+                    # Status.
+                    if ttl is not None and ttl <= 0:
+                        entry["status"] = "active"
+                    elif last_hb is not None and ttl is not None:
+                        age = now_monotonic - last_hb
+                        entry["status"] = "active" if age <= ttl else "stale"
+                    else:
+                        entry["status"] = "unknown"
+
+                    # Mailbox flag.
+                    try:
+                        ep = server.registry.lookup(agent_id)
+                        entry["mailbox"] = ep.mailbox
+                    except AgentNotFoundError:
+                        entry["mailbox"] = False
+
+                    agents.append(entry)
+
             self._write_json(200, {"agents": agents})
+            return
+
+        if urlsplit(self.path).path == "/traffic":
+            self._handle_traffic()
             return
 
         if urlsplit(self.path).path == DEFAULT_MESSAGE_PATH:
@@ -566,6 +613,30 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         self.send_response(204)
         self.end_headers()
 
+    def _record_traffic(
+        self,
+        *,
+        message: Message,
+        disposition: str,
+        status: int,
+    ) -> None:
+        body_size_bytes = len(json.dumps(message.body))
+        record: dict[str, object] = {
+            "timestamp": time.time(),
+            "source": message.metadata.sender,
+            "destination": message.metadata.recipient,
+            "type": message.type.value,
+            "topic": message.metadata.extra.get("topic"),
+            "message_id": message.message_id,
+            "correlation_id": message.correlation_id,
+            "body_size_bytes": body_size_bytes,
+            "disposition": disposition,
+            "status": status,
+        }
+        server = self._server()
+        with server.traffic_lock:
+            server.traffic_buffer.append(record)
+
     def _handle_send(self) -> None:
         """Handle ``POST /messages`` — deserialise, validate, route."""
         raw = self._read_body()
@@ -598,6 +669,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 status=403,
                 detail="sender does not match authenticated agent",
             )
+            self._record_traffic(message=message, disposition="rejected", status=403)
             return
 
         # Empty/missing recipient → 400
@@ -611,6 +683,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 status=400,
                 detail="missing recipient",
             )
+            self._record_traffic(message=message, disposition="rejected", status=400)
             return
 
         # Check that the recipient is registered (before routing).
@@ -631,6 +704,9 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 status=404,
                 detail=f"unknown recipient: {recipient}",
             )
+            self._record_traffic(
+                message=message, disposition="unknown_recipient", status=404
+            )
             return
 
         # Mailbox (pull) recipient: enqueue and let the agent fetch it via
@@ -650,6 +726,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             )
             self.send_response(202)
             self.end_headers()
+            self._record_traffic(message=message, disposition="queued", status=202)
             return
 
         http_status, body_str = self._route_send(message)
@@ -660,6 +737,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             status=http_status,
             detail=f"recipient={recipient}",
         )
+        self._record_traffic(message=message, disposition="routed", status=http_status)
         if body_str is not None:
             self._write_serialized(http_status, body_str)
         else:
@@ -760,6 +838,55 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         )
         self._write_json(200, {"messages": messages})
 
+    def _handle_traffic(self) -> None:
+        """Handle ``GET /traffic`` — return recent message traffic records."""
+        server = self._server()
+        query = parse_qs(urlsplit(self.path).query)
+
+        # Parse filters
+        agent_filter = query.get("agent", [None])[0]
+        topic_filter = query.get("topic", [None])[0]
+
+        since: float | None = None
+        until: float | None = None
+        with contextlib.suppress(ValueError, TypeError):
+            since = float(query.get("since", [""])[0])
+        with contextlib.suppress(ValueError, TypeError):
+            until = float(query.get("until", [""])[0])
+
+        limit: int | None = None
+        try:
+            limit = int(query.get("limit", [""])[0])
+            if limit <= 0:
+                limit = None  # negative/zero → ignore (semantically invalid)
+            else:
+                limit = min(limit, server.traffic_buffer.maxlen or 1000)
+        except (ValueError, TypeError):
+            pass
+
+        # Snapshot under lock
+        with server.traffic_lock:
+            records = list(server.traffic_buffer)
+
+        # Apply filters (outside lock)
+        if agent_filter:
+            records = [
+                r
+                for r in records
+                if r.get("source") == agent_filter
+                or r.get("destination") == agent_filter
+            ]
+        if topic_filter:
+            records = [r for r in records if r.get("topic") == topic_filter]
+        if since is not None:
+            records = [r for r in records if cast(float, r["timestamp"]) >= since]
+        if until is not None:
+            records = [r for r in records if cast(float, r["timestamp"]) <= until]
+        if limit is not None:
+            records = records[-limit:]
+
+        self._write_json(200, {"traffic": records})
+
     def log_message(self, _format: str, *_args: object) -> None:
         """Silence the default stderr request logging."""
 
@@ -814,6 +941,7 @@ class BrokerServer:
         max_body_size: int = 1_048_576,
         rate_limit_per_second: float = 0.0,
         audit_log_path: str | None = None,
+        traffic_buffer_size: int = 1000,
     ) -> None:
         # -- Validate require_client_cert before binding a socket --
         if require_client_cert and ssl_context is None:
@@ -863,6 +991,10 @@ class BrokerServer:
         # -- Mailbox / pull delivery --
         self._server.mailboxes = {}
         self._server.mailbox_cond = threading.Condition()
+
+        # -- Traffic ring buffer (monitoring data layer) --
+        self._server.traffic_buffer = deque(maxlen=traffic_buffer_size)
+        self._server.traffic_lock = threading.Lock()
 
         # -- Router for message delivery --
         retry_policy = (

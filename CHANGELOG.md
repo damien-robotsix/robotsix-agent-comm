@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Broker: embedded traffic recorder (bounded, thread-safe ring buffer) and
+    `GET /traffic` JSON endpoint with `agent`, `topic`, `since`,
+    `until`, and `limit` query filters. `GET /agents` now includes
+    `last_seen_seconds_ago`, `ttl_seconds`, `status`, and `mailbox`
+    for each registered agent.
+
+- `AGENT.md` — project overview for AI coding agents covering repo identity,
+    key directories, build/test/lint commands, environment variables, periodic
+    workflows, and notable omissions.
+
+- `robotsix_agent_comm.sdk.reply.reply_text()`: a pure, dependency-free
+    extractor that returns the `"reply"` string from a brokered response
+    body with a configurable fallback.
+
+- `robotsix_agent_comm.sdk.brokered_request.BrokeredRequester`: a one-shot,
+    per-call helper that encapsulates the brokered request lifecycle
+    (transport pair, agent, send, error unwrap, reply extraction) so
+    consumers no longer need to open-code it.
+
 ### Changed
 
 - Created `tests/conftest.py` with shared `broker` and `agent_server`
@@ -23,21 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - `Agent._build_metadata_and_body()`: extracted shared message-construction
     logic from `send_request` and `send_notification` into a private helper.
-
-### Added
-
-- `AGENT.md` — project overview for AI coding agents covering repo identity,
-    key directories, build/test/lint commands, environment variables, periodic
-    workflows, and notable omissions.
-
-- `robotsix_agent_comm.sdk.reply.reply_text()`: a pure, dependency-free
-    extractor that returns the `"reply"` string from a brokered response
-    body with a configurable fallback.
-
-- `robotsix_agent_comm.sdk.brokered_request.BrokeredRequester`: a one-shot,
-    per-call helper that encapsulates the brokered request lifecycle
-    (transport pair, agent, send, error unwrap, reply extraction) so
-    consumers no longer need to open-code it.
 
 ## [0.1.0] - 2026-06-14
 
