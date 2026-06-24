@@ -16,6 +16,18 @@ from robotsix_agent_comm.protocol import (
     Response,
 )
 from robotsix_agent_comm.sdk import BrokeredAgent, BrokeredResponder
+from robotsix_agent_comm.sdk.responder import BUILTIN_HANDLERS
+
+# ---------------------------------------------------------------------------
+# Validated kind constants — keep in sync with BUILTIN_HANDLERS
+# ---------------------------------------------------------------------------
+
+_K_MONITOR = "monitor"
+_K_CONFIG_GET = "config-get"
+_K_CONFIG_SET = "config-set"
+
+for _k in (_K_MONITOR, _K_CONFIG_GET, _K_CONFIG_SET):
+    assert _k in BUILTIN_HANDLERS, f"Kind {_k!r} not in BUILTIN_HANDLERS"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -102,7 +114,7 @@ def test_dispatch_monitor(broker: BrokerServer) -> None:
     requester = _requester("q", broker)
     with responder, requester:
         reply = _request(
-            requester, "r", {"kind": "monitor", "params": {"detail": "full"}}
+            requester, "r", {"kind": _K_MONITOR, "params": {"detail": "full"}}
         )
 
     assert isinstance(reply, Response)
@@ -114,7 +126,7 @@ def test_dispatch_config_get(broker: BrokerServer) -> None:
     responder = _TestResponder("r", broker)
     requester = _requester("q", broker)
     with responder, requester:
-        reply = _request(requester, "r", {"kind": "config-get"})
+        reply = _request(requester, "r", {"kind": _K_CONFIG_GET})
 
     assert isinstance(reply, Response)
     assert reply.body == {"theme": "dark", "retries": 3}
@@ -128,13 +140,13 @@ def test_dispatch_config_set_round_trip(broker: BrokerServer) -> None:
         reply_set = _request(
             requester,
             "r",
-            {"kind": "config-set", "params": {"retries": 7, "theme": "light"}},
+            {"kind": _K_CONFIG_SET, "params": {"retries": 7, "theme": "light"}},
         )
         assert isinstance(reply_set, Response)
         assert reply_set.body == {"theme": "light", "retries": 7}
 
         # -- verify the update persisted --
-        reply_get = _request(requester, "r", {"kind": "config-get"})
+        reply_get = _request(requester, "r", {"kind": _K_CONFIG_GET})
         assert isinstance(reply_get, Response)
         assert reply_get.body == {"theme": "light", "retries": 7}
 
@@ -144,7 +156,7 @@ def test_missing_params_defaults_to_empty(broker: BrokerServer) -> None:
     responder = _TestResponder("r", broker)
     requester = _requester("q", broker)
     with responder, requester:
-        reply = _request(requester, "r", {"kind": "monitor"})  # no params
+        reply = _request(requester, "r", {"kind": _K_MONITOR})  # no params
 
     assert isinstance(reply, Response)
     assert reply.body["params"] == {}
@@ -235,13 +247,13 @@ def test_handler_raises_and_responder_stays_alive(broker: BrokerServer) -> None:
     requester = _requester("q", broker)
     with responder, requester:
         # 1. The handler raises → error frame
-        reply1 = _request(requester, "r", {"kind": "monitor"})
+        reply1 = _request(requester, "r", {"kind": _K_MONITOR})
         assert isinstance(reply1, Error)
         assert reply1.body.get("code") == "handler_error"
         assert "simulated telemetry failure" in reply1.body.get("message", "")
 
         # 2. The responder is still alive → serves a subsequent request
-        reply2 = _request(requester, "r", {"kind": "config-get"})
+        reply2 = _request(requester, "r", {"kind": _K_CONFIG_GET})
         assert isinstance(reply2, Response)
         assert reply2.body == {"ok": True}
 
@@ -273,14 +285,15 @@ def test_unimplemented_kind_yields_handler_error(
     requester = _requester("q", broker)
     with responder, requester:
         # monitor works
-        r1 = _request(requester, "r", {"kind": "monitor"})
+        r1 = _request(requester, "r", {"kind": _K_MONITOR})
         assert isinstance(r1, Response)
 
         # config-get raises NotImplementedError → handler_error
-        r2 = _request(requester, "r", {"kind": "config-get"})
+        r2 = _request(requester, "r", {"kind": _K_CONFIG_GET})
         assert isinstance(r2, Error)
         assert r2.body.get("code") == "handler_error"
-        assert "handle_config_get not implemented" in r2.body.get("message", "")
+        expected = f"{BUILTIN_HANDLERS[_K_CONFIG_GET]} not implemented"
+        assert expected in r2.body.get("message", "")
 
 
 # ---------------------------------------------------------------------------
@@ -307,12 +320,12 @@ def test_register_handler_overrides_builtin(broker: BrokerServer) -> None:
     responder = _TestResponder("r", broker)
     requester = _requester("q", broker)
 
-    @responder.register_handler("monitor")
+    @responder.register_handler(_K_MONITOR)
     def _custom_monitor(request: Request, params: dict[str, Any]) -> dict[str, Any]:
         return {"custom": True}
 
     with responder, requester:
-        reply = _request(requester, "r", {"kind": "monitor"})
+        reply = _request(requester, "r", {"kind": _K_MONITOR})
     assert isinstance(reply, Response)
     assert reply.body == {"custom": True}
 
@@ -342,7 +355,7 @@ def test_auth_round_trip(auth_broker: BrokerServer) -> None:
     responder = _TestResponder("responder", auth_broker, broker_token="tok-r")
     requester = _requester("requester", auth_broker, broker_token="tok-q")
     with responder, requester:
-        reply = requester.send_request("responder", {"kind": "monitor"}, timeout=5.0)
+        reply = requester.send_request("responder", {"kind": _K_MONITOR}, timeout=5.0)
 
     assert isinstance(reply, Response)
     assert reply.body["cpu"] == 42
@@ -356,7 +369,7 @@ def test_auth_requester_missing_token_rejected(
     # Requester with NO token — broker should return 401.
     requester = _requester("no-token-req", auth_broker, broker_token=None)
     with responder, requester, pytest.raises(ProtocolError):
-        requester.send_request("responder", {"kind": "monitor"}, timeout=5.0)
+        requester.send_request("responder", {"kind": _K_MONITOR}, timeout=5.0)
 
 
 def test_auth_requester_wrong_token_rejected(
@@ -366,4 +379,4 @@ def test_auth_requester_wrong_token_rejected(
     responder = _TestResponder("responder", auth_broker, broker_token="tok-r")
     requester = _requester("bad-req", auth_broker, broker_token="wrong-token")
     with responder, requester, pytest.raises(ProtocolError):
-        requester.send_request("responder", {"kind": "monitor"}, timeout=5.0)
+        requester.send_request("responder", {"kind": _K_MONITOR}, timeout=5.0)

@@ -74,7 +74,7 @@ from .brokered import BrokeredAgent
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["BrokeredResponder"]
+__all__ = ["BrokeredResponder", "BUILTIN_HANDLERS"]
 
 
 class BrokeredResponder(BrokeredAgent):
@@ -335,3 +335,11 @@ class BrokeredResponder(BrokeredAgent):
                 getattr(self, method_name, None),
             )
         return None
+
+
+BUILTIN_HANDLERS = BrokeredResponder._BUILTIN_HANDLERS
+"""Public alias for the built-in handler kind→method mapping.
+
+``dict[str, str]`` mapping each built-in kind string (e.g. ``"monitor"``)
+to the corresponding handler method name (e.g. ``"handle_monitor"``).
+"""
