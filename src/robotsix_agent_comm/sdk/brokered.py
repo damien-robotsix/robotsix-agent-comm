@@ -129,11 +129,20 @@ class BrokeredAgent:
             recipient, dict(body) if body is not None else None, **extra
         )
 
+    def _registration_capabilities(self) -> dict[str, object]:
+        """Override in subclasses to advertise agent capabilities at registration.
+
+        Returned dict is snapshotted when :meth:`start` is called; changes
+        made after ``start()`` are not reflected at the broker until the
+        agent is restarted.
+        """
+        return {}
+
     # -- lifecycle --------------------------------------------------------
 
     def start(self) -> None:
         """Register the mailbox and start the background receive loop."""
-        self._agent.start()
+        self._agent.start(capabilities=self._registration_capabilities())
         logger.info("BrokeredAgent %r started (pull/mailbox mode)", self.agent_id)
 
     def stop(self) -> None:

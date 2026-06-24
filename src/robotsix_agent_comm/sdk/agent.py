@@ -144,18 +144,25 @@ class Agent:
 
     # -- lifecycle --------------------------------------------------------
 
-    def start(self) -> None:
+    def start(self, *, capabilities: dict[str, object] | None = None) -> None:
         """Start receiving and register this agent's endpoint.
 
         In pull mode the agent registers a *mailbox* (no local listener) and
         receives by long-polling the broker — NAT-safe. Otherwise it opens a
         local :class:`TransportServer` the broker/peers dial into.
+
+        *capabilities* are forwarded to the registry's ``register()`` call
+        so the broker can advertise them via ``GET /agents``.  Capabilities
+        are snapshotted at registration time; changes made after this call
+        are not reflected until the agent is restarted.
         """
+        caps = dict(capabilities or {})
         if self._pull:
             if self._recv_thread is not None:
                 return
             self._registry.register(
-                Endpoint(agent_id=self.agent_id, host="mailbox", port=0, mailbox=True)
+                Endpoint(agent_id=self.agent_id, host="mailbox", port=0, mailbox=True),
+                capabilities=caps,
             )
             self._recv_stop.clear()
             thread = threading.Thread(target=self._recv_loop, daemon=True)
@@ -168,7 +175,8 @@ class Agent:
         server.start()
         self._server = server
         self._registry.register(
-            Endpoint(agent_id=self.agent_id, host=server.host, port=server.port)
+            Endpoint(agent_id=self.agent_id, host=server.host, port=server.port),
+            capabilities=caps,
         )
 
     def stop(self) -> None:

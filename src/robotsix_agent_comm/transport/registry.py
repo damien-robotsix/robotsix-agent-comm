@@ -21,8 +21,17 @@ class Registry:
         self._lock = threading.Lock()
         self._endpoints: dict[str, Endpoint] = {}
 
-    def register(self, endpoint: Endpoint) -> None:
-        """Register (or replace) ``endpoint`` under its ``agent_id``."""
+    def register(
+        self,
+        endpoint: Endpoint,
+        *,
+        capabilities: dict[str, object] | None = None,
+    ) -> None:
+        """Register (or replace) ``endpoint`` under its ``agent_id``.
+
+        *capabilities* are accepted for compatibility with
+        :class:`BrokeredRegistry` but ignored in the in-process registry.
+        """
         with self._lock:
             self._endpoints[endpoint.agent_id] = endpoint
 
