@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `fail_under = 85` to `[tool.coverage.report]` in `pyproject.toml` so local
+    coverage runs (e.g. `pytest --cov`) also enforce the same 85% branch-coverage
+    threshold that CI requires.
+
 - Export `BUILTIN_HANDLERS` (public alias for the built-in handler kind→method mapping)
     from `responder.py` so tests can reference it instead of hardcoding kind strings.
 
