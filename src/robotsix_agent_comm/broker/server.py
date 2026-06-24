@@ -92,7 +92,6 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
 
     # Mailbox grace period (defense-in-depth against poll gaps)
     mailbox_grace_seconds: float
-=======
     # Dashboard enable flag
     dashboard_enabled: bool
 
@@ -991,7 +990,6 @@ class BrokerServer:
         audit_log_path: str | None = None,
         traffic_buffer_size: int = 1000,
         mailbox_grace_seconds: float = _MAX_POLL_WAIT_SECONDS,
-=======
         dashboard_enabled: bool = False,
     ) -> None:
         # -- Validate require_client_cert before binding a socket --
@@ -1049,7 +1047,6 @@ class BrokerServer:
 
         # -- Mailbox grace period (defense-in-depth against poll gaps) --
         self._server.mailbox_grace_seconds = mailbox_grace_seconds
-=======
         # -- Dashboard enable flag --
         self._server.dashboard_enabled = dashboard_enabled
 
