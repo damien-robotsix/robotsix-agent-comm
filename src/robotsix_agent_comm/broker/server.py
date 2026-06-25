@@ -805,7 +805,6 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 status=202,
                 detail=f"queued for mailbox {recipient}",
             )
-            self._record_traffic(message=message, disposition="queued", status=202)
             self.send_response(202)
             self.end_headers()
             return
