@@ -15,16 +15,17 @@ DASHBOARD_HTML: str = """\
 <title>Broker Dashboard — robotsix-agent-comm</title>
 <style>
   :root {
-    --bg: #f5f5f5;
-    --card: #fff;
-    --text: #222;
-    --muted: #666;
-    --border: #ddd;
-    --accent: #2563eb;
-    --accent-hover: #1d4ed8;
-    --green: #16a34a;
-    --red: #dc2626;
-    --amber: #d97706;
+    color-scheme: dark;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #334155;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --green: #4ade80;
+    --red: #f87171;
+    --amber: #fbbf24;
     --radius: 6px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,6 +69,8 @@ DASHBOARD_HTML: str = """\
     border: 1px solid var(--border);
     border-radius: var(--radius);
     font-size: 0.875rem;
+    background: var(--bg);
+    color: var(--text);
   }
   .controls button {
     padding: 6px 16px;
@@ -93,7 +96,7 @@ DASHBOARD_HTML: str = """\
     white-space: nowrap;
   }
   th { color: var(--muted); font-weight: 600; }
-  tr:hover { background: #f0f7ff; }
+  tr:hover { background: rgba(59, 130, 246, 0.1); }
 
   /* badges */
   .badge {
@@ -103,18 +106,18 @@ DASHBOARD_HTML: str = """\
     font-size: 0.75rem;
     font-weight: 600;
   }
-  .badge-active { background: #dcfce7; color: var(--green); }
-  .badge-stale { background: #fef3c7; color: var(--amber); }
-  .badge-unknown { background: #f3f4f6; color: var(--muted); }
-  .badge-queued { background: #dbeafe; color: var(--accent); }
-  .badge-rejected { background: #fee2e2; color: var(--red); }
-  .badge-error { background: #fee2e2; color: var(--red); }
+  .badge-active { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+  .badge-stale { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+  .badge-unknown { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
+  .badge-queued { background: rgba(59, 130, 246, 0.15); color: var(--accent); }
+  .badge-rejected { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+  .badge-error { background: rgba(248, 113, 113, 0.15); color: var(--red); }
 
   /* error banner */
   .error-banner {
-    background: #fee2e2;
+    background: rgba(248, 113, 113, 0.12);
     color: var(--red);
-    border: 1px solid #fecaca;
+    border: 1px solid rgba(248, 113, 113, 0.4);
     border-radius: var(--radius);
     padding: 10px 14px;
     margin-bottom: 16px;
