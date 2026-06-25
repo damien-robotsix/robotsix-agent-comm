@@ -48,6 +48,7 @@ docs = [
 
 [project.scripts]
 robotsix-broker = "robotsix_agent_comm.broker.service:main"
+robotsix-lifecycle = "robotsix_agent_comm.lifecycle.service:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/robotsix_agent_comm"]
@@ -62,10 +63,12 @@ select = ["E", "F", "I", "UP", "B", "SIM", "S", "D"]
 
 [tool.ruff.lint.per-file-ignores]
 "vulture_whitelist.py" = ["B018", "F821", "D10"]
-"tests/**" = ["S101", "S104", "S105", "S106", "S108", "D10", "D205", "D403", "D415"]
+"tests/**" = ["S101", "S104", "S105", "S106", "S107", "S108", "S310", "D10", "D205", "D403", "D415", "E501"]
 "src/robotsix_agent_comm/broker/config.py" = ["S104"]
 "src/robotsix_agent_comm/broker/server.py" = ["S101", "D107"]
 "src/robotsix_agent_comm/broker/_dashboard.py" = ["E501"]
+"src/robotsix_agent_comm/lifecycle/config.py" = ["S104"]
+"src/robotsix_agent_comm/lifecycle/server.py" = ["S101", "D107"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

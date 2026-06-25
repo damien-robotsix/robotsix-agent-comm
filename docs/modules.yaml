@@ -91,3 +91,16 @@ modules:
     dependencies:
       - protocol
       - transport
+
+  - id: lifecycle
+    description: >-
+      Lifecycle management server for the robotsix suite. Provides versioned
+      deployment with rollback support for managed services. Exposes a JSON
+      HTTP API for deploy, rollback, and deployment history, backed by a
+      pluggable execution backend (Docker Compose via subprocess).
+    paths:
+      - src/robotsix_agent_comm/lifecycle/*.py
+      - tests/lifecycle/*.py
+    dependencies:
+      - protocol
+      - transport
