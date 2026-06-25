@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from .config import LifecycleConfig
 from .server import LifecycleServer
-from .tracing import LifecycleTracing
 from .supervision import (
     Incident,
     ServiceState,
@@ -25,6 +24,7 @@ from .supervision import (
     SupervisionConfig,
     build_supervisor,
 )
+from .tracing import LifecycleTracing
 
 __all__ = [
     "Incident",
