@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Lifecycle: new `robotsix_agent_comm.lifecycle` package with `LifecycleServer`,
+    `LifecycleConfig`, `build_lifecycle`, and the `robotsix-lifecycle` CLI.
+    Provides versioned deployment with rollback support for managed suite
+    services: `POST /services/{name}/deploy` (health-gated with auto-rollback),
+    `POST /services/{name}/rollback` (explicit or previous revision), and
+    `GET /services/{name}/deployments` (ordered history). Includes in-memory
+    `DeploymentStore` with per-service locking, a pluggable `LifecycleBackend`
+    interface with `SubprocessBackend` for Docker Compose, and 24 tests covering
+    deploy success, auto-rollback, explicit rollback, auth, validation,
+    concurrency, and server lifecycle.
+
 ### Changed
 
 - Broker: extracted `_validate_register_payload` method from `_handle_register`,
