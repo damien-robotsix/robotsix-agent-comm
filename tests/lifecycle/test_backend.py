@@ -38,7 +38,7 @@ class TestLifecycleBackendABC:
             # missing stop() and health()
 
         with pytest.raises(TypeError, match="abstract"):
-            Partial()
+            Partial()  # type: ignore[abstract]
 
     def test_subprocess_backend_is_a_lifecycle_backend(self) -> None:
         """SubprocessBackend is a valid LifecycleBackend subclass."""
