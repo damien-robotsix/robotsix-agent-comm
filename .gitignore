@@ -23,6 +23,7 @@ scratch_*
 # coverage data
 .coverage
 .coverage.*
+coverage.xml
 
 # Local dependency install directory
 .local-packages/

@@ -797,6 +797,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                     serialize(message)
                 )
                 server.mailbox_cond.notify_all()
+            self._record_traffic(message=message, disposition="queued", status=202)
             server._audit_logger.log(
                 "send",
                 self._authenticated_agent_id,
@@ -804,12 +805,12 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 status=202,
                 detail=f"queued for mailbox {recipient}",
             )
-            self._record_traffic(message=message, disposition="queued", status=202)
             self.send_response(202)
             self.end_headers()
             return
 
         http_status, body_str = self._route_send(message)
+        self._record_traffic(message=message, disposition="routed", status=http_status)
         server._audit_logger.log(
             "send",
             self._authenticated_agent_id,
@@ -817,7 +818,6 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             status=http_status,
             detail=f"recipient={recipient}",
         )
-        self._record_traffic(message=message, disposition="routed", status=http_status)
         if body_str is not None:
             self._write_serialized(http_status, body_str)
         else:
