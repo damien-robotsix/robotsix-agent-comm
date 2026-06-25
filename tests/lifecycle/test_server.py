@@ -58,7 +58,7 @@ def _make_server(
         "robotsix_agent_comm.sdk.brokered.create_transport_pair",
         return_value=(mock_agent, mock_transport),
     ):
-        server = LifecycleServer(config=config, tracing=tracing)  # type: ignore[arg-type]
+        server = LifecycleServer(config=config, tracing=tracing)
     return server
 
 
@@ -86,7 +86,7 @@ class TestInit:
             "robotsix_agent_comm.sdk.brokered.create_transport_pair",
             return_value=(mock_agent, mock_transport),
         ):
-            return LifecycleServer(config=config, tracing=tracing)  # type: ignore[arg-type]
+            return LifecycleServer(config=config, tracing=tracing)
 
     def test_stores_tracing_instance(self) -> None:
         """tracing is stored as ``self.tracing``."""
@@ -124,7 +124,7 @@ class TestInit:
             # is mocked (so _extra_handlers is never created) but
             # LifecycleServer.__init__ still calls register_handler.
             with patch.object(LifecycleServer, "register_handler"):
-                LifecycleServer(config=config, tracing=LifecycleTracing())  # type: ignore[arg-type]
+                LifecycleServer(config=config, tracing=LifecycleTracing())
             mock_super_init.assert_called_once_with(
                 agent_id="custom-id",
                 broker_host="broker.local",
