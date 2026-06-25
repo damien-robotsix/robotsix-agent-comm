@@ -1,0 +1,1 @@
+Switched the broker dashboard (``GET /dashboard``) to a dark theme. The palette is driven by the existing ``:root`` CSS variables, with the few hardcoded light tints (table hover, status badges, error banner, form inputs) updated to dark-friendly translucent equivalents.
