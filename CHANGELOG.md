@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Add missing `ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS` and `ROBOTSIX_BROKER_DASHBOARD_ENABLED` entries to `.env.broker.example` reference config.
+
 - Broker: moved traffic record writes before HTTP response in `_handle_send` to
     eliminate a race condition that caused flaky test failures in
     `test_rejected_sender_mismatch_appears_in_traffic` and
