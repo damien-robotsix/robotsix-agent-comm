@@ -15,8 +15,10 @@ component:
 
 from __future__ import annotations
 
+from .backend import MockBackend, SubprocessBackend
 from .config import LifecycleConfig
 from .server import LifecycleServer
+from .service import build_server
 from .supervision import (
     Incident,
     ServiceState,
@@ -44,18 +46,9 @@ __all__ = [
 def __getattr__(name: str) -> object:
     """Lazy-import forward references for not-yet-loaded submodules.
 
-    For example, ``build_server`` is defined in ``service.py`` but is
-    listed in ``__all__`` so the public API is self-describing even
-    before every module is imported.
+    Currently all public names are imported eagerly above; this
+    fallback exists as a forward-compatibility hook in case future
+    additions are added to ``__all__`` without a corresponding
+    top-level import.
     """
-    if name == "build_server":
-        from .service import build_server as _build_server
-
-        return _build_server
-    if name in ("MockBackend", "SubprocessBackend"):
-        from .backend import MockBackend, SubprocessBackend
-
-        if name == "MockBackend":
-            return MockBackend
-        return SubprocessBackend
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
