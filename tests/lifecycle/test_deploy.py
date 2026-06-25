@@ -20,7 +20,9 @@ from robotsix_agent_comm.lifecycle import (
 
 
 def _post(
-    url: str, body: dict[str, Any], token: str | None = "test-token"  # noqa: S107
+    url: str,
+    body: dict[str, Any],
+    token: str | None = "test-token",  # noqa: S107
 ) -> dict[str, Any]:
     """POST JSON to *url* and return the decoded response body."""
     data = json.dumps(body).encode("utf-8")
@@ -38,7 +40,8 @@ def _post(
 
 
 def _get(
-    url: str, token: str | None = "test-token"  # noqa: S107
+    url: str,
+    token: str | None = "test-token",  # noqa: S107
 ) -> dict[str, Any]:
     """GET JSON from *url* and return the decoded response body."""
     req = urllib.request.Request(url, method="GET")
@@ -54,7 +57,9 @@ def _get(
 
 
 def _post_raw(
-    url: str, body: dict[str, Any], token: str | None = "test-token"  # noqa: S107
+    url: str,
+    body: dict[str, Any],
+    token: str | None = "test-token",  # noqa: S107
 ) -> tuple[int, dict[str, Any]]:
     """POST and return (status_code, body_dict)."""
     data = json.dumps(body).encode("utf-8")
@@ -77,7 +82,9 @@ def _post_raw(
 
 
 class TestDeploySuccess:
-    def test_deploy_healthy(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_deploy_healthy(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """A deploy that passes health check returns 200 and records HEALTHY."""
         backend._health_results = [True]
 
@@ -92,7 +99,9 @@ class TestDeploySuccess:
         assert rev.status == "HEALTHY"
         assert rev.source == "deploy"
 
-    def test_deploy_records_start_call(self, base_url: str, backend: MockBackend) -> None:
+    def test_deploy_records_start_call(
+        self, base_url: str, backend: MockBackend
+    ) -> None:
         """The backend's start() is called with the service name and version."""
         backend._health_results = [True]
 
@@ -102,7 +111,9 @@ class TestDeploySuccess:
         assert svc == "my-svc"
         assert ver == "v2.0.0"
 
-    def test_deploy_health_check_disabled(self, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_deploy_health_check_disabled(
+        self, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """With health_check_enabled=False, deploy succeeds without health polling."""
         backend._health_results = [False]  # would fail if checked
 
@@ -122,7 +133,9 @@ class TestDeploySuccess:
         finally:
             srv.stop()
 
-    def test_deploy_sets_current_revision(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_deploy_sets_current_revision(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """After deploy, get_current() returns the new revision."""
         backend._health_results = [True]
 
@@ -140,7 +153,9 @@ class TestDeploySuccess:
 
 
 class TestDeployAutoRollback:
-    def test_auto_rollback_on_unhealthy(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_auto_rollback_on_unhealthy(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """When health check fails, the server rolls back to the last good revision."""
         # First deploy: healthy.
         backend._health_results = [True]
@@ -154,7 +169,9 @@ class TestDeployAutoRollback:
         #   call 2 (rollback health check): True → rollback succeeds
         backend._health_results = [False, True]
 
-        status, resp = _post_raw(f"{base_url}/services/svc/deploy", {"version": "v2-bad"})
+        status, resp = _post_raw(
+            f"{base_url}/services/svc/deploy", {"version": "v2-bad"}
+        )
         assert status == 200
         assert resp["status"] == "HEALTHY"
         assert resp.get("rolled_back") is True
@@ -165,7 +182,9 @@ class TestDeployAutoRollback:
         assert current.version == "v1"
         assert current.source == "rollback"
 
-    def test_auto_rollback_no_previous_revision(self, base_url: str, backend: MockBackend) -> None:
+    def test_auto_rollback_no_previous_revision(
+        self, base_url: str, backend: MockBackend
+    ) -> None:
         """When the first deploy fails and there's no previous revision, return 502."""
         backend._health_results = [False]
 
@@ -173,7 +192,9 @@ class TestDeployAutoRollback:
         assert status == 502
         assert "no previous good revision" in resp["error"]
 
-    def test_auto_rollback_records_both_revisions(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_auto_rollback_records_both_revisions(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """Auto-rollback records the failed deploy AND the rollback revision."""
         backend._health_results = [True]
         _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -191,7 +212,9 @@ class TestDeployAutoRollback:
         assert sources == ["deploy", "deploy", "rollback"]
         assert statuses == ["HEALTHY", "UNHEALTHY", "HEALTHY"]
 
-    def test_auto_rollback_rollback_target_unhealthy(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_auto_rollback_rollback_target_unhealthy(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """When even the rollback target is unhealthy, return 502."""
         # First deploy healthy.
         backend._health_results = [True]
@@ -201,7 +224,9 @@ class TestDeployAutoRollback:
         backend._health_calls = 0
         backend._health_results = [False, False]  # both fail
 
-        status, resp = _post_raw(f"{base_url}/services/svc/deploy", {"version": "v2-bad"})
+        status, resp = _post_raw(
+            f"{base_url}/services/svc/deploy", {"version": "v2-bad"}
+        )
         assert status == 502
         assert "rollback target is also unhealthy" in resp["error"]
 
@@ -218,7 +243,9 @@ class TestDeployAutoRollback:
 
 
 class TestExplicitRollback:
-    def test_rollback_to_previous(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_rollback_to_previous(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """POST /rollback (no body) rolls back to the immediate predecessor."""
         # Deploy v1.
         backend._health_results = [True]
@@ -238,7 +265,9 @@ class TestExplicitRollback:
         assert current.version == "v1"
         assert current.source == "rollback"
 
-    def test_rollback_to_explicit_revision(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_rollback_to_explicit_revision(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """POST /rollback with revision_id rolls back to that specific revision."""
         backend._health_results = [True]
         r1 = _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -250,10 +279,14 @@ class TestExplicitRollback:
         _post(f"{base_url}/services/svc/deploy", {"version": "v3"})
 
         # Rollback to v1 explicitly.
-        resp = _post(f"{base_url}/services/svc/rollback", {"revision_id": r1["revision_id"]})
+        resp = _post(
+            f"{base_url}/services/svc/rollback", {"revision_id": r1["revision_id"]}
+        )
         assert resp["version"] == "v1"
 
-    def test_rollback_nonexistent_revision(self, base_url: str, backend: MockBackend) -> None:
+    def test_rollback_nonexistent_revision(
+        self, base_url: str, backend: MockBackend
+    ) -> None:
         """Rollback to a nonexistent revision returns 404."""
         backend._health_results = [True]
         _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -269,7 +302,9 @@ class TestExplicitRollback:
         assert status == 400
         assert "no current deployment" in resp["error"]
 
-    def test_rollback_no_previous_revision(self, base_url: str, backend: MockBackend) -> None:
+    def test_rollback_no_previous_revision(
+        self, base_url: str, backend: MockBackend
+    ) -> None:
         """Rollback when current has no predecessor returns 400."""
         backend._health_results = [True]
         _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -278,7 +313,9 @@ class TestExplicitRollback:
         assert status == 400
         assert "no previous revision" in resp["error"]
 
-    def test_rollback_creates_new_revision(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_rollback_creates_new_revision(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """Explicit rollback creates a new revision with source='rollback'."""
         backend._health_results = [True]
         _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -294,7 +331,9 @@ class TestExplicitRollback:
         assert current.revision_id == resp["revision_id"]
         assert current.source == "rollback"
 
-    def test_rollback_starts_target_version(self, base_url: str, backend: MockBackend) -> None:
+    def test_rollback_starts_target_version(
+        self, base_url: str, backend: MockBackend
+    ) -> None:
         """Rollback calls backend.start() with the target version."""
         backend._health_results = [True]
         _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -318,7 +357,9 @@ class TestExplicitRollback:
 
 
 class TestDeploymentHistory:
-    def test_get_deployments_returns_ordered_list(self, base_url: str, backend: MockBackend) -> None:
+    def test_get_deployments_returns_ordered_list(
+        self, base_url: str, backend: MockBackend
+    ) -> None:
         """GET /deployments returns all revisions ordered oldest-first."""
         backend._health_results = [True]
         _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -338,7 +379,9 @@ class TestDeploymentHistory:
         resp = _get(f"{base_url}/services/unknown/deployments")
         assert resp["deployments"] == []
 
-    def test_get_deployments_marks_current(self, base_url: str, backend: MockBackend) -> None:
+    def test_get_deployments_marks_current(
+        self, base_url: str, backend: MockBackend
+    ) -> None:
         """The current revision has current=True, others have current=False."""
         backend._health_results = [True]
         _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -384,7 +427,9 @@ class TestAuth:
         )
         assert status == 401
 
-    def test_no_auth_server_allows_unauthenticated(self, base_url_no_auth: str, backend: MockBackend) -> None:
+    def test_no_auth_server_allows_unauthenticated(
+        self, base_url_no_auth: str, backend: MockBackend
+    ) -> None:
         """When auth_token=None, requests without auth header succeed."""
         backend._health_results = [True]
 
@@ -435,7 +480,9 @@ class TestValidation:
         else:
             raise AssertionError("expected HTTPError 400")
 
-    def test_rollback_invalid_revision_id_type(self, base_url: str, backend: MockBackend) -> None:
+    def test_rollback_invalid_revision_id_type(
+        self, base_url: str, backend: MockBackend
+    ) -> None:
         """Rollback with non-string revision_id returns 400."""
         backend._health_results = [True]
         _post(f"{base_url}/services/svc/deploy", {"version": "v1"})
@@ -452,7 +499,9 @@ class TestValidation:
 
 
 class TestServerLifecycle:
-    def test_start_stop_idempotent(self, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_start_stop_idempotent(
+        self, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """Calling start/stop multiple times is safe."""
         srv = LifecycleServer(backend=backend, store=store, host="127.0.0.1", port=0)
         srv.start()
@@ -460,7 +509,9 @@ class TestServerLifecycle:
         srv.stop()
         srv.stop()  # idempotent
 
-    def test_context_manager(self, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_context_manager(
+        self, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """LifecycleServer can be used as a context manager."""
         backend._health_results = [True]
         with LifecycleServer(
@@ -482,7 +533,9 @@ class TestServerLifecycle:
 
 
 class TestConcurrency:
-    def test_serialized_deploys_same_service(self, base_url: str, backend: MockBackend, store: DeploymentStore) -> None:
+    def test_serialized_deploys_same_service(
+        self, base_url: str, backend: MockBackend, store: DeploymentStore
+    ) -> None:
         """Two concurrent deploys on the same service are serialized."""
         backend._health_results = [True, True]
 

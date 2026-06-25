@@ -96,7 +96,7 @@ class _LifecycleRequestHandler(BaseHTTPRequestHandler):
             self._write_error(401, "missing or invalid Authorization header")
             return None
 
-        token = auth_header[len("Bearer "):]
+        token = auth_header[len("Bearer ") :]
         if token != server.auth_token:
             self._write_error(401, "invalid token")
             return None
@@ -144,9 +144,7 @@ class _LifecycleRequestHandler(BaseHTTPRequestHandler):
         if parsed.path.endswith("/deploy"):
             service_name = self._parse_service_name(parsed.path, "/deploy")
             if service_name is None:
-                self._write_error(
-                    400, "invalid path: expected /services/{name}/deploy"
-                )
+                self._write_error(400, "invalid path: expected /services/{name}/deploy")
                 return
             self._handle_deploy(service_name)
             return
@@ -177,7 +175,7 @@ class _LifecycleRequestHandler(BaseHTTPRequestHandler):
         prefix = "/services/"
         if not path.startswith(prefix) or not path.endswith(suffix):
             return None
-        name = path[len(prefix): -len(suffix)]
+        name = path[len(prefix) : -len(suffix)]
         if not name:
             return None
         return name
@@ -371,13 +369,9 @@ class _LifecycleRequestHandler(BaseHTTPRequestHandler):
                 if current.previous_revision_id is None:
                     self._write_error(400, "no previous revision to roll back to")
                     return
-                target = store.get_revision(
-                    service_name, current.previous_revision_id
-                )
+                target = store.get_revision(service_name, current.previous_revision_id)
                 if target is None:
-                    self._write_error(
-                        500, "previous revision not found in store"
-                    )
+                    self._write_error(500, "previous revision not found in store")
                     return
 
             # Stop current, start target.
@@ -520,9 +514,7 @@ class LifecycleServer:
         self._store = store or DeploymentStore()
         self._backend = backend
 
-        self._http_server = _LifecycleHTTPServer(
-            (host, port), _LifecycleRequestHandler
-        )
+        self._http_server = _LifecycleHTTPServer((host, port), _LifecycleRequestHandler)
 
         # Attach shared state to the HTTP server instance.
         self._http_server.backend = backend
@@ -562,9 +554,7 @@ class LifecycleServer:
         """Serve requests on a background daemon thread (idempotent)."""
         if self._thread is not None:
             return
-        thread = threading.Thread(
-            target=self._http_server.serve_forever, daemon=True
-        )
+        thread = threading.Thread(target=self._http_server.serve_forever, daemon=True)
         thread.start()
         self._thread = thread
 
