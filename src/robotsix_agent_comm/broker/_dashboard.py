@@ -139,6 +139,23 @@ DASHBOARD_HTML: str = """\
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* traffic row expand-for-detail */
+  tr.traffic-row { cursor: pointer; }
+  tr.traffic-row.expanded { background: rgba(59, 130, 246, 0.1); }
+  tr.traffic-row td:first-child::before {
+    content: "\25B8"; color: var(--muted);
+    display: inline-block; width: 1em; transition: transform 0.1s;
+  }
+  tr.traffic-row.expanded td:first-child::before { transform: rotate(90deg); }
+  tr.traffic-detail > td { padding: 0 8px 10px 8px; white-space: normal; }
+  .kv-grid {
+    display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 12px;
+  }
+  .kv-k { color: var(--muted); font-weight: 600; }
+  .kv-v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+
   /* footer */
   .footer {
     text-align: center;
@@ -328,20 +345,56 @@ async function loadTraffic() {
   }
 }
 
+// Set of expanded record keys (message_id, or a synthetic fallback), tracked
+// across the 4s auto-refresh so an open detail row stays open.
+var _expandedTraffic = {};
+var _lastTraffic = null;
+
+function trafficKey(r, i) {
+  return r.message_id || ("idx:" + i + ":" + (r.timestamp || ""));
+}
+
+function trafficDetailRow(r) {
+  function kv(k, v) {
+    if (v == null || v === "") v = "—";
+    return '<span class="kv-k">' + esc(k) + '</span>' +
+           '<span class="kv-v">' + esc(v) + '</span>';
+  }
+  var iso = r.timestamp ? new Date(r.timestamp * 1000).toISOString() : "—";
+  var tstamp = iso + (r.timestamp ? "  (" + r.timestamp + ")" : "");
+  var rows =
+    kv("Message ID", r.message_id) +
+    kv("Correlation ID", r.correlation_id) +
+    kv("Source", r.source) +
+    kv("Destination", r.destination) +
+    kv("Topic", r.topic) +
+    kv("Type", r.type) +
+    kv("Disposition", r.disposition) +
+    kv("Status", r.status) +
+    kv("Body size", (r.body_size_bytes != null ? r.body_size_bytes + " bytes" : null)) +
+    kv("Timestamp", tstamp);
+  return '<tr class="traffic-detail"><td colspan="7">' +
+    '<div class="kv-grid">' + rows + '</div></td></tr>';
+}
+
 function renderTraffic(records) {
+  _lastTraffic = records;
   const tbody = $("#traffic-tbody");
   if (records.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">No traffic recorded yet.</td></tr>';
     return;
   }
-  tbody.innerHTML = records.map(function(r) {
+  tbody.innerHTML = records.map(function(r, i) {
     var ts = r.timestamp ? new Date(r.timestamp * 1000).toLocaleTimeString() : "—";
     var dispCls = "badge-unknown";
     if (r.disposition === "queued") dispCls = "badge-queued";
     else if (r.disposition === "rejected") dispCls = "badge-rejected";
     else if (r.disposition && r.disposition.indexOf("error") !== -1) dispCls = "badge-error";
     var size = (r.body_size_bytes != null) ? r.body_size_bytes + " B" : "—";
-    return '<tr>' +
+    var key = trafficKey(r, i);
+    var open = !!_expandedTraffic[key];
+    var main = '<tr class="traffic-row' + (open ? " expanded" : "") +
+      '" data-key="' + esc(key) + '" title="Click for details">' +
       '<td>' + esc(ts) + '</td>' +
       '<td>' + esc(r.source || "—") + '</td>' +
       '<td>' + esc(r.destination || "—") + '</td>' +
@@ -350,8 +403,19 @@ function renderTraffic(records) {
       '<td>' + esc(size) + '</td>' +
       '<td><span class="badge ' + dispCls + '">' + esc(r.disposition || r.status || "—") + '</span></td>' +
       '</tr>';
+    return main + (open ? trafficDetailRow(r) : "");
   }).join("");
 }
+
+// Event delegation: clicking a traffic row toggles its detail panel.
+$("#traffic-tbody").addEventListener("click", function(ev) {
+  var tr = ev.target.closest("tr.traffic-row");
+  if (!tr) return;
+  var key = tr.getAttribute("data-key");
+  if (_expandedTraffic[key]) delete _expandedTraffic[key];
+  else _expandedTraffic[key] = true;
+  if (_lastTraffic) renderTraffic(_lastTraffic);
+});
 
 function esc(s) {
   if (s == null) return "—";
