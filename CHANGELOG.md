@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     deploy success, auto-rollback, explicit rollback, auth, validation,
     concurrency, and server lifecycle.
 
+- Supervision: new `SupervisionAgent` in the lifecycle package that continuously
+    monitors managed services via the lifecycle backend and reacts to failures:
+    bounded auto-restart with exponential backoff, escalation after N consecutive
+    failures, an alert/notification callback for broker/Langfuse integration,
+    and an HTTP status endpoint (`GET /status`) with per-service health summaries.
+    Configurable via `ROBOTSIX_SUPERVISION_*` environment variables; degrades
+    gracefully when alerting callbacks are absent. Includes 22 tests covering
+    healthy steady-state, transient-failure auto-restart, escalation, lifecycle,
+    and configuration.
+
 ### Changed
 
 - Broker: extracted `_validate_register_payload` method from `_handle_register`,

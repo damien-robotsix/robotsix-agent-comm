@@ -741,6 +741,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             self._authenticated_agent_id != ""
             and message.metadata.sender != self._authenticated_agent_id
         ):
+            self._record_traffic(message=message, disposition="rejected", status=403)
             self._write_error(403, "sender does not match authenticated agent")
             self._server()._audit_logger.log(
                 "send",
@@ -749,12 +750,12 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 status=403,
                 detail="sender does not match authenticated agent",
             )
-            self._record_traffic(message=message, disposition="rejected", status=403)
             return
 
         # Empty/missing recipient → 400
         recipient = message.metadata.recipient
         if not recipient:
+            self._record_traffic(message=message, disposition="rejected", status=400)
             self._write_error(400, "metadata.recipient is required")
             self._server()._audit_logger.log(
                 "send",
@@ -763,7 +764,6 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 status=400,
                 detail="missing recipient",
             )
-            self._record_traffic(message=message, disposition="rejected", status=400)
             return
 
         # Check that the recipient is registered (before routing).
@@ -776,6 +776,9 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 code=UNKNOWN_RECIPIENT,
                 message=f"unknown recipient: {recipient}",
             )
+            self._record_traffic(
+                message=message, disposition="unknown_recipient", status=404
+            )
             self._write_serialized(404, serialize(error))
             server._audit_logger.log(
                 "send",
@@ -783,9 +786,6 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 path="/messages",
                 status=404,
                 detail=f"unknown recipient: {recipient}",
-            )
-            self._record_traffic(
-                message=message, disposition="unknown_recipient", status=404
             )
             return
 
@@ -804,9 +804,9 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
                 status=202,
                 detail=f"queued for mailbox {recipient}",
             )
+            self._record_traffic(message=message, disposition="queued", status=202)
             self.send_response(202)
             self.end_headers()
-            self._record_traffic(message=message, disposition="queued", status=202)
             return
 
         http_status, body_str = self._route_send(message)
