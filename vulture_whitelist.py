@@ -24,3 +24,7 @@ handle_config_get
 handle_config_set
 handle_monitor
 register_handler
+handle_lifecycle
+handle_status
+__getattr__
+args

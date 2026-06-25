@@ -1,8 +1,7 @@
 """Env-var configuration parser and validator for the lifecycle server.
 
-Produces a frozen :class:`LifecycleConfig` from
-``ROBOTSIX_LIFECYCLE_*`` environment variables (or an explicit
-``Mapping``).
+Produces a frozen :class:`LifecycleConfig` from ``ROBOTSIX_LIFECYCLE_*``
+environment variables (or an explicit ``Mapping``).
 """
 
 from __future__ import annotations
@@ -14,36 +13,24 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _parse_bool(raw: str) -> bool:
-    """Accept ``1`` / ``true`` / ``yes`` (case-insensitive) as truthy."""
-    return raw.strip().lower() in ("1", "true", "yes")
-
-
-# ---------------------------------------------------------------------------
-# LifecycleConfig
-# ---------------------------------------------------------------------------
-
 
 @dataclass(frozen=True)
 class LifecycleConfig:
-    """Immutable configuration for a :class:`LifecycleServer`.
+    """Immutable configuration for the lifecycle server.
 
     Construct via :meth:`from_env` (preferred) or directly with keyword
     arguments (for tests).
     """
 
-    host: str = "0.0.0.0"  # nosec B104 -- server must accept external connections
-    port: int = 8500
-    env: str = "production"
-    auth_token: str | None = None
-    health_timeout_seconds: float = 30.0
-    health_interval_seconds: float = 2.0
-    health_check_enabled: bool = True
+    agent_id: str = "lifecycle-server"
+    broker_host: str = "localhost"
+    broker_port: int = 8443
+    broker_scheme: str = "https"
+    broker_token: str | None = None
+    broker_tls_ca: str | None = None
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    langfuse_host: str | None = None
 
     # -- Factory ---------------------------------------------------------
 
@@ -57,8 +44,7 @@ class LifecycleConfig:
         Parameters:
             env:
                 An explicit ``Mapping`` of variable names to values, or
-                ``None`` to read the real process environment.  Passing a
-                plain ``dict`` keeps tests isolated.
+                ``None`` to read the real process environment.
 
         Returns:
             A populated-and-validated :class:`LifecycleConfig`.
@@ -69,22 +55,22 @@ class LifecycleConfig:
         def _get(key: str, default: str = "") -> str:
             return env.get(key, default)
 
-        raw_health_check = _get("ROBOTSIX_LIFECYCLE_HEALTH_CHECK_ENABLED")
+        broker_token = _get("ROBOTSIX_LIFECYCLE_BROKER_TOKEN") or None
+        broker_tls_ca = _get("ROBOTSIX_LIFECYCLE_BROKER_TLS_CA") or None
+        langfuse_public_key = _get("ROBOTSIX_LIFECYCLE_LANGFUSE_PUBLIC_KEY") or None
+        langfuse_secret_key = _get("ROBOTSIX_LIFECYCLE_LANGFUSE_SECRET_KEY") or None
+        langfuse_host = _get("ROBOTSIX_LIFECYCLE_LANGFUSE_HOST") or None
 
         config = cls(
-            host=_get("ROBOTSIX_LIFECYCLE_HOST", "0.0.0.0"),  # nosec B104
-            port=int(_get("ROBOTSIX_LIFECYCLE_PORT", "8500")),
-            env=_get("ROBOTSIX_LIFECYCLE_ENV", "production"),
-            auth_token=_get("ROBOTSIX_LIFECYCLE_AUTH_TOKEN") or None,
-            health_timeout_seconds=float(
-                _get("ROBOTSIX_LIFECYCLE_HEALTH_TIMEOUT_SECONDS", "30.0")
-            ),
-            health_interval_seconds=float(
-                _get("ROBOTSIX_LIFECYCLE_HEALTH_INTERVAL_SECONDS", "2.0")
-            ),
-            health_check_enabled=_parse_bool(raw_health_check)
-            if raw_health_check
-            else True,
+            agent_id=_get("ROBOTSIX_LIFECYCLE_AGENT_ID", "lifecycle-server"),
+            broker_host=_get("ROBOTSIX_LIFECYCLE_BROKER_HOST", "localhost"),
+            broker_port=int(_get("ROBOTSIX_LIFECYCLE_BROKER_PORT", "8443")),
+            broker_scheme=_get("ROBOTSIX_LIFECYCLE_BROKER_SCHEME", "https"),
+            broker_token=broker_token,
+            broker_tls_ca=broker_tls_ca,
+            langfuse_public_key=langfuse_public_key,
+            langfuse_secret_key=langfuse_secret_key,
+            langfuse_host=langfuse_host,
         )
 
         config.validate()
@@ -93,24 +79,17 @@ class LifecycleConfig:
     # -- Validation ------------------------------------------------------
 
     def validate(self) -> None:
-        """Validate this config, raising :exc:`ValueError` on failure."""
-        is_prod = self.env != "development"
+        """Validate this config, emitting warnings for non-critical issues.
 
-        if is_prod and not self.auth_token:
-            raise ValueError(
-                "authentication is required in production: "
-                "set ROBOTSIX_LIFECYCLE_AUTH_TOKEN"
-            )
-
-        if self.health_timeout_seconds <= 0:
-            raise ValueError("health_timeout_seconds must be positive")
-
-        if self.health_interval_seconds <= 0:
-            raise ValueError("health_interval_seconds must be positive")
-
-        if not is_prod and not self.auth_token:
+        A missing ``broker_token`` triggers a warning since the broker may
+        have authentication disabled in development, but it should never
+        be missing in production.
+        """
+        if not self.broker_token:
             logger.warning(
-                "DEVELOPMENT MODE: authentication is not configured — "
-                "the lifecycle server will accept anonymous requests. "
-                "Set ROBOTSIX_LIFECYCLE_AUTH_TOKEN to enable authentication."
+                "ROBOTSIX_LIFECYCLE_BROKER_TOKEN is not set — "
+                "the lifecycle server will connect to the broker "
+                "without a bearer token.  This is acceptable when "
+                "broker authentication is disabled, but should "
+                "never be the case in production."
             )

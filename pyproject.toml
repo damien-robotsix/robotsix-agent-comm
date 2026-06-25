@@ -46,6 +46,11 @@ docs = [
     "mkdocstrings[python]",
 ]
 
+[project.optional-dependencies]
+# Langfuse is an optional soft dependency for lifecycle tracing.
+# The LifecycleTracing wrapper gracefully degrades to no-op when it is absent.
+lifecycle = ["langfuse"]
+
 [project.scripts]
 robotsix-broker = "robotsix_agent_comm.broker.service:main"
 robotsix-lifecycle = "robotsix_agent_comm.lifecycle.service:main"
@@ -77,6 +82,10 @@ convention = "google"
 python_version = "3.12"
 strict = true
 exclude = ["^templates/", "^vulture_whitelist\\.py$"]
+
+[[tool.mypy.overrides]]
+module = "langfuse"
+ignore_missing_imports = true
 
 [tool.deptry]
 # The package's own modules are first-party — the example scripts under
