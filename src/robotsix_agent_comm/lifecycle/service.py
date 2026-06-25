@@ -1,8 +1,8 @@
-"""Lifecycle builder and service entrypoint.
+"""Lifecycle server builder and service entrypoint.
 
-Provides :func:`build_lifecycle` (constructs a :class:`LifecycleServer`
-from a :class:`LifecycleConfig`) and :func:`main` (CLI entrypoint that
-reads env vars, builds, starts, and blocks until signalled).
+Provides :func:`build_server` (constructs a :class:`LifecycleServer` from a
+:class:`LifecycleConfig`) and :func:`main` (CLI entrypoint that reads env
+vars, builds, starts, and blocks until signalled).
 """
 
 from __future__ import annotations
@@ -12,34 +12,32 @@ import signal
 import threading
 from typing import Any
 
-from .backend import SubprocessBackend
 from .config import LifecycleConfig
 from .server import LifecycleServer
+from .tracing import LifecycleTracing
 
 logger = logging.getLogger(__name__)
 
 
-def build_lifecycle(config: LifecycleConfig) -> LifecycleServer:
-    """Build a :class:`LifecycleServer` from a validated *config*."""
-    backend = SubprocessBackend()
+def build_server(config: LifecycleConfig) -> LifecycleServer:
+    """Build a :class:`LifecycleServer` from a validated *config*.
 
-    kwargs: dict[str, Any] = {
-        "backend": backend,
-        "host": config.host,
-        "port": config.port,
-        "auth_token": config.auth_token,
-        "health_timeout_seconds": config.health_timeout_seconds,
-        "health_interval_seconds": config.health_interval_seconds,
-        "health_check_enabled": config.health_check_enabled,
-    }
-
-    return LifecycleServer(**kwargs)
+    Constructs a :class:`LifecycleTracing` from the config's Langfuse
+    settings (public key, secret key, and host), then creates and
+    returns a :class:`LifecycleServer` with that tracing instance.
+    """
+    tracing = LifecycleTracing(
+        public_key=config.langfuse_public_key,
+        secret_key=config.langfuse_secret_key,
+        host=config.langfuse_host,
+    )
+    return LifecycleServer(config=config, tracing=tracing)
 
 
 def main(argv: list[str] | None = None) -> int:
     """Parse env, build lifecycle server, start it, and block until signalled.
 
-    Returns ``0`` on clean shutdown, non-zero on configuration errors.
+    Returns ``0`` on clean shutdown, ``1`` on configuration errors.
     """
     # -- Parse config --------------------------------------------------
     try:
@@ -49,12 +47,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # -- Build and start -----------------------------------------------
-    server = build_lifecycle(config)
+    server = build_server(config)
     server.start()
     logger.info(
-        "Lifecycle server listening on %s:%s",
-        server.host,
-        server.port,
+        "Lifecycle server started as agent %r",
+        server.agent_id,
     )
 
     # -- Signal handling -----------------------------------------------
@@ -64,8 +61,7 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("Received signal %d, shutting down...", signum)
         shutdown_event.set()
 
-    if hasattr(signal, "SIGTERM"):
-        signal.signal(signal.SIGTERM, _on_signal)
+    signal.signal(signal.SIGTERM, _on_signal)
     signal.signal(signal.SIGINT, _on_signal)
 
     # -- Block until signalled -----------------------------------------

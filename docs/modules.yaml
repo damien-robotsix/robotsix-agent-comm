@@ -94,13 +94,15 @@ modules:
 
   - id: lifecycle
     description: >-
-      Lifecycle management server for the robotsix suite. Provides versioned
-      deployment with rollback support for managed services. Exposes a JSON
-      HTTP API for deploy, rollback, and deployment history, backed by a
-      pluggable execution backend (Docker Compose via subprocess).
+      Central deployment & lifecycle server. Registers on the agent-comm
+      broker as a BrokeredResponder, exposes status / lifecycle-command
+      request surfaces, and instruments operations with optional Langfuse
+      tracing.
     paths:
       - src/robotsix_agent_comm/lifecycle/*.py
       - tests/lifecycle/*.py
     dependencies:
       - protocol
       - transport
+      - sdk
+      - broker
