@@ -7,31 +7,48 @@ component:
 * :class:`LifecycleServer` — brokered responder exposing status and lifecycle handlers.
 * :class:`LifecycleTracing` — Langfuse instrumentation wrapper.
 * :func:`build_server` — convenience factory (defined in ``service.py``).
+* :class:`SupervisionAgent` — continuously monitors managed services and reacts
+    to failures with auto-restart and escalation.
+* :class:`SupervisionConfig` — immutable configuration for the supervision agent.
+* :func:`build_supervisor` — convenience factory for :class:`SupervisionAgent`.
 """
 
 from __future__ import annotations
 
+from .backend import MockBackend, SubprocessBackend
 from .config import LifecycleConfig
 from .server import LifecycleServer
+from .service import build_server
+from .supervision import (
+    Incident,
+    ServiceState,
+    SupervisionAgent,
+    SupervisionConfig,
+    build_supervisor,
+)
 from .tracing import LifecycleTracing
 
 __all__ = [
+    "Incident",
     "LifecycleConfig",
     "LifecycleServer",
     "LifecycleTracing",
+    "MockBackend",
+    "ServiceState",
+    "SubprocessBackend",
+    "SupervisionAgent",
+    "SupervisionConfig",
     "build_server",
+    "build_supervisor",
 ]
 
 
 def __getattr__(name: str) -> object:
     """Lazy-import forward references for not-yet-loaded submodules.
 
-    For example, ``build_server`` is defined in ``service.py`` but is
-    listed in ``__all__`` so the public API is self-describing even
-    before every module is imported.
+    Currently all public names are imported eagerly above; this
+    fallback exists as a forward-compatibility hook in case future
+    additions are added to ``__all__`` without a corresponding
+    top-level import.
     """
-    if name == "build_server":
-        from .service import build_server as _build_server
-
-        return _build_server
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
