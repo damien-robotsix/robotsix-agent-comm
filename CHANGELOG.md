@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `BrokeredResponder.__init__` now accepts and forwards `max_handler_workers`
+    (default 4) to `BrokeredAgent`, matching the documented "mirrors BrokeredAgent
+    exactly" contract. Previously the parameter was silently dropped.
+
 - Add missing `ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS` and `ROBOTSIX_BROKER_DASHBOARD_ENABLED` entries to `.env.broker.example` reference config.
 
 - Broker: moved traffic record writes before HTTP response in `_handle_send` to
