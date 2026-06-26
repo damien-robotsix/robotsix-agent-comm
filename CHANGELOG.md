@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- Lifecycle: removed dead-code `__getattr__` forward-compat hook from
+    `robotsix_agent_comm.lifecycle`. All 11 public symbols are eagerly imported
+    and listed in `__all__`; the hook always raised `AttributeError` and had
+    zero reachable call sites.
+
 ### Fixed
 
 - `BrokeredResponder.__init__` now accepts and forwards `max_handler_workers`
