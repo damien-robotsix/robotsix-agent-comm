@@ -26,5 +26,4 @@ handle_monitor
 register_handler
 handle_lifecycle
 handle_status
-__getattr__
 args
