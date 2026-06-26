@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `robotsix_agent_comm.lifecycle`. All 11 public symbols are eagerly imported
     and listed in `__all__`; the hook always raised `AttributeError` and had
     zero reachable call sites.
+- Removed stale `__getattr__` entry from `vulture_whitelist.py` (the
+    forward-compat hook it suppressed was removed in a prior change).
 
 ### Fixed
 
