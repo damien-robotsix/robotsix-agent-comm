@@ -41,14 +41,3 @@ __all__ = [
     "build_server",
     "build_supervisor",
 ]
-
-
-def __getattr__(name: str) -> object:
-    """Lazy-import forward references for not-yet-loaded submodules.
-
-    Currently all public names are imported eagerly above; this
-    fallback exists as a forward-compatibility hook in case future
-    additions are added to ``__all__`` without a corresponding
-    top-level import.
-    """
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
