@@ -105,6 +105,25 @@ class _TestResponder(BrokeredResponder):
 
 
 # ---------------------------------------------------------------------------
+# Constructor forwarding
+# ---------------------------------------------------------------------------
+
+
+def test_max_handler_workers_forwarded(broker: BrokerServer) -> None:
+    """max_handler_workers is forwarded to Agent's handler worker pool."""
+    r = BrokeredResponder(
+        "r",
+        broker_host=broker.host,
+        broker_port=broker.port,
+        broker_scheme="http",
+        broker_token=None,
+        timeout=5.0,
+        max_handler_workers=10,
+    )
+    assert r._agent._max_handler_workers == 10
+
+
+# ---------------------------------------------------------------------------
 # Dispatch tests
 # ---------------------------------------------------------------------------
 

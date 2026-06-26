@@ -99,6 +99,8 @@ class BrokeredResponder(BrokeredAgent):
         tls_ca: Optional path to a custom CA PEM.
         ssl_context: Optional explicit :class:`ssl.SSLContext`.
         timeout: Per-request timeout in seconds.
+        max_handler_workers: Maximum number of threads in the handler
+            worker pool (default 4).
     """
 
     #: Class-level mapping of built-in kind → handler method name.
@@ -120,6 +122,7 @@ class BrokeredResponder(BrokeredAgent):
         tls_ca: str | None = None,
         ssl_context: ssl.SSLContext | None = None,
         timeout: float = 30.0,
+        max_handler_workers: int = 4,
     ) -> None:
         """Initialise the brokered responder with broker connection settings.
 
@@ -136,6 +139,7 @@ class BrokeredResponder(BrokeredAgent):
             tls_ca=tls_ca,
             ssl_context=ssl_context,
             timeout=timeout,
+            max_handler_workers=max_handler_workers,
         )
         # Per-instance extra handlers (populated via register_handler).
         self._extra_handlers: dict[
