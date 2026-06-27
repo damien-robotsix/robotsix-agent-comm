@@ -45,12 +45,14 @@ class _MessageRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:  # noqa: N802 (BaseHTTPRequestHandler API)
+        """Dispatch ``GET /health`` returning a liveness probe response."""
         if self.path == HEALTH_PATH:
             self._write_json(200, {"status": "ok"})
             return
         self._write_json(404, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802 (BaseHTTPRequestHandler API)
+        """Dispatch ``POST <message-path>`` to deserialize and route a message."""
         server = self._server()
         if self.path != server.message_path:
             self._write_json(404, {"error": "not found"})
