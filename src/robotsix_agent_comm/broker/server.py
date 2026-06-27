@@ -300,6 +300,53 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             return None
         return agent_id
 
+    @staticmethod
+    def _build_agent_entry(
+        registry: Registry,
+        agent_id: str,
+        caps: dict[str, object],
+        hb_snapshot: dict[str, float],
+        ttl_snapshot: dict[str, int],
+        now_monotonic: float,
+    ) -> dict[str, object]:
+        """Build a single agent entry for the /agents response.
+
+        Pure function — no side effects.
+        """
+        entry: dict[str, object] = {
+            "agent_id": agent_id,
+            "capabilities": dict(caps),
+        }
+
+        # Last-seen age (monotonic clock).
+        last_hb = hb_snapshot.get(agent_id)
+        if last_hb is not None:
+            entry["last_seen_seconds_ago"] = now_monotonic - last_hb
+        else:
+            entry["last_seen_seconds_ago"] = None
+
+        # TTL.
+        ttl = ttl_snapshot.get(agent_id)
+        entry["ttl_seconds"] = ttl
+
+        # Status.
+        if ttl is not None and ttl <= 0:
+            entry["status"] = "active"
+        elif last_hb is not None and ttl is not None:
+            age = now_monotonic - last_hb
+            entry["status"] = "active" if age <= ttl else "stale"
+        else:
+            entry["status"] = "unknown"
+
+        # Mailbox flag.
+        try:
+            ep = registry.lookup(agent_id)
+            entry["mailbox"] = ep.mailbox
+        except AgentNotFoundError:
+            entry["mailbox"] = False
+
+        return entry
+
     def do_GET(self) -> None:  # noqa: N802
         # Health probe is intentionally unauthenticated so Docker HEALTHCHECK
         # and external liveness monitors can reach it without a bearer token.
@@ -330,38 +377,14 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
             with server.capabilities_lock:
                 agents = []
                 for agent_id, caps in server.capabilities.items():
-                    entry: dict[str, object] = {
-                        "agent_id": agent_id,
-                        "capabilities": dict(caps),
-                    }
-
-                    # Last-seen age (monotonic clock).
-                    last_hb = hb_snapshot.get(agent_id)
-                    if last_hb is not None:
-                        entry["last_seen_seconds_ago"] = now_monotonic - last_hb
-                    else:
-                        entry["last_seen_seconds_ago"] = None
-
-                    # TTL.
-                    ttl = ttl_snapshot.get(agent_id)
-                    entry["ttl_seconds"] = ttl
-
-                    # Status.
-                    if ttl is not None and ttl <= 0:
-                        entry["status"] = "active"
-                    elif last_hb is not None and ttl is not None:
-                        age = now_monotonic - last_hb
-                        entry["status"] = "active" if age <= ttl else "stale"
-                    else:
-                        entry["status"] = "unknown"
-
-                    # Mailbox flag.
-                    try:
-                        ep = server.registry.lookup(agent_id)
-                        entry["mailbox"] = ep.mailbox
-                    except AgentNotFoundError:
-                        entry["mailbox"] = False
-
+                    entry = self._build_agent_entry(
+                        server.registry,
+                        agent_id,
+                        caps,
+                        hb_snapshot,
+                        ttl_snapshot,
+                        now_monotonic,
+                    )
                     agents.append(entry)
 
             self._write_json(200, {"agents": agents})
