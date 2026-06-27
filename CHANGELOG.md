@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Docstrings for all 6 HTTP handler methods (`do_GET`, `do_POST`, `do_DELETE`)
+    across `_BrokerRequestHandler`, `_StatusRequestHandler`, and
+    `_MessageRequestHandler`.
+
 ### Removed
 
 - Lifecycle: removed dead-code `__getattr__` forward-compat hook from

@@ -301,6 +301,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         return agent_id
 
     def do_GET(self) -> None:  # noqa: N802
+        """Dispatch ``GET`` requests: health, agents, traffic, dashboard, or poll."""
         # Health probe is intentionally unauthenticated so Docker HEALTHCHECK
         # and external liveness monitors can reach it without a bearer token.
         if self.path == HEALTH_PATH:
@@ -389,6 +390,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         self._write_error(404, "not found")
 
     def do_POST(self) -> None:  # noqa: N802
+        """Dispatch ``POST`` requests: agent registration or message sending."""
         agent_id = self._authenticated_and_rate_limited()
         if agent_id is None:
             return
@@ -404,6 +406,7 @@ class _BrokerRequestHandler(BaseHTTPRequestHandler):
         self._write_error(404, "not found")
 
     def do_DELETE(self) -> None:  # noqa: N802
+        """Dispatch ``DELETE`` requests: agent deregistration."""
         agent_id = self._authenticated_and_rate_limited()
         if agent_id is None:
             return

@@ -231,6 +231,7 @@ class _StatusRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:  # noqa: N802
+        """Dispatch ``GET /status`` returning a JSON summary of supervised services."""
         if self.path == "/status":
             self._handle_status()
             return
