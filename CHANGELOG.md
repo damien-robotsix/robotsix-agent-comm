@@ -54,6 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Broker: extracted `_build_agent_entry` helper method from `/agents` handler,
+    reducing nesting depth from 6 to 3 and making per-agent entry construction
+    a pure, side-effect-free function.
+
 - Broker: extracted `_validate_register_payload` method from `_handle_register`,
     reducing the longest function in the codebase from ~186 lines to ~70 lines of
     orchestration. Validation is now a pure data-in/data-out helper.
