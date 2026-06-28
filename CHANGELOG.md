@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Replace abandoned `detect-secrets` pre-commit hook with actively-maintained
-  `gitleaks` v8.30.1 for secrets scanning; add `.gitleaks.toml` with
-  path-based allowlists for test/fixture directories; remove
-  `.secrets.baseline`; document secrets scanning policy in `SECURITY.md`.
+    `gitleaks` v8.30.1 for secrets scanning; add `.gitleaks.toml` with
+    path-based allowlists for test/fixture directories; remove
+    `.secrets.baseline`; document secrets scanning policy in `SECURITY.md`.
 
 ### Added
 
