@@ -1327,212 +1327,114 @@ class TestMaxBodySize:
 
 
 class TestInputValidation:
-    def test_port_zero_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps({"agent_id": "a", "host": "127.0.0.1", "port": 0}),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert "port must be between 1 and 65535" in _body_written(handler)["error"]
-
-    def test_port_negative_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps({"agent_id": "a", "host": "127.0.0.1", "port": -1}),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert "port must be between 1 and 65535" in _body_written(handler)["error"]
-
-    def test_port_too_large_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps({"agent_id": "a", "host": "127.0.0.1", "port": 65536}),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert "port must be between 1 and 65535" in _body_written(handler)["error"]
-
-    def test_scheme_invalid_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
-                {
-                    "agent_id": "a",
-                    "host": "127.0.0.1",
-                    "port": 9000,
-                    "scheme": "ftp",
-                }
+    @pytest.mark.parametrize(
+        ("body_dict", "expected_status", "expected_error_substring"),
+        [
+            # port validation
+            (
+                {"agent_id": "a", "host": "127.0.0.1", "port": 0},
+                400,
+                "port must be between 1 and 65535",
             ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert "scheme must be 'http' or 'https'" in _body_written(handler)["error"]
-
-    def test_scheme_not_string_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
-                {
-                    "agent_id": "a",
-                    "host": "127.0.0.1",
-                    "port": 9000,
-                    "scheme": 123,
-                }
+            (
+                {"agent_id": "a", "host": "127.0.0.1", "port": -1},
+                400,
+                "port must be between 1 and 65535",
             ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert "scheme must be 'http' or 'https'" in _body_written(handler)["error"]
-
-    def test_path_no_leading_slash_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
+            (
+                {"agent_id": "a", "host": "127.0.0.1", "port": 65536},
+                400,
+                "port must be between 1 and 65535",
+            ),
+            # scheme validation
+            (
+                {"agent_id": "a", "host": "127.0.0.1", "port": 9000, "scheme": "ftp"},
+                400,
+                "scheme must be 'http' or 'https'",
+            ),
+            (
+                {"agent_id": "a", "host": "127.0.0.1", "port": 9000, "scheme": 123},
+                400,
+                "scheme must be 'http' or 'https'",
+            ),
+            # path validation
+            (
                 {
                     "agent_id": "a",
                     "host": "127.0.0.1",
                     "port": 9000,
                     "path": "messages",
-                }
+                },
+                400,
+                "path must be a string starting with '/'",
             ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert (
-            "path must be a string starting with '/'" in _body_written(handler)["error"]
-        )
-
-    def test_path_not_string_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
-                {
-                    "agent_id": "a",
-                    "host": "127.0.0.1",
-                    "port": 9000,
-                    "path": 123,
-                }
+            (
+                {"agent_id": "a", "host": "127.0.0.1", "port": 9000, "path": 123},
+                400,
+                "path must be a string starting with '/'",
             ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert (
-            "path must be a string starting with '/'" in _body_written(handler)["error"]
-        )
-
-    def test_capabilities_not_dict_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
+            # capabilities validation
+            (
                 {
                     "agent_id": "a",
                     "host": "127.0.0.1",
                     "port": 9000,
                     "capabilities": [1, 2, 3],
-                }
+                },
+                400,
+                "capabilities must be a JSON object",
             ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert "capabilities must be a JSON object" in _body_written(handler)["error"]
-
-    def test_capabilities_dict_succeeds(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
+            (
                 {
                     "agent_id": "a",
                     "host": "127.0.0.1",
                     "port": 9000,
                     "capabilities": {"x": 1},
-                }
+                },
+                201,
+                None,
             ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(201)
-
-    def test_ttl_seconds_negative_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
-                {
-                    "agent_id": "a",
-                    "host": "127.0.0.1",
-                    "port": 9000,
-                    "ttl_seconds": -1,
-                }
+            # ttl_seconds validation
+            (
+                {"agent_id": "a", "host": "127.0.0.1", "port": 9000, "ttl_seconds": -1},
+                400,
+                "ttl_seconds must be a non-negative integer",
             ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert (
-            "ttl_seconds must be a non-negative integer"
-            in _body_written(handler)["error"]
-        )
-
-    def test_ttl_seconds_float_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
+            (
                 {
                     "agent_id": "a",
                     "host": "127.0.0.1",
                     "port": 9000,
                     "ttl_seconds": 30.5,
-                }
+                },
+                400,
+                "ttl_seconds must be a non-negative integer",
             ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert (
-            "ttl_seconds must be a non-negative integer"
-            in _body_written(handler)["error"]
-        )
-
-    def test_agent_id_too_long_returns_400(self) -> None:
+            # field length validation
+            (
+                {"agent_id": "a" * 256, "host": "127.0.0.1", "port": 9000},
+                400,
+                "agent_id must not exceed 255",
+            ),
+            (
+                {"agent_id": "a", "host": "h" * 254, "port": 9000},
+                400,
+                "host must not exceed 253",
+            ),
+        ],
+    )
+    def test_post_input_validation(
+        self,
+        body_dict: dict[str, Any],
+        expected_status: int,
+        expected_error_substring: str | None,
+    ) -> None:
         handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
-                {
-                    "agent_id": "a" * 256,
-                    "host": "127.0.0.1",
-                    "port": 9000,
-                }
-            ),
-        )
+        _set_body(handler, json.dumps(body_dict))
         handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert "agent_id must not exceed 255" in _body_written(handler)["error"]
-
-    def test_host_too_long_returns_400(self) -> None:
-        handler = _make_handler()
-        _set_body(
-            handler,
-            json.dumps(
-                {
-                    "agent_id": "a",
-                    "host": "h" * 254,
-                    "port": 9000,
-                }
-            ),
-        )
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
-        assert "host must not exceed 253" in _body_written(handler)["error"]
+        handler.send_response.assert_called_once_with(expected_status)
+        if expected_error_substring is not None:
+            assert expected_error_substring in _body_written(handler)["error"]
 
 
 # ======================================================================
