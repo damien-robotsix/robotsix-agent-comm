@@ -98,8 +98,6 @@ class ConfigContract(Protocol):
         """Validate *updates* without applying them; return errors or ``None``."""
         ...
 
-    def apply_update(
-        self, settings: Any, updates: dict[str, Any]
-    ) -> dict[str, Any]:
+    def apply_update(self, settings: Any, updates: dict[str, Any]) -> dict[str, Any]:
         """Validate and apply *updates* to *settings*; return audit dict."""
         ...
