@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Docstrings for all 6 HTTP handler methods (`do_GET`, `do_POST`, `do_DELETE`)
     across `_BrokerRequestHandler`, `_StatusRequestHandler`, and
     `_MessageRequestHandler`.
+- `robotsix_agent_comm._logging.setup_logging()`: shared logging configuration
+    for CLI entry points. Reads `LOG_LEVEL` from the environment (default
+    `INFO`) and configures the root logger with ISO-8601 timestamps on stdout.
+    Called as the first statement in both `broker/service.py:main()` and
+    `lifecycle/service.py:main()`.
 - `robotsix_agent_comm.protocol.config_contract`: shared base types for
     broker `config-get` / `config-set` request kinds — `ConfigContractError`,
     `ConfigContract` Protocol, `SecretRedactor`, and `SettableKey`.

@@ -17,8 +17,10 @@ modules:
       - src/robotsix_agent_comm/__init__.py
       - src/robotsix_agent_comm/errors.py
       - src/robotsix_agent_comm/py.typed
+      - src/robotsix_agent_comm/_logging.py
       - src/robotsix_agent_comm/service_utils.py
       - tests/__init__.py
+      - tests/test_logging_setup.py
       - tests/test_smoke.py
       - tests/conftest.py
       - tests/helpers.py

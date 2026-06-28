@@ -37,6 +37,10 @@ def main(argv: list[str] | None = None) -> int:
 
     Returns ``0`` on clean shutdown, ``1`` on configuration errors.
     """
+    from robotsix_agent_comm._logging import setup_logging
+
+    setup_logging()
+
     # -- Parse config --------------------------------------------------
     try:
         config = LifecycleConfig.from_env()
