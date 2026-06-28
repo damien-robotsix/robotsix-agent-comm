@@ -23,7 +23,7 @@ result. **Never hand-edit `uv.lock`.**
 ## Checks
 
 The recommended way to run checks is through **pre-commit**, which
-mirrors the hooks that CI enforces (ruff, mypy, bandit, detect-secrets,
+mirrors the hooks that CI enforces (ruff, mypy, bandit, gitleaks,
 vulture, and basic file checks):
 
 ```bash

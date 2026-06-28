@@ -1,0 +1,9 @@
+# gitleaks configuration — secrets scanner (pre-commit + CI)
+
+[allowlist]
+  description = "Path-based allowlist for test/fixture directories and generated code"
+  paths = [
+    '''^tests/''',
+    '''^examples/''',
+    '''^templates/''',
+  ]
