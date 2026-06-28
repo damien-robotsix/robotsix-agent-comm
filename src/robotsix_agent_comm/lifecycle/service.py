@@ -8,10 +8,8 @@ vars, builds, starts, and blocks until signalled).
 from __future__ import annotations
 
 import logging
-import signal
-import threading
-from typing import Any
 
+from ..service_utils import _run_until_signalled
 from .config import LifecycleConfig
 from .server import LifecycleServer
 from .tracing import LifecycleTracing
@@ -54,18 +52,7 @@ def main(argv: list[str] | None = None) -> int:
         server.agent_id,
     )
 
-    # -- Signal handling -----------------------------------------------
-    shutdown_event = threading.Event()
-
-    def _on_signal(signum: int, frame: Any) -> None:
-        logger.info("Received signal %d, shutting down...", signum)
-        shutdown_event.set()
-
-    signal.signal(signal.SIGTERM, _on_signal)
-    signal.signal(signal.SIGINT, _on_signal)
-
     # -- Block until signalled -----------------------------------------
-    shutdown_event.wait()
-    server.stop()
+    _run_until_signalled(server, logger)
     logger.info("Lifecycle server stopped.")
     return 0

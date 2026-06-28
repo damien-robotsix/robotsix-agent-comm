@@ -131,11 +131,11 @@ class TestMain:
                 return_value=mock_server,
             ),
             patch(
-                "robotsix_agent_comm.lifecycle.service.signal.signal",
+                "robotsix_agent_comm.service_utils.signal.signal",
                 _fake_signal,
             ),
             patch(
-                "robotsix_agent_comm.lifecycle.service.threading.Event",
+                "robotsix_agent_comm.service_utils.threading.Event",
                 return_value=shutdown_event_mock,
             ),
         ):
@@ -186,11 +186,11 @@ class TestMain:
                 return_value=mock_server,
             ),
             patch(
-                "robotsix_agent_comm.lifecycle.service.signal.signal",
+                "robotsix_agent_comm.service_utils.signal.signal",
                 _fake_signal,
             ),
             patch(
-                "robotsix_agent_comm.lifecycle.service.threading.Event",
+                "robotsix_agent_comm.service_utils.threading.Event",
                 return_value=shutdown_event_mock,
             ),
         ):

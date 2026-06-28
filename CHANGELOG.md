@@ -132,6 +132,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     and `handle_status`, eliminating 9 lines of duplicated result-dict
     construction and optional tracing logic.
 
+- Extracted shared `_run_until_signalled(server, logger)` helper in
+    `robotsix_agent_comm.service_utils` to eliminate duplicated
+    signal-handling/shutdown code in both `broker.service.main` and
+    `lifecycle.service.main`.
+
 ## [0.1.0] - 2026-06-14
 
 ### Added
