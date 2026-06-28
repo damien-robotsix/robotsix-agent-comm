@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Replace abandoned `detect-secrets` pre-commit hook with actively-maintained
+    `gitleaks` v8.30.1 for secrets scanning; add `.gitleaks.toml` with
+    path-based allowlists for test/fixture directories; remove
+    `.secrets.baseline`; document secrets scanning policy in `SECURITY.md`.
+
 ### Added
 
 - Docstrings for all 6 HTTP handler methods (`do_GET`, `do_POST`, `do_DELETE`)
