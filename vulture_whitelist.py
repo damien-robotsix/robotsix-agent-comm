@@ -27,3 +27,11 @@ register_handler
 handle_lifecycle
 handle_status
 args
+apply_update
+describe
+get_snapshot
+python_type
+redact_value
+settings
+updates
+validate_update
