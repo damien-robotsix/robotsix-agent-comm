@@ -1,0 +1,12 @@
+# gitleaks configuration — secrets scanner (pre-commit + CI)
+#
+# This is a starter template. Adjust the allowlist to match your project's
+# layout — add generated-code directories, test fixtures, and example data
+# that may contain false-positive patterns.
+
+[allowlist]
+  description = "Path-based allowlist for test/fixture directories and generated code"
+  paths = [
+    '''^tests/''',
+    '''^examples/''',
+  ]
