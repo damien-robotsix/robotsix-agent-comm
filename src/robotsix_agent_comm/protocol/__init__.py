@@ -7,6 +7,13 @@ concerns (those land in later phases).
 
 from __future__ import annotations
 
+from .config_contract import (
+    REDACTED_SENTINEL,
+    ConfigContract,
+    ConfigContractError,
+    SecretRedactor,
+    SettableKey,
+)
 from .messages import (
     PROTOCOL_VERSION,
     Error,
@@ -29,6 +36,9 @@ from .validation import (
 
 __all__ = [
     "PROTOCOL_VERSION",
+    "REDACTED_SENTINEL",
+    "ConfigContract",
+    "ConfigContractError",
     "Error",
     "Message",
     "MessageType",
@@ -37,6 +47,8 @@ __all__ = [
     "ProtocolError",
     "Request",
     "Response",
+    "SecretRedactor",
+    "SettableKey",
     "UnsupportedVersionError",
     "ValidationError",
     "deserialize",
