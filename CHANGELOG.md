@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Upgrade `astral-sh/setup-uv` from v5.4.2 to v8.2.0 with `enable-cache: true`
+    across all CI workflows (`.github/workflows/ci.yml`, `audit.yml`,
+    `publish.yml`) and their Python-package templates; eliminates repeated
+    re-downloads of uv-managed tools on every CI run.
 - Replace abandoned `detect-secrets` pre-commit hook with actively-maintained
     `gitleaks` v8.30.1 for secrets scanning; add `.gitleaks.toml` with
     path-based allowlists for test/fixture directories; remove
