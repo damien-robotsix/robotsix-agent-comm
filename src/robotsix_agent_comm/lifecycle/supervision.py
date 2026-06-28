@@ -12,15 +12,15 @@ via ``ROBOTSIX_SUPERVISION_*`` environment variables.
 from __future__ import annotations
 
 import contextlib
-import json
 import logging
 import threading
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
 from typing import cast
 
+from ..transport.server import _BaseRequestHandler
 from .backend import LifecycleBackend
 
 logger = logging.getLogger(__name__)
@@ -216,19 +216,11 @@ class _StatusHTTPServer(ThreadingHTTPServer):
     supervisor: SupervisionAgent
 
 
-class _StatusRequestHandler(BaseHTTPRequestHandler):
+class _StatusRequestHandler(_BaseRequestHandler):
     """Serves ``GET /status`` as a JSON summary."""
 
     def _sv(self) -> SupervisionAgent:
         return cast("_StatusHTTPServer", self.server).supervisor
-
-    def _write_json(self, status: int, payload: dict[str, object]) -> None:
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
 
     def do_GET(self) -> None:  # noqa: N802
         """Dispatch ``GET /status`` returning a JSON summary of supervised services."""

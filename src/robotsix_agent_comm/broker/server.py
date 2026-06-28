@@ -13,7 +13,7 @@ import ssl
 import threading
 import time
 from collections import deque
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
 from typing import cast
 from urllib.parse import parse_qs, urlsplit
 
@@ -36,6 +36,7 @@ from ..transport import (
     TransportClient,
 )
 from ..transport.endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH
+from ..transport.server import _BaseRequestHandler
 from ._audit import _AuditLogger
 from ._dashboard import DASHBOARD_HTML
 from ._rate_limit import _TokenBucket
@@ -101,19 +102,11 @@ class _BrokerHTTPServer(ThreadingHTTPServer):
 # ---------------------------------------------------------------------------
 
 
-class _BrokerRequestHandler(BaseHTTPRequestHandler):
+class _BrokerRequestHandler(_BaseRequestHandler):
     """Routes ``/agents``, ``/messages``, and ``/health`` endpoints."""
 
     def _server(self) -> _BrokerHTTPServer:
         return cast("_BrokerHTTPServer", self.server)
-
-    def _write_json(self, status: int, payload: dict[str, object]) -> None:
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
 
     def _write_error(self, status: int, message: str) -> None:
         self._write_json(status, {"error": message})

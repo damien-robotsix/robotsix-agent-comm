@@ -30,11 +30,12 @@ class _MessageHTTPServer(ThreadingHTTPServer):
     message_path: str
 
 
-class _MessageRequestHandler(BaseHTTPRequestHandler):
-    """Routes ``POST <message-path>`` and ``GET /health``."""
+class _BaseRequestHandler(BaseHTTPRequestHandler):
+    """Shared mixin for request handlers that write JSON responses.
 
-    def _server(self) -> _MessageHTTPServer:
-        return cast("_MessageHTTPServer", self.server)
+    Defines ``_write_json`` once so every handler in the codebase
+    that inherits from ``BaseHTTPRequestHandler`` can use it.
+    """
 
     def _write_json(self, status: int, payload: dict[str, object]) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -43,6 +44,13 @@ class _MessageRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+
+class _MessageRequestHandler(_BaseRequestHandler):
+    """Routes ``POST <message-path>`` and ``GET /health``."""
+
+    def _server(self) -> _MessageHTTPServer:
+        return cast("_MessageHTTPServer", self.server)
 
     def do_GET(self) -> None:  # noqa: N802 (BaseHTTPRequestHandler API)
         """Dispatch ``GET /health`` returning a liveness probe response."""
