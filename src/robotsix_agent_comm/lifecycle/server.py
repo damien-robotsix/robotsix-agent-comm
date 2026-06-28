@@ -74,34 +74,30 @@ class LifecycleServer(BrokeredResponder):
     def handle_monitor(
         self, request: Request, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Return live telemetry, tracing the check when enabled.
-
-        Returns:
-            A status dict with ``status``, ``agent_id``, and
-            ``tracing_enabled`` keys.
-        """
-        result: dict[str, Any] = {
-            "status": "ok",
-            "agent_id": self.agent_id,
-            "tracing_enabled": self.tracing.enabled,
-        }
-
-        if self.tracing.enabled:
-            with self.tracing.trace("monitor") as span:
-                span.event("monitor-check")
-                return result
-
-        return result
+        """Return live telemetry, tracing the check when enabled."""
+        return self._build_status_result("monitor", "monitor-check")
 
     # ------------------------------------------------------------------
     # Custom handlers
     # ------------------------------------------------------------------
 
     def handle_status(self, request: Request, params: dict[str, Any]) -> dict[str, Any]:
-        """Return server status with tracing.
+        """Return server status with tracing."""
+        return self._build_status_result("status", "status-check")
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _build_status_result(self, check_name: str, span_name: str) -> dict[str, Any]:
+        """Build a status result dict with optional tracing.
+
+        Args:
+            check_name: Span name for the tracing span.
+            span_name: Event name logged inside the span.
 
         Returns:
-            A status dict with ``status``, ``agent_id``, and
+            A dict with ``status``, ``agent_id``, and
             ``tracing_enabled`` keys.
         """
         result: dict[str, Any] = {
@@ -111,8 +107,8 @@ class LifecycleServer(BrokeredResponder):
         }
 
         if self.tracing.enabled:
-            with self.tracing.trace("status") as span:
-                span.event("status-check")
+            with self.tracing.trace(check_name) as span:
+                span.event(span_name)
                 return result
 
         return result

@@ -128,6 +128,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `Agent._build_metadata_and_body()`: extracted shared message-construction
     logic from `send_request` and `send_notification` into a private helper.
 
+- Lifecycle: extracted `_build_status_result` helper from `handle_monitor`
+    and `handle_status`, eliminating 9 lines of duplicated result-dict
+    construction and optional tracing logic.
+
 ## [0.1.0] - 2026-06-14
 
 ### Added
