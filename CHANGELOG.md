@@ -71,6 +71,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     reducing the longest function in the codebase from ~186 lines to ~70 lines of
     orchestration. Validation is now a pure data-in/data-out helper.
 
+- Extracted duplicated `_write_json` method into a shared `_BaseRequestHandler`
+    mixin class in `transport/server.py`, eliminating triplication across
+    `_MessageRequestHandler`, `_BrokerRequestHandler`, and
+    `_StatusRequestHandler`.
+
 ### Added
 
 - Add `fail_under = 85` to `[tool.coverage.report]` in `pyproject.toml` so local
