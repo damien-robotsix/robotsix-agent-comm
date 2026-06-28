@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `gitleaks` v8.30.1 for secrets scanning; add `.gitleaks.toml` with
     path-based allowlists for test/fixture directories; remove
     `.secrets.baseline`; document secrets scanning policy in `SECURITY.md`.
+- Migrate `templates/python-package/` scaffold from detect-secrets to gitleaks:
+    replace hook in `.pre-commit-config.yaml`, add starter `.gitleaks.toml`,
+    remove stale `.secrets.baseline`.
 
 ### Added
 
