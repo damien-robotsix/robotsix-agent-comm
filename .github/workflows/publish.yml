@@ -66,7 +66,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: damien-robotsix/robotsix-mill/.github/workflows/python-release.yml@90fcbcb32974e45c86e798f6da435e430e276a99  # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-release.yml@5cd8c1facb02299da618979e7a55f1953f9c075a  # main
     with:
       python-version: "3.12"
       github-release: false
