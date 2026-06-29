@@ -23,6 +23,8 @@ from robotsix_agent_comm.protocol import (
     serialize,
 )
 from robotsix_agent_comm.transport import (
+    DELIVERY_FAILED,
+    UNKNOWN_RECIPIENT,
     AgentNotFoundError,
     DeliveryError,
     Endpoint,
@@ -227,7 +229,7 @@ class TestNetworkedBrokerTransportSend:
         request = _request_msg("ghost")
         error_envelope = Error.to(
             request,
-            code="unknown_recipient",
+            code=UNKNOWN_RECIPIENT,
             message="unknown recipient: ghost",
         )
         fake_resp = _FakeHTTPResponse(404, serialize(error_envelope).encode("utf-8"))
@@ -244,7 +246,7 @@ class TestNetworkedBrokerTransportSend:
         request = _request_msg("agent-a")
         error_envelope = Error.to(
             request,
-            code="delivery_failed",
+            code=DELIVERY_FAILED,
             message="connection refused",
         )
         fake_resp = _FakeHTTPResponse(502, serialize(error_envelope).encode("utf-8"))

@@ -111,6 +111,8 @@ DASHBOARD_HTML: str = """\
   .badge-unknown { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
   .badge-queued { background: rgba(59, 130, 246, 0.15); color: var(--accent); }
   .badge-rejected { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+  .badge-routed { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+  .badge-unknown-recipient { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
   .badge-error { background: rgba(248, 113, 113, 0.15); color: var(--red); }
 
   /* error banner */
@@ -389,6 +391,8 @@ function renderTraffic(records) {
     var dispCls = "badge-unknown";
     if (r.disposition === "queued") dispCls = "badge-queued";
     else if (r.disposition === "rejected") dispCls = "badge-rejected";
+    else if (r.disposition === "routed") dispCls = "badge-routed";
+    else if (r.disposition === "unknown_recipient") dispCls = "badge-unknown-recipient";
     else if (r.disposition && r.disposition.indexOf("error") !== -1) dispCls = "badge-error";
     var size = (r.body_size_bytes != null) ? r.body_size_bytes + " B" : "—";
     var key = trafficKey(r, i);
