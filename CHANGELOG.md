@@ -22,10 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     across all CI workflows (`.github/workflows/ci.yml`, `audit.yml`,
     `publish.yml`) and their Python-package templates; eliminates repeated
     re-downloads of uv-managed tools on every CI run.
+
 - Replace abandoned `detect-secrets` pre-commit hook with actively-maintained
     `gitleaks` v8.30.1 for secrets scanning; add `.gitleaks.toml` with
     path-based allowlists for test/fixture directories; remove
     `.secrets.baseline`; document secrets scanning policy in `SECURITY.md`.
+
 - Migrate `templates/python-package/` scaffold from detect-secrets to gitleaks:
     replace hook in `.pre-commit-config.yaml`, add starter `.gitleaks.toml`,
     remove stale `.secrets.baseline`.
