@@ -9,14 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Adopt hatch-vcs for single-source versioning: remove static `version = "0.1.0"`
+    from `pyproject.toml`, remove `__version__` from
+    `src/robotsix_agent_comm/__init__.py`, and derive the package version from
+    Git tags at build time. Consumers should use
+    `importlib.metadata.version("robotsix-agent-comm")` instead of the removed
+    `__version__` attribute. Simplify `publish.yml`: remove the `verify-tag` job
+    (redundant — hatch-vcs bakes the tag into the build); add `fetch-depth: 0`
+    to checkout steps so hatch-vcs can resolve tags.
+
 - Upgrade `astral-sh/setup-uv` from v5.4.2 to v8.2.0 with `enable-cache: true`
     across all CI workflows (`.github/workflows/ci.yml`, `audit.yml`,
     `publish.yml`) and their Python-package templates; eliminates repeated
     re-downloads of uv-managed tools on every CI run.
+
 - Replace abandoned `detect-secrets` pre-commit hook with actively-maintained
     `gitleaks` v8.30.1 for secrets scanning; add `.gitleaks.toml` with
     path-based allowlists for test/fixture directories; remove
     `.secrets.baseline`; document secrets scanning policy in `SECURITY.md`.
+
 - Migrate `templates/python-package/` scaffold from detect-secrets to gitleaks:
     replace hook in `.pre-commit-config.yaml`, add starter `.gitleaks.toml`,
     remove stale `.secrets.baseline`.

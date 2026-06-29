@@ -9,5 +9,3 @@ See docs/modules.yaml for the canonical module taxonomy.
 from .errors import RobotsixAgentCommError
 
 __all__ = ["RobotsixAgentCommError"]
-
-__version__ = "0.1.0"
