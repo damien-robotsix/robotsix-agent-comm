@@ -69,6 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Docstrings for all 6 HTTP handler methods (`do_GET`, `do_POST`, `do_DELETE`)
     across `_BrokerRequestHandler`, `_StatusRequestHandler`, and
     `_MessageRequestHandler`.
+
+- `#:` docstring comments for `DEFAULT_RETRY_POLICY` in `broker/server.py` and
+    `REQUIRED_ENVELOPE_FIELDS` in `protocol/validation.py`, closing the last
+    two undocumented module-level public constants.
 - `robotsix_agent_comm._logging.setup_logging()`: shared logging configuration
     for CLI entry points. Reads `LOG_LEVEL` from the environment (default
     `INFO`) and configures the root logger with ISO-8601 timestamps on stdout.

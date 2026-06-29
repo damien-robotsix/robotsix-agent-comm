@@ -18,6 +18,7 @@ from robotsix_agent_comm.errors import RobotsixAgentCommError
 
 from .messages import PROTOCOL_VERSION, Message, MessageType
 
+#: Tuple of field names required in every message envelope.
 REQUIRED_ENVELOPE_FIELDS = (
     "message_id",
     "type",
