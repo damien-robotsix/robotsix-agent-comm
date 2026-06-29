@@ -1006,6 +1006,7 @@ class _BrokerRequestHandler(_BaseRequestHandler):
 # Public BrokerServer
 # ---------------------------------------------------------------------------
 
+#: Default retry behaviour for the broker's internal router (no retries).
 DEFAULT_RETRY_POLICY = RetryPolicy(max_attempts=1, base_delay=0.0, max_delay=0.0)
 
 
