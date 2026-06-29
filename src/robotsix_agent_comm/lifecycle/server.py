@@ -42,6 +42,14 @@ class LifecycleServer(BrokeredResponder):
             credentials are missing or the SDK is not installed.
     """
 
+    #: Built-in handlers excluding config-get/config-set (not applicable
+    #: to the lifecycle server).
+    _BUILTIN_HANDLERS: dict[str, str] = {
+        k: v
+        for k, v in BrokeredResponder._BUILTIN_HANDLERS.items()
+        if k not in ("config-get", "config-set")
+    }
+
     def __init__(
         self,
         config: LifecycleConfig,
