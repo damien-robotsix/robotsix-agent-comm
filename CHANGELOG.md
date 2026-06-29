@@ -73,11 +73,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `#:` docstring comments for `DEFAULT_RETRY_POLICY` in `broker/server.py` and
     `REQUIRED_ENVELOPE_FIELDS` in `protocol/validation.py`, closing the last
     two undocumented module-level public constants.
+
 - `robotsix_agent_comm._logging.setup_logging()`: shared logging configuration
     for CLI entry points. Reads `LOG_LEVEL` from the environment (default
     `INFO`) and configures the root logger with ISO-8601 timestamps on stdout.
     Called as the first statement in both `broker/service.py:main()` and
     `lifecycle/service.py:main()`.
+
 - `robotsix_agent_comm.protocol.config_contract`: shared base types for
     broker `config-get` / `config-set` request kinds — `ConfigContractError`,
     `ConfigContract` Protocol, `SecretRedactor`, and `SettableKey`.
