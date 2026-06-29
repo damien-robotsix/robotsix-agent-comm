@@ -16,6 +16,7 @@ nav:
   - Changelog: CHANGELOG.md
   - Contributing: CONTRIBUTING.md
   - Broker deployment: broker/deployment.md
+  - Lifecycle deployment: lifecycle/index.md
   - Design: design/index.md
   - API reference: api/index.md
   - SDK tutorial: sdk/tutorial.md

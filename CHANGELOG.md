@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `docs/lifecycle/index.md` — comprehensive deployment guide for the lifecycle
+    subsystem covering architecture, configuration (17 env vars), quickstart,
+    supervision policy (health checks, exponential backoff, escalation), status
+    HTTP endpoint, backends, Langfuse tracing, and deployment considerations.
+
 - `IncidentKind` `StrEnum` (`DEGRADED`, `RESTARTED`, `ESCALATED`) replacing raw string
     literals for `Incident.kind`.
 

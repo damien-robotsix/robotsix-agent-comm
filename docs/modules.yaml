@@ -104,6 +104,7 @@ modules:
     paths:
       - src/robotsix_agent_comm/lifecycle/*.py
       - tests/lifecycle/*.py
+      - docs/lifecycle/*.md
     dependencies:
       - protocol
       - transport
