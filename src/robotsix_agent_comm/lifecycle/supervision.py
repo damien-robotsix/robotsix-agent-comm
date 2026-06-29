@@ -17,6 +17,7 @@ import threading
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from enum import StrEnum
 from http.server import ThreadingHTTPServer
 from typing import cast
 
@@ -41,6 +42,19 @@ Receives the :class:`Incident` describing what happened.
 # ---------------------------------------------------------------------------
 
 
+class IncidentKind(StrEnum):
+    """Valid values for :attr:`Incident.kind`."""
+
+    DEGRADED = "degraded"
+    """Service health-check failed."""
+
+    RESTARTED = "restarted"
+    """Service was restarted."""
+
+    ESCALATED = "escalated"
+    """Service exceeded restart threshold and was escalated."""
+
+
 @dataclass
 class Incident:
     """A recorded supervision event (degradation, restart, escalation)."""
@@ -51,14 +65,14 @@ class Incident:
     service_name: str
     """The service that triggered this incident."""
 
-    kind: str
-    """One of ``"degraded"``, ``"restarted"``, ``"escalated"``."""
+    kind: IncidentKind
+    """One of :class:`IncidentKind` values."""
 
     message: str
     """Human-readable description."""
 
     attempt: int | None = None
-    """For ``"restarted"``: which restart attempt (1-based).  ``None`` otherwise."""
+    """For ``RESTARTED``: restart attempt (1-based).  ``None`` otherwise."""
 
 
 # ---------------------------------------------------------------------------
@@ -483,7 +497,7 @@ class SupervisionAgent:
             incident = Incident(
                 timestamp=now,
                 service_name=service_name,
-                kind="degraded",
+                kind=IncidentKind.DEGRADED,
                 message=f"Service {service_name!r} is unhealthy",
             )
             state.incidents.append(incident)
@@ -537,7 +551,7 @@ class SupervisionAgent:
         incident = Incident(
             timestamp=now,
             service_name=service_name,
-            kind="restarted",
+            kind=IncidentKind.RESTARTED,
             message=f"Service {service_name!r} restarted (attempt {attempt})",
             attempt=attempt,
         )
@@ -557,7 +571,7 @@ class SupervisionAgent:
         incident = Incident(
             timestamp=now,
             service_name=service_name,
-            kind="escalated",
+            kind=IncidentKind.ESCALATED,
             message=(
                 f"Service {service_name!r} escalated after "
                 f"{state.consecutive_failures} consecutive failures "

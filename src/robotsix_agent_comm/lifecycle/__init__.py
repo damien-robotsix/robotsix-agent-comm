@@ -21,6 +21,7 @@ from .server import LifecycleServer
 from .service import build_server
 from .supervision import (
     Incident,
+    IncidentKind,
     ServiceState,
     SupervisionAgent,
     SupervisionConfig,
@@ -30,6 +31,7 @@ from .tracing import LifecycleTracing
 
 __all__ = [
     "Incident",
+    "IncidentKind",
     "LifecycleConfig",
     "LifecycleServer",
     "LifecycleTracing",

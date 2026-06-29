@@ -14,7 +14,7 @@ from robotsix_agent_comm.lifecycle import (
     SupervisionAgent,
     SupervisionConfig,
 )
-from robotsix_agent_comm.lifecycle.supervision import Incident
+from robotsix_agent_comm.lifecycle.supervision import Incident, IncidentKind
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -150,8 +150,8 @@ class TestAutoRestart:
 
         # Should have at least "degraded" and "restarted" incidents.
         kinds = [a.kind for a in alerts]
-        assert "degraded" in kinds, f"Expected 'degraded' in {kinds}"
-        assert "restarted" in kinds, f"Expected 'restarted' in {kinds}"
+        assert IncidentKind.DEGRADED in kinds, f"Expected 'degraded' in {kinds}"
+        assert IncidentKind.RESTARTED in kinds, f"Expected 'restarted' in {kinds}"
 
         state = agent.services_state["test-svc"]
         assert state.restart_count >= 1
@@ -181,7 +181,7 @@ class TestAutoRestart:
         finally:
             agent.stop()
 
-        restart_incidents = [a for a in alerts if a.kind == "restarted"]
+        restart_incidents = [a for a in alerts if a.kind == IncidentKind.RESTARTED]
         assert len(restart_incidents) >= 1
 
         state = agent.services_state["test-svc"]
@@ -253,7 +253,7 @@ class TestEscalation:
         finally:
             agent.stop()
 
-        escalated = [a for a in alerts if a.kind == "escalated"]
+        escalated = [a for a in alerts if a.kind == IncidentKind.ESCALATED]
         assert len(escalated) >= 1, f"Expected escalation alert, got {alerts}"
 
         state = agent.services_state["test-svc"]
@@ -283,7 +283,7 @@ class TestEscalation:
         # (the +1 is because the first failure triggers a restart, then
         # each subsequent failure in the poll loop triggers another restart
         # attempt until we exceed max_restart_attempts).
-        restart_count = sum(1 for a in alerts if a.kind == "restarted")
+        restart_count = sum(1 for a in alerts if a.kind == IncidentKind.RESTARTED)
         # After escalation, no more restarts.  The exact count depends on
         # timing, but it should be bounded.
         assert restart_count <= config.max_restart_attempts + 1
@@ -305,7 +305,7 @@ class TestEscalation:
         finally:
             agent.stop()
 
-        escalated = [a for a in alerts if a.kind == "escalated"]
+        escalated = [a for a in alerts if a.kind == IncidentKind.ESCALATED]
         assert len(escalated) >= 1
         msg = escalated[0].message
         assert "test-svc" in msg

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `IncidentKind` `StrEnum` (`DEGRADED`, `RESTARTED`, `ESCALATED`) replacing raw string
+  literals for `Incident.kind`.
 
 - `TrafficDisposition(StrEnum)` and `AgentStatus(StrEnum)` in
     `robotsix_agent_comm.protocol._types` — single source of truth for
