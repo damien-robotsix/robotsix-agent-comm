@@ -81,9 +81,9 @@ production deployment should always set it.
 | `ROBOTSIX_SUPERVISION_STATUS_HOST` | Status HTTP endpoint bind host | `127.0.0.1` |
 | `ROBOTSIX_SUPERVISION_STATUS_PORT` | Status HTTP endpoint bind port (`0` = OS-assigned) | `0` |
 
-The `SupervisionConfig.validate()` method enforces these constraints at
-startup and raises `ValueError` (which the entrypoint converts to exit
-code 1) on invalid values.
+The `SupervisionConfig.validate()` method (called automatically by
+`SupervisionConfig.from_env()`) enforces these constraints and raises
+`ValueError` on invalid values.
 
 ______________________________________________________________________
 
