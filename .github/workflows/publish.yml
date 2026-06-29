@@ -19,33 +19,6 @@ permissions:
 
 jobs:
   # ------------------------------------------------------------------
-  # Agent-comm-specific: verify that a pushed tag matches the
-  # [project].version single-source-of-truth in pyproject.toml.
-  # Runs before the reusable workflow so a mismatch fails fast
-  # without consuming a build slot.
-  # ------------------------------------------------------------------
-  verify-tag:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
-        with:
-          enable-cache: true
-      - name: Verify tag matches project version
-        run: |
-          tag_version="${GITHUB_REF_NAME#v}"
-          project_version="$(uv run --frozen python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
-          echo "Tag version:     ${tag_version}"
-          echo "Project version: ${project_version}"
-          if [ "${tag_version}" != "${project_version}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match [project].version (${project_version})"
-            exit 1
-          fi
-
-  # ------------------------------------------------------------------
   # Thin call to the shared reusable: build + publish to PyPI via
   # Trusted Publishing (OIDC).  Only runs on tag pushes;
   # workflow_dispatch dry-runs go through the dedicated
@@ -58,11 +31,7 @@ jobs:
   # ------------------------------------------------------------------
   # environment for OIDC trusted publishing is declared inside the reusable python-release.yml; it cannot be set on a reusable-calling job
   release:
-    needs: verify-tag
-    if: |
-      always() &&
-      (needs.verify-tag.result == 'success' || needs.verify-tag.result == 'skipped') &&
-      startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: read
       id-token: write
@@ -105,6 +74,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           name: python-package-distributions
@@ -154,18 +124,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
         with:
           enable-cache: true
-      - name: Verify tag matches project version
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          tag_version="${GITHUB_REF_NAME#v}"
-          project_version="$(uv run --frozen python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
-          if [ "${tag_version}" != "${project_version}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match [project].version (${project_version})"
-            exit 1
-          fi
       - name: Build sdist and wheel
         run: uv build
       - name: Validate artifacts
@@ -173,8 +135,8 @@ jobs:
       - name: Check if version already exists on TestPyPI
         id: check-testpypi
         run: |
-          VERSION=$(uv run --frozen python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')
-          PACKAGE=$(uv run --frozen python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["name"])')
+          VERSION=$(python3 -c "import pathlib; w=sorted(pathlib.Path('dist').glob('*.whl')); print(w[0].name.split('-')[1])")
+          PACKAGE="robotsix-agent-comm"
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://test.pypi.org/pypi/${PACKAGE}/${VERSION}/json")
           echo "http_code=${HTTP_CODE}" >> "$GITHUB_OUTPUT"
           if [ "${HTTP_CODE}" = "200" ]; then
