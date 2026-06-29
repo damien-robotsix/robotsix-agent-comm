@@ -14,6 +14,7 @@ from urllib.request import Request as HTTPRequest
 from urllib.request import urlopen
 
 from robotsix_agent_comm.broker import BrokerServer
+from robotsix_agent_comm.protocol import TrafficDisposition
 from robotsix_agent_comm.protocol.messages import (
     Metadata,
     Notification,
@@ -135,7 +136,7 @@ class TestTrafficEndpoint:
         assert r["source"] == "sender"
         assert r["destination"] == "receiver"
         assert r["type"] == "request"
-        assert r["disposition"] == "queued"
+        assert r["disposition"] == TrafficDisposition.QUEUED
         assert r["status"] == 202
         assert "timestamp" in r
         assert "message_id" in r
@@ -151,7 +152,7 @@ class TestTrafficEndpoint:
 
         records = _traffic(broker)
         assert len(records) == 1
-        assert records[0]["disposition"] == "unknown_recipient"
+        assert records[0]["disposition"] == TrafficDisposition.UNKNOWN_RECIPIENT
         assert records[0]["status"] == 404
         assert records[0]["destination"] == "nonexistent"
 
@@ -193,7 +194,7 @@ class TestTrafficEndpoint:
             _, body = _traffic_with_auth(server, "tok-a")
             records = list(body["traffic"])
             assert len(records) == 1
-            assert records[0]["disposition"] == "rejected"
+            assert records[0]["disposition"] == TrafficDisposition.REJECTED
             assert records[0]["status"] == 403
             assert records[0]["source"] == "agent-b"
         finally:

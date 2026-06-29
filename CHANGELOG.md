@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `TrafficDisposition(StrEnum)` and `AgentStatus(StrEnum)` in
+    `robotsix_agent_comm.protocol._types` — single source of truth for
+    traffic disposition values ("queued", "rejected", "routed",
+    "unknown_recipient") and agent liveness statuses ("active", "stale",
+    "unknown"). Replaces raw string literals in `broker/server.py` and
+    `broker/_dashboard.py`; the `UNKNOWN_RECIPIENT` constant in
+    `transport/errors.py` is now aliased from the enum.
+
+- Dashboard CSS badges (`badge-routed`, `badge-unknown-recipient`) and JS
+    handling for the "routed" and "unknown_recipient" traffic dispositions,
+    closing a gap where they fell through to the default `badge-unknown` style.
+
 - Expanded `Makefile` with `help`, `check-all`, `clean`, `coverage-report`,
     `typecheck`, `security`, `docs-serve`, `docs-build`, and `docker-build`
     targets, modelled on Litestar's dev workflow pattern.

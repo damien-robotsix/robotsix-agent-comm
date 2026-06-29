@@ -26,7 +26,7 @@ from robotsix_agent_comm.protocol import (
     deserialize,
     serialize,
 )
-from robotsix_agent_comm.transport import TransportServer
+from robotsix_agent_comm.transport import UNKNOWN_RECIPIENT, TransportServer
 
 
 def _json_request(
@@ -243,7 +243,7 @@ class TestBrokerIntegration:
         assert isinstance(body, dict)
         error_msg = deserialize(json.dumps(body))
         assert isinstance(error_msg, Error)
-        assert error_msg.body.get("code") == "unknown_recipient"
+        assert error_msg.body.get("code") == UNKNOWN_RECIPIENT
 
     def test_health_endpoint(self, broker: BrokerServer) -> None:
         status, body = _json_request("GET", broker, "/health")
@@ -383,7 +383,7 @@ class TestBrokerTTLEviction:
             assert status == 404
             error_msg = deserialize(json.dumps(body))
             assert isinstance(error_msg, Error)
-            assert error_msg.body.get("code") == "unknown_recipient"
+            assert error_msg.body.get("code") == UNKNOWN_RECIPIENT
         finally:
             broker.stop()
 

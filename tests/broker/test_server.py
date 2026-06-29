@@ -21,6 +21,7 @@ from robotsix_agent_comm.broker.server import (
     _BrokerRequestHandler,
 )
 from robotsix_agent_comm.protocol import (
+    AgentStatus,
     Error,
     Metadata,
     Notification,
@@ -29,7 +30,12 @@ from robotsix_agent_comm.protocol import (
     deserialize,
     serialize,
 )
-from robotsix_agent_comm.transport import AgentNotFoundError, Registry
+from robotsix_agent_comm.transport import (
+    DELIVERY_FAILED,
+    UNKNOWN_RECIPIENT,
+    AgentNotFoundError,
+    Registry,
+)
 from robotsix_agent_comm.transport.endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH
 
 # ---------------------------------------------------------------------------
@@ -347,7 +353,7 @@ class TestDiscoveryEndpoint:
         assert isinstance(a["last_seen_seconds_ago"], float)
         assert a["last_seen_seconds_ago"] >= 0
         assert a["ttl_seconds"] == 120
-        assert a["status"] == "active"
+        assert a["status"] == AgentStatus.ACTIVE
         assert a["mailbox"] is False
 
     def test_agents_include_mailbox_flag(self) -> None:
@@ -399,7 +405,7 @@ class TestDiscoveryEndpoint:
         handler.do_GET()
         result = _body_written(handler)
         agents = result["agents"]
-        assert agents[0]["status"] == "stale"
+        assert agents[0]["status"] == AgentStatus.STALE
 
 
 # ---------------------------------------------------------------------------
@@ -505,7 +511,7 @@ class TestSendEndpoint:
         handler.send_response.assert_called_once_with(404)
         error_msg = deserialize(json.dumps(_body_written(handler)))
         assert isinstance(error_msg, Error)
-        assert error_msg.body.get("code") == "unknown_recipient"
+        assert error_msg.body.get("code") == UNKNOWN_RECIPIENT
 
     def test_empty_recipient_returns_400(self) -> None:
         request = Request(
@@ -554,7 +560,7 @@ class TestSendEndpoint:
         handler.send_response.assert_called_once_with(502)
         error_msg = deserialize(json.dumps(_body_written(handler)))
         assert isinstance(error_msg, Error)
-        assert error_msg.body.get("code") == "delivery_failed"
+        assert error_msg.body.get("code") == DELIVERY_FAILED
 
 
 # ---------------------------------------------------------------------------

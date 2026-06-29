@@ -8,6 +8,7 @@ not failures of the message envelope itself.
 from __future__ import annotations
 
 from robotsix_agent_comm.errors import RobotsixAgentCommError
+from robotsix_agent_comm.protocol._types import TrafficDisposition
 
 
 class TransportError(RobotsixAgentCommError):
@@ -42,4 +43,6 @@ class DeliveryError(TransportError):
 #: Error code for the ``"delivery_failed"`` error envelope.
 DELIVERY_FAILED: str = "delivery_failed"
 #: Error code for the ``"unknown_recipient"`` error envelope.
-UNKNOWN_RECIPIENT: str = "unknown_recipient"
+#: Aliased from :class:`TrafficDisposition.UNKNOWN_RECIPIENT
+#: <robotsix_agent_comm.protocol._types.TrafficDisposition>`.
+UNKNOWN_RECIPIENT: str = TrafficDisposition.UNKNOWN_RECIPIENT.value

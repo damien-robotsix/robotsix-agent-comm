@@ -7,6 +7,7 @@ concerns (those land in later phases).
 
 from __future__ import annotations
 
+from ._types import AgentStatus, TrafficDisposition
 from .config_contract import (
     REDACTED_SENTINEL,
     ConfigContract,
@@ -37,6 +38,7 @@ from .validation import (
 __all__ = [
     "PROTOCOL_VERSION",
     "REDACTED_SENTINEL",
+    "AgentStatus",
     "ConfigContract",
     "ConfigContractError",
     "Error",
@@ -49,6 +51,7 @@ __all__ = [
     "Response",
     "SecretRedactor",
     "SettableKey",
+    "TrafficDisposition",
     "UnsupportedVersionError",
     "ValidationError",
     "deserialize",

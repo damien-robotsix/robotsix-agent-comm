@@ -18,9 +18,11 @@ from typing import cast
 from urllib.parse import parse_qs, urlsplit
 
 from ..protocol import (
+    AgentStatus,
     Error,
     Message,
     ProtocolError,
+    TrafficDisposition,
     deserialize,
     serialize,
 )
@@ -324,12 +326,12 @@ class _BrokerRequestHandler(_BaseRequestHandler):
 
         # Status.
         if ttl is not None and ttl <= 0:
-            entry["status"] = "active"
+            entry["status"] = AgentStatus.ACTIVE
         elif last_hb is not None and ttl is not None:
             age = now_monotonic - last_hb
-            entry["status"] = "active" if age <= ttl else "stale"
+            entry["status"] = AgentStatus.ACTIVE if age <= ttl else AgentStatus.STALE
         else:
-            entry["status"] = "unknown"
+            entry["status"] = AgentStatus.UNKNOWN
 
         # Mailbox flag.
         try:
@@ -760,7 +762,9 @@ class _BrokerRequestHandler(_BaseRequestHandler):
             self._authenticated_agent_id != ""
             and message.metadata.sender != self._authenticated_agent_id
         ):
-            self._record_traffic(message=message, disposition="rejected", status=403)
+            self._record_traffic(
+                message=message, disposition=TrafficDisposition.REJECTED, status=403
+            )
             self._write_error(403, "sender does not match authenticated agent")
             self._server()._audit_logger.log(
                 "send",
@@ -774,7 +778,9 @@ class _BrokerRequestHandler(_BaseRequestHandler):
         # Empty/missing recipient → 400
         recipient = message.metadata.recipient
         if not recipient:
-            self._record_traffic(message=message, disposition="rejected", status=400)
+            self._record_traffic(
+                message=message, disposition=TrafficDisposition.REJECTED, status=400
+            )
             self._write_error(400, "metadata.recipient is required")
             self._server()._audit_logger.log(
                 "send",
@@ -796,7 +802,9 @@ class _BrokerRequestHandler(_BaseRequestHandler):
                 message=f"unknown recipient: {recipient}",
             )
             self._record_traffic(
-                message=message, disposition="unknown_recipient", status=404
+                message=message,
+                disposition=TrafficDisposition.UNKNOWN_RECIPIENT,
+                status=404,
             )
             self._write_serialized(404, serialize(error))
             server._audit_logger.log(
@@ -816,7 +824,9 @@ class _BrokerRequestHandler(_BaseRequestHandler):
                     serialize(message)
                 )
                 server.mailbox_cond.notify_all()
-            self._record_traffic(message=message, disposition="queued", status=202)
+            self._record_traffic(
+                message=message, disposition=TrafficDisposition.QUEUED, status=202
+            )
             server._audit_logger.log(
                 "send",
                 self._authenticated_agent_id,
@@ -829,7 +839,9 @@ class _BrokerRequestHandler(_BaseRequestHandler):
             return
 
         http_status, body_str = self._route_send(message)
-        self._record_traffic(message=message, disposition="routed", status=http_status)
+        self._record_traffic(
+            message=message, disposition=TrafficDisposition.ROUTED, status=http_status
+        )
         server._audit_logger.log(
             "send",
             self._authenticated_agent_id,
