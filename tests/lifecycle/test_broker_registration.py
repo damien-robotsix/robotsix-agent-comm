@@ -72,6 +72,10 @@ class TestBrokerRegistration:
             assert "monitor" in kinds
             assert "status" in kinds
             assert "lifecycle" in kinds
+            # config-get and config-set are not applicable to the
+            # lifecycle server and must not be advertised.
+            assert "config-get" not in kinds
+            assert "config-set" not in kinds
         finally:
             server.stop()
 

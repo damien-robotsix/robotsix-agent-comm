@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `typecheck`, `security`, `docs-serve`, `docs-build`, and `docker-build`
     targets, modelled on Litestar's dev workflow pattern.
 
+### Fixed
+
+- `LifecycleServer` no longer advertises `config-get` and `config-set` in
+    its `supported_kinds`, matching its actual capability set (only `monitor`,
+    `status`, and `lifecycle` are handled).
+
 ### Changed
 
 - Adopt hatch-vcs for single-source versioning: remove static `version = "0.1.0"`
