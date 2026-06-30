@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `.robotsix-mill/periodic/env_doc_sync.yaml`: enable the `env_doc_sync` periodic
     workflow that cross-references discovered environment variables against
     `docs/configuration.md` and files tickets for documentation gaps.
+
 - Document `ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS` in the Tuning section of
     `docs/broker/deployment.md`.
 
