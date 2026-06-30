@@ -185,7 +185,7 @@ class BrokerConfig:
             if raw_require_cc
             else False,
             agent_tokens=agent_tokens,
-            ttl_seconds=int(raw_ttl) if raw_ttl else None,
+            ttl_seconds=int(raw_ttl),
             rate_limit=float(raw_rate) if raw_rate else None,
             max_body_size=int(raw_body) if raw_body else None,
             audit_log=raw_audit or None,
