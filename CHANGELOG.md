@@ -46,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Correct `ROBOTSIX_BROKER_RATE_LIMIT` default in `docs/broker/deployment.md`
+    from "server default (0)" to "unset (off)", matching the actual code
+    behaviour where the config field is `None` when the env var is unset.
+
 - `LifecycleServer` no longer advertises `config-get` and `config-set` in
     its `supported_kinds`, matching its actual capability set (only `monitor`,
     `status`, and `lifecycle` are handled).

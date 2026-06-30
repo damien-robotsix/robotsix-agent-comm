@@ -103,7 +103,7 @@ agent-1=shared-secret-one,agent-2=shared-secret-two
 | Variable                                | Meaning                                                       | Default                |
 | --------------------------------------- | ------------------------------------------------------------- | ---------------------- |
 | `ROBOTSIX_BROKER_TTL_SECONDS`           | Registration TTL (int)                                        | server default (60)    |
-| `ROBOTSIX_BROKER_RATE_LIMIT`            | Max requests/agent/second (float; 0 = off)                    | server default (0)     |
+| `ROBOTSIX_BROKER_RATE_LIMIT`            | Max requests/agent/second (float; 0 = off)                    | unset (off)            |
 | `ROBOTSIX_BROKER_MAX_BODY_SIZE`         | Max HTTP body bytes (int)                                     | server default (1 MiB) |
 | `ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS` | Grace period (seconds) before a stale mailbox is GCed (float) | unset (no grace)       |
 | `ROBOTSIX_BROKER_DASHBOARD_ENABLED`     | Enable built-in dashboard UI (`1`/`true`/`yes`)               | `false`                |
