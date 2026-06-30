@@ -100,11 +100,12 @@ agent-1=shared-secret-one,agent-2=shared-secret-two
 
 ### Tuning
 
-| Variable                        | Meaning                                    | Default                |
-| ------------------------------- | ------------------------------------------ | ---------------------- |
-| `ROBOTSIX_BROKER_TTL_SECONDS`   | Registration TTL (int)                     | server default (60)    |
-| `ROBOTSIX_BROKER_RATE_LIMIT`    | Max requests/agent/second (float; 0 = off) | server default (0)     |
-| `ROBOTSIX_BROKER_MAX_BODY_SIZE` | Max HTTP body bytes (int)                  | server default (1 MiB) |
+| Variable                                | Meaning                                                       | Default                |
+| --------------------------------------- | ------------------------------------------------------------- | ---------------------- |
+| `ROBOTSIX_BROKER_TTL_SECONDS`           | Registration TTL (int)                                        | server default (60)    |
+| `ROBOTSIX_BROKER_RATE_LIMIT`            | Max requests/agent/second (float; 0 = off)                    | server default (0)     |
+| `ROBOTSIX_BROKER_MAX_BODY_SIZE`         | Max HTTP body bytes (int)                                     | server default (1 MiB) |
+| `ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS` | Grace period (seconds) before a stale mailbox is GCed (float) | unset (no grace)       |
 
 ### Audit
 

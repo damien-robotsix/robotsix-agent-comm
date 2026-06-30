@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     workflow that cross-references discovered environment variables against
     `docs/configuration.md` and files tickets for documentation gaps.
 
+- Document `ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS` in the Tuning section of
+    `docs/broker/deployment.md`.
+
 - `docs/lifecycle/index.md` — comprehensive deployment guide for the lifecycle
     subsystem covering architecture, configuration (18 env vars), quickstart,
     supervision policy (health checks, exponential backoff, escalation), status
