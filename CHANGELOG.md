@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `BrokerConfig.max_body_size` now defaults to `1_048_576` (1 MiB) instead of
+    `None`, resolving a mismatch where the code had no default but the
+    documentation stated "server default (1 MiB)".
+
 ### Added
 
 - `.robotsix-mill/periodic/env_doc_sync.yaml`: enable the `env_doc_sync` periodic
