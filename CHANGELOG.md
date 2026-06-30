@@ -75,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     replace hook in `.pre-commit-config.yaml`, add starter `.gitleaks.toml`,
     remove stale `.secrets.baseline`.
 
+- `ROBOTSIX_BROKER_TTL_SECONDS` now defaults to 60 in `BrokerConfig`
+    (was `None` at the config layer, relying on the server constructor default).
+    The effective default is unchanged (60); the config is now self-documenting.
+
 ### Added
 
 - Docstrings for all 6 HTTP handler methods (`do_GET`, `do_POST`, `do_DELETE`)

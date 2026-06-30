@@ -80,7 +80,7 @@ class BrokerConfig:
     agent_tokens: dict[str, str] | None = None
 
     # Tunables
-    ttl_seconds: int | None = None
+    ttl_seconds: int = 60
     rate_limit: float | None = None
     max_body_size: int | None = None
     mailbox_grace_seconds: float | None = None
@@ -127,7 +127,7 @@ class BrokerConfig:
         raw_require_cc = _get("ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT")
         raw_tokens_file = _get("ROBOTSIX_BROKER_AGENT_TOKENS_FILE")
         raw_tokens_inline = _get("ROBOTSIX_BROKER_AGENT_TOKENS")
-        raw_ttl = _get("ROBOTSIX_BROKER_TTL_SECONDS")
+        raw_ttl = _get("ROBOTSIX_BROKER_TTL_SECONDS", "60")
         raw_rate = _get("ROBOTSIX_BROKER_RATE_LIMIT")
         raw_body = _get("ROBOTSIX_BROKER_MAX_BODY_SIZE")
         raw_audit = _get("ROBOTSIX_BROKER_AUDIT_LOG")

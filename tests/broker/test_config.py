@@ -71,7 +71,7 @@ class TestFromEnvBasics:
         assert config.tls_ca is None
         assert config.require_client_cert is False
         assert config.agent_tokens is None
-        assert config.ttl_seconds is None
+        assert config.ttl_seconds == 60
         assert config.rate_limit is None
         assert config.max_body_size is None
         assert config.audit_log is None
