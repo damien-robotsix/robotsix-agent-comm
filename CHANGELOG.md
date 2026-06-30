@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Dependabot `pre-commit` package-ecosystem: automatic grouped PRs for pinned
+    pre-commit hook updates on a weekly schedule.
 - `.robotsix-mill/periodic/env_doc_sync.yaml`: enable the `env_doc_sync` periodic
     workflow that cross-references discovered environment variables against
     `docs/configuration.md` and files tickets for documentation gaps.
