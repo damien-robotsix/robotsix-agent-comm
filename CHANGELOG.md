@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Document `ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS` in the Tuning section of
     `docs/broker/deployment.md`.
 
+- Document `ROBOTSIX_BROKER_DASHBOARD_ENABLED` in `docs/broker/deployment.md`
+    Tuning table (was already in `.env.broker.example` but missing from the
+    formal reference doc).
+
 - `docs/lifecycle/index.md` — comprehensive deployment guide for the lifecycle
     subsystem covering architecture, configuration (18 env vars), quickstart,
     supervision policy (health checks, exponential backoff, escalation), status
