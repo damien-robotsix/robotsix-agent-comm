@@ -82,7 +82,7 @@ class BrokerConfig:
     # Tunables
     ttl_seconds: int = 60
     rate_limit: float | None = None
-    max_body_size: int | None = None
+    max_body_size: int = 1_048_576
     mailbox_grace_seconds: float | None = None
 
     # Audit
@@ -129,7 +129,7 @@ class BrokerConfig:
         raw_tokens_inline = _get("ROBOTSIX_BROKER_AGENT_TOKENS")
         raw_ttl = _get("ROBOTSIX_BROKER_TTL_SECONDS", "60")
         raw_rate = _get("ROBOTSIX_BROKER_RATE_LIMIT")
-        raw_body = _get("ROBOTSIX_BROKER_MAX_BODY_SIZE")
+        raw_body = _get("ROBOTSIX_BROKER_MAX_BODY_SIZE", "1048576")
         raw_audit = _get("ROBOTSIX_BROKER_AUDIT_LOG")
         raw_mailbox_grace = _get("ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS")
         raw_dashboard = _get("ROBOTSIX_BROKER_DASHBOARD_ENABLED")
@@ -187,7 +187,7 @@ class BrokerConfig:
             agent_tokens=agent_tokens,
             ttl_seconds=int(raw_ttl),
             rate_limit=float(raw_rate) if raw_rate else None,
-            max_body_size=int(raw_body) if raw_body else None,
+            max_body_size=int(raw_body),
             audit_log=raw_audit or None,
             mailbox_grace_seconds=(
                 float(raw_mailbox_grace) if raw_mailbox_grace else None

@@ -73,7 +73,7 @@ class TestFromEnvBasics:
         assert config.agent_tokens is None
         assert config.ttl_seconds == 60
         assert config.rate_limit is None
-        assert config.max_body_size is None
+        assert config.max_body_size == 1_048_576
         assert config.audit_log is None
 
     def test_parses_each_var(self, cert_and_token_files: dict[str, Any]) -> None:
