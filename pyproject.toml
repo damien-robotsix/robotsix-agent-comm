@@ -39,6 +39,7 @@ dev = [
     "vulture",
     "trustme",
     "mdformat-mkdocs",
+    "deptry",
 ]
 docs = [
     "mkdocs",

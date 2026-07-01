@@ -49,3 +49,8 @@ repos:
         entry: vulture src/ vulture_whitelist.py
         language: system
         pass_filenames: false
+      - id: deptry
+        name: deptry
+        entry: uv run deptry .
+        language: system
+        pass_filenames: false

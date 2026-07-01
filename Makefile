@@ -36,6 +36,10 @@ typecheck:  ## Full-tree strict mypy (matches CI typecheck job)
 security:  ## Local security scan (bandit)
 	uv run --with bandit bandit -c pyproject.toml -r src/
 
+.PHONY: deptry
+deptry:  ## Check import dependencies (deptry)
+	uv run deptry .
+
 .PHONY: docs-serve
 docs-serve:  ## Serve docs with live reload
 	uv run mkdocs serve
