@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add `.editorconfig` at repository root for consistent editor indentation and whitespace handling across contributors.
 - Remove stale LLM and Chat SSE variables from `.env.example` and `AGENT.md`; keep only the `LOG_LEVEL` variable that is actually consumed by the code.
 - Wire `deptry` into dev dependencies, `Makefile`, pre-commit hooks, and the audit CI workflow.
 - Extracted shared `_parse_bool` and `make_env_getter` config helpers into `protocol._config_helpers`, eliminating byte-for-byte duplication across `broker/config.py`, `lifecycle/config.py`, and `lifecycle/supervision.py`.
