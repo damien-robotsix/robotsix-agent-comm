@@ -70,7 +70,7 @@ consistent with the mechanics in [Releasing to PyPI](releasing.md).
 
 - [ ] Decide the bump (PATCH / MINOR / MAJOR) per SemVer
 - [ ] Roll up `CHANGELOG.md` `[Unreleased]` into `## [X.Y.Z]`; leave a fresh empty `[Unreleased]`
-- [ ] Tag and push `vX.Y.Z` (version derived from tag via hatch-vcs)
+- [ ] No version bump needed — `hatch-vcs` derives the version from the git tag
 - [ ] `uv lock` clean (no unintended dependency changes)
 - [ ] Local checks green: `ruff check .`, `ruff format --check .`, `mypy .`, `pytest`
 - [ ] Dry-run to TestPyPI via `workflow_dispatch` (build + `twine check` + upload OK)
