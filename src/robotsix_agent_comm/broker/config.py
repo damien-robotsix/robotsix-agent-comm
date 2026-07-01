@@ -16,16 +16,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from ..protocol._config_helpers import _parse_bool, make_env_getter
+
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _parse_bool(raw: str) -> bool:
-    """Accept ``1`` / ``true`` / ``yes`` (case-insensitive) as truthy."""
-    return raw.strip().lower() in ("1", "true", "yes")
 
 
 def _parse_inline_tokens(raw: str) -> dict[str, str]:
@@ -114,11 +107,7 @@ class BrokerConfig:
         Returns:
             A populated-but-not-yet-validated :class:`BrokerConfig`.
         """
-        if env is None:
-            env = os.environ
-
-        def _get(key: str, default: str = "") -> str:
-            return env.get(key, default)
+        _get = make_env_getter(env)
 
         # -- Parse each variable -----------------------------------------
         raw_tls_cert = _get("ROBOTSIX_BROKER_TLS_CERT")
