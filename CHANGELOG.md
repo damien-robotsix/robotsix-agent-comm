@@ -11,6 +11,7 @@
 - Extract shared `_do_post()` and `_check_health()` HTTP helpers in `transport/_http.py`, eliminating duplicate request/error-handling boilerplate across `client.py` and `brokered.py`.
 
 - Bump pre-commit hooks: `pre-commit-hooks` from v5.0.0 to v6.0.0, `ruff-pre-commit` from v0.15.15 to v0.15.20
+
 # Changelog
 
 All notable changes to this project are documented in this file.
