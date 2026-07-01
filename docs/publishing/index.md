@@ -29,7 +29,7 @@ Reference: this repo's `pyproject.toml` declares
 
 ```toml
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -51,7 +51,7 @@ Reference: this repo's `[project]` block —
 ```toml
 [project]
 name = "robotsix-agent-comm"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Agent communication system for the robotsix ecosystem"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -87,7 +87,8 @@ Versions MUST follow [Semantic Versioning](https://semver.org/)
 (`MAJOR.MINOR.PATCH`). Packages that have not stabilized their public
 API SHOULD stay pre-1.0 and signal maturity through an accurate
 `Development Status` classifier (e.g. `2 - Pre-Alpha`). The version MUST
-have a single source of truth in `[project].version`.
+have a single source of truth in the git tag (hatch-vcs derives the
+version at build time).
 
 ## Changelog
 

@@ -64,10 +64,11 @@ cannot perform them.
     `## [Unreleased]` entries into a new `## [X.Y.Z]` section and leave a
     fresh empty `Unreleased` section above it.
 
-2. **Bump the version.** Set `[project].version` in `pyproject.toml` to
-    `X.Y.Z`. This is the single source of truth for the version; the
-    workflow's tag/version guard fails the build if the tag and this
-    value disagree.
+2. **No version bump needed.** `pyproject.toml` declares
+    `dynamic = ["version"]` with `[tool.hatch.version] source = "vcs"`,
+    so `hatch-vcs` derives the version from the git tag at build time.
+    The tag IS the single source of truth — there is no static version
+    string to update.
 
 3. **Dry-run to TestPyPI.** Trigger the `Publish` workflow manually
     (`workflow_dispatch`) with the `testpypi` target and confirm the

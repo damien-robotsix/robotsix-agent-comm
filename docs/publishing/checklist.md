@@ -16,7 +16,8 @@ publishing a repository to PyPI. Every box MUST be checked.
     mkdocs-material + mkdocstrings `docs/` site with every page wired
     into `mkdocs.yml` `nav`.
 - [ ] **Version numbering** — version follows Semantic Versioning with a
-    single source of truth in `[project].version`.
+    single source of truth in the git tag (hatch-vcs derives the
+    version at build time).
 - [ ] **Changelog** — `CHANGELOG.md` present in repo root, follows Keep
     a Changelog, has an `Unreleased` section, and is updated for this
     release.
