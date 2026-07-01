@@ -45,7 +45,7 @@ trufflehog secrets scan.
 ### General (`.env.example`)
 
 The only general-purpose environment variable is `LOG_LEVEL` (default
-`INFO`), which controls the Python logging level for the library.  All
+`INFO`), which controls the Python logging level for the library. All
 other configuration is sub-system-specific; see the broker and lifecycle
 example files below.
 
