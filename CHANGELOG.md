@@ -1,6 +1,7 @@
 ## 0.0.0 (unreleased)
 
 - Extracted shared `_parse_bool` and `make_env_getter` config helpers into `protocol._config_helpers`, eliminating byte-for-byte duplication across `broker/config.py`, `lifecycle/config.py`, and `lifecycle/supervision.py`.
+
 # Changelog
 
 All notable changes to this project are documented in this file.
