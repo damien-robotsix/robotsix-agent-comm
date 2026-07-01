@@ -11,9 +11,10 @@ from __future__ import annotations
 import http.client
 
 from ..protocol import Message, ProtocolError, deserialize, serialize
+from ._http import _check_health, _do_post
 from .base import Transport
-from .endpoints import HEALTH_PATH, Endpoint
-from .errors import TransportError, TransportTimeoutError
+from .endpoints import Endpoint
+from .errors import TransportError
 
 _JSON_HEADERS = {"Content-Type": "application/json"}
 
@@ -41,19 +42,9 @@ class TransportClient(Transport):
         """
         body = serialize(message).encode("utf-8")
         conn = self._connect(endpoint, timeout)
-        try:
-            conn.request("POST", endpoint.path, body=body, headers=_JSON_HEADERS)
-            response = conn.getresponse()
-            status = response.status
-            data = response.read().decode("utf-8")
-        except TimeoutError as exc:
-            raise TransportTimeoutError(
-                f"request to {endpoint.url} timed out after {timeout}s"
-            ) from exc
-        except OSError as exc:
-            raise TransportError(f"failed to reach {endpoint.url}: {exc}") from exc
-        finally:
-            conn.close()
+        status, data = _do_post(
+            conn, endpoint.path, body, _JSON_HEADERS, timeout, endpoint.url
+        )
 
         if status >= 400:
             raise TransportError(f"{endpoint.url} returned HTTP {status}: {data}")
@@ -73,12 +64,4 @@ class TransportClient(Transport):
         raising, so callers can poll liveness cheaply.
         """
         conn = self._connect(endpoint, timeout)
-        try:
-            conn.request("GET", HEALTH_PATH)
-            response = conn.getresponse()
-            response.read()
-            return response.status == 200
-        except OSError:
-            return False
-        finally:
-            conn.close()
+        return _check_health(conn)

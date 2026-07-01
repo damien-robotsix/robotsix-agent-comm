@@ -22,9 +22,10 @@ from typing import Any
 from urllib.parse import urlencode
 
 from ..protocol import Message, ProtocolError, deserialize, serialize
+from ._http import _check_health, _do_post
 from .base import Transport
 from .client import TransportClient
-from .endpoints import DEFAULT_MESSAGE_PATH, HEALTH_PATH, AgentInfo, Endpoint
+from .endpoints import DEFAULT_MESSAGE_PATH, AgentInfo, Endpoint
 from .errors import (
     DELIVERY_FAILED,
     UNKNOWN_RECIPIENT,
@@ -136,19 +137,9 @@ class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
         body = serialize(message).encode("utf-8")
         headers = {**_JSON_HEADERS, **self._auth_headers()}
         conn = self._connect(timeout)
-        try:
-            conn.request("POST", DEFAULT_MESSAGE_PATH, body=body, headers=headers)
-            response = conn.getresponse()
-            status = response.status
-            data = response.read().decode("utf-8")
-        except TimeoutError as exc:
-            raise TransportTimeoutError(
-                f"request to broker timed out after {timeout}s"
-            ) from exc
-        except OSError as exc:
-            raise TransportError(f"failed to reach broker: {exc}") from exc
-        finally:
-            conn.close()
+        status, data = _do_post(
+            conn, DEFAULT_MESSAGE_PATH, body, headers, timeout, "broker"
+        )
 
         if status == 200:
             try:
@@ -187,15 +178,7 @@ class NetworkedBrokerTransport(_BrokerConnectionMixin, Transport):
         """
         headers = self._auth_headers()
         conn = self._connect(timeout)
-        try:
-            conn.request("GET", HEALTH_PATH, headers=headers)
-            response = conn.getresponse()
-            response.read()
-            return response.status == 200
-        except OSError:
-            return False
-        finally:
-            conn.close()
+        return _check_health(conn, headers)
 
     def receive(self, agent_id: str, *, wait: float, timeout: float) -> list[Message]:
         """Long-poll the broker for *agent_id*'s queued mailbox messages.
