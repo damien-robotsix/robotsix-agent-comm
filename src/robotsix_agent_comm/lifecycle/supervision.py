@@ -21,6 +21,7 @@ from enum import StrEnum
 from http.server import ThreadingHTTPServer
 from typing import cast
 
+from ..protocol._config_helpers import make_env_getter
 from ..transport.server import _BaseRequestHandler
 from .backend import LifecycleBackend
 
@@ -101,11 +102,6 @@ class ServiceState:
 # ---------------------------------------------------------------------------
 
 
-def _parse_bool(raw: str) -> bool:
-    """Accept ``1`` / ``true`` / ``yes`` (case-insensitive) as truthy."""
-    return raw.strip().lower() in ("1", "true", "yes")
-
-
 def _parse_service_list(raw: str) -> tuple[str, ...]:
     """Split a comma- or space-separated list into a tuple of stripped strings."""
     if not raw:
@@ -165,13 +161,7 @@ class SupervisionConfig:
         Returns:
             A populated-and-validated :class:`SupervisionConfig`.
         """
-        import os
-
-        if env is None:
-            env = os.environ
-
-        def _get(key: str, default: str = "") -> str:
-            return env.get(key, default)
+        _get = make_env_getter(env)
 
         config = cls(
             poll_interval_seconds=float(

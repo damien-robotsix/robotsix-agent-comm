@@ -7,9 +7,10 @@ environment variables (or an explicit ``Mapping``).
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+
+from ..protocol._config_helpers import make_env_getter
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +50,7 @@ class LifecycleConfig:
         Returns:
             A populated-and-validated :class:`LifecycleConfig`.
         """
-        if env is None:
-            env = os.environ
-
-        def _get(key: str, default: str = "") -> str:
-            return env.get(key, default)
+        _get = make_env_getter(env)
 
         broker_token = _get("ROBOTSIX_LIFECYCLE_BROKER_TOKEN") or None
         broker_tls_ca = _get("ROBOTSIX_LIFECYCLE_BROKER_TLS_CA") or None
