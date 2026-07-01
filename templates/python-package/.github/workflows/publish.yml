@@ -25,23 +25,12 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
         with:
           enable-cache: true
-
-      - name: Verify tag matches project version
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          tag_version="${GITHUB_REF_NAME#v}"
-          project_version="$(uv run --frozen python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
-          echo "Tag version:     ${tag_version}"
-          echo "Project version: ${project_version}"
-          if [ "${tag_version}" != "${project_version}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match [project].version (${project_version})"
-            exit 1
-          fi
 
       - name: Build sdist and wheel
         run: uv build

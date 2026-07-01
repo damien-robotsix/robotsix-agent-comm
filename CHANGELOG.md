@@ -1,5 +1,11 @@
 ## 0.0.0 (unreleased)
 
+- Sync docs and template to hatch-vcs versioning — replace static
+    `[project].version` references with `dynamic = ["version"]` +
+    `[tool.hatch.version] source = "vcs"`; remove `__version__` from the
+    template package init; remove the stale tag/version guard from the
+    template `publish.yml`
+
 - Add `.editorconfig` at repository root for consistent editor indentation and whitespace handling across contributors.
 
 - Remove stale LLM and Chat SSE variables from `.env.example` and `AGENT.md`; keep only the `LOG_LEVEL` variable that is actually consumed by the code.

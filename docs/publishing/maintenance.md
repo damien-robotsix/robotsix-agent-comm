@@ -42,9 +42,10 @@ tested; reserve MAJOR for genuinely breaking work and announce it (see
 [Communication plan for major releases](#communication-plan-for-major-releases)).
 
 **Version is single-source-of-truth.** The only authoritative version
-string is `[project].version` in `pyproject.toml`; the release
-workflow's tag/version guard fails the build if the `vX.Y.Z` tag and
-this value disagree. On each release the accumulated `## [Unreleased]`
+is the git tag (`vX.Y.Z`); `hatch-vcs` derives the version from the tag
+at build time and `pyproject.toml` declares `dynamic = ["version"]`
+with `[tool.hatch.version] source = "vcs"`. On each release the
+accumulated `## [Unreleased]`
 entries in [`CHANGELOG.md`](../../CHANGELOG.md) are rolled up into a new
 `## [X.Y.Z]` section and a fresh empty `Unreleased` section is left
 above it. See [Releasing to PyPI](releasing.md#per-release-steps) for
@@ -69,7 +70,7 @@ consistent with the mechanics in [Releasing to PyPI](releasing.md).
 
 - [ ] Decide the bump (PATCH / MINOR / MAJOR) per SemVer
 - [ ] Roll up `CHANGELOG.md` `[Unreleased]` into `## [X.Y.Z]`; leave a fresh empty `[Unreleased]`
-- [ ] Bump `[project].version` in `pyproject.toml` to `X.Y.Z`
+- [ ] No version bump needed — `hatch-vcs` derives the version from the git tag
 - [ ] `uv lock` clean (no unintended dependency changes)
 - [ ] Local checks green: `ruff check .`, `ruff format --check .`, `mypy .`, `pytest`
 - [ ] Dry-run to TestPyPI via `workflow_dispatch` (build + `twine check` + upload OK)
