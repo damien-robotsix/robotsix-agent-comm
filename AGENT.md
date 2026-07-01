@@ -44,14 +44,10 @@ trufflehog secrets scan.
 
 ### General (`.env.example`)
 
-| Variable       | Default       | Purpose                        |
-| -------------- | ------------- | ------------------------------ |
-| `LLM_API_KEY`  | —             | LLM provider API key           |
-| `LLM_MODEL`    | `gpt-4o-mini` | LLM model name                 |
-| `LLM_BASE_URL` | —             | Custom LLM base URL            |
-| `SERVER_HOST`  | `127.0.0.1`   | Chat SSE server listen address |
-| `SERVER_PORT`  | `8000`        | Chat SSE server listen port    |
-| `LOG_LEVEL`    | `INFO`        | Logging level                  |
+The only general-purpose environment variable is `LOG_LEVEL` (default
+`INFO`), which controls the Python logging level for the library. All
+other configuration is sub-system-specific; see the broker and lifecycle
+example files below.
 
 ### Broker (`.env.broker.example`)
 
