@@ -1,5 +1,7 @@
 # robotsix-agent-comm
 
+This repo follows the [robotsix stack standards](https://github.com/damien-robotsix/robotsix-standards).
+
 Agent communication stack for the robotsix ecosystem — a Python library
 providing a typed message protocol, an HTTP+JSON network transport, a
 high-level agent SDK, and a broker server (`robotsix-broker`).

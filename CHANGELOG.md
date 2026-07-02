@@ -1,5 +1,7 @@
 ## 0.0.0 (unreleased)
 
+- Add link to robotsix stack standards in `README.md` and `AGENT.md`.
+
 - Re-export `AlertHandler` from `robotsix_agent_comm.lifecycle` so consumers can type-annotate alert callbacks without importing from the private `supervision` module.
 
 - Enable `changelog_autofill` periodic workflow to auto-propose changelog
