@@ -20,6 +20,7 @@ from .config import LifecycleConfig
 from .server import LifecycleServer
 from .service import build_server
 from .supervision import (
+    AlertHandler,
     Incident,
     IncidentKind,
     ServiceState,
@@ -30,6 +31,7 @@ from .supervision import (
 from .tracing import LifecycleTracing
 
 __all__ = [
+    "AlertHandler",
     "Incident",
     "IncidentKind",
     "LifecycleConfig",
