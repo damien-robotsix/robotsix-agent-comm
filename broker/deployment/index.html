@@ -1,0 +1,1579 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Agent communication system for the robotsix ecosystem">
+      
+      
+      
+      
+        <link rel="prev" href="../..">
+      
+      
+        <link rel="next" href="../../lifecycle/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Broker deployment - robotsix-agent-comm</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#deploying-the-broker" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="robotsix-agent-comm" class="md-header__button md-logo" aria-label="robotsix-agent-comm" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            robotsix-agent-comm
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Broker deployment
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="robotsix-agent-comm" class="md-nav__button md-logo" aria-label="robotsix-agent-comm" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    robotsix-agent-comm
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTRIBUTING.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Broker deployment
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Broker deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart-docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart (Docker Compose)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#listen-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listen address
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TLS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tls-certificate-provisioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TLS certificate provisioning
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TLS certificate provisioning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#self-signed-development-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-signed (development / testing)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-lets-encrypt-or-internal-pki" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production (Let's Encrypt or internal PKI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-credential-provisioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent credential provisioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-vs-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production vs development
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-directly-without-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running directly (without Docker)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker image
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SDK tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Publishing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PyPI publishing standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publishing/checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-publication checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publishing/releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releasing to PyPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publishing/maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package maintenance procedures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0001-stdlib-first/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Stdlib-first, minimal dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0002-transport-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Transport architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0003-addressing-and-routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Addressing and routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0004-delivery-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Delivery semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0005-http-json-transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. HTTP+JSON transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0006-broker-server-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Broker-server architecture, security model, and deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart-docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart (Docker Compose)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#listen-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listen address
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TLS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tls-certificate-provisioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TLS certificate provisioning
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TLS certificate provisioning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#self-signed-development-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-signed (development / testing)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-lets-encrypt-or-internal-pki" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production (Let's Encrypt or internal PKI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-credential-provisioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent credential provisioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-vs-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production vs development
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-directly-without-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running directly (without Docker)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker image
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="deploying-the-broker">Deploying the broker</h1>
+<p>The <code>robotsix-broker</code> is a <strong>standalone, long-running daemon</strong> that
+provides agent registration, discovery, and message-routing services to
+the robotsix ecosystem. This guide covers configuration, TLS
+provisioning, and containerised deployment.</p>
+<p>See <a href="../../decisions/0006-broker-server-architecture/">ADR 0006</a> for the
+architecture and security model.</p>
+<hr />
+<h2 id="quickstart-docker-compose">Quickstart (Docker Compose)</h2>
+<pre><code class="language-bash"># 1. Generate TLS material (self-signed CA + server cert)
+mkdir -p tls
+openssl req -x509 -newkey rsa:4096 -keyout tls/ca.key -out tls/ca.pem \
+  -days 365 -nodes -subj &quot;/CN=robotsix-ca&quot;
+openssl req -newkey rsa:2048 -keyout tls/server.key -out tls/server.csr \
+  -nodes -subj &quot;/CN=localhost&quot;
+openssl x509 -req -in tls/server.csr -CA tls/ca.pem -CAkey tls/ca.key \
+  -CAcreateserial -out tls/server.pem -days 365
+
+# 2. Create an agent-tokens file
+echo '{&quot;agent-a&quot;: &quot;tok-a&quot;, &quot;agent-b&quot;: &quot;tok-b&quot;}' &gt; agent-tokens.json
+
+# 3. Review and adjust .env.broker (copy from .env.broker.example)
+cp .env.broker.example .env.broker
+# Edit .env.broker — at minimum set:
+#   ROBOTSIX_BROKER_TLS_CERT=/etc/robotsix/tls/server.pem
+#   ROBOTSIX_BROKER_TLS_KEY=/etc/robotsix/tls/server.key
+#   ROBOTSIX_BROKER_AGENT_TOKENS_FILE=/etc/robotsix/broker/agent-tokens.json
+
+# 4. Build and start
+docker compose up --build
+</code></pre>
+<p>The broker listens on <code>https://localhost:8443</code>.</p>
+<hr />
+<h2 id="environment-variables">Environment variables</h2>
+<p>Every variable uses the <code>ROBOTSIX_BROKER_</code> prefix (ADR 0006 §3.1).</p>
+<h3 id="listen-address">Listen address</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROBOTSIX_BROKER_HOST</code></td>
+<td>Bind host address</td>
+<td><code>0.0.0.0</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_PORT</code></td>
+<td>TCP port (int)</td>
+<td><code>8443</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="mode">Mode</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROBOTSIX_BROKER_ENV</code></td>
+<td><code>"production"</code> or <code>"development"</code></td>
+<td><code>"production"</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Production</strong> mode enforces TLS and per-agent authentication (see
+<a href="#security-model">Security model</a>). <strong>Development</strong> mode relaxes those
+requirements but emits loud warnings so an insecure boot is never
+silent.</p>
+<h3 id="tls">TLS</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROBOTSIX_BROKER_TLS_CERT</code></td>
+<td>Path to server certificate PEM</td>
+<td>unset</td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_TLS_KEY</code></td>
+<td>Path to server private-key PEM</td>
+<td>unset</td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_TLS_CA</code></td>
+<td>Path to CA bundle PEM (mTLS)</td>
+<td>unset</td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_REQUIRE_CLIENT_CERT</code></td>
+<td>Enable mTLS (<code>1</code>/<code>true</code>/<code>yes</code>)</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<p>When <code>REQUIRE_CLIENT_CERT</code> is truthy, <code>TLS_CA</code> <strong>must</strong> be set and the
+file must exist — mutual TLS needs a trust anchor.</p>
+<h3 id="agent-credentials">Agent credentials</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROBOTSIX_BROKER_AGENT_TOKENS_FILE</code></td>
+<td>Path to JSON file <code>{"agent_id": "token", ...}</code></td>
+<td>unset</td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_AGENT_TOKENS</code></td>
+<td>Inline fallback <code>id=token,id=token</code></td>
+<td>unset</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Precedence:</strong> when both are set, <code>AGENT_TOKENS_FILE</code> wins.</p>
+<p>The JSON file format:</p>
+<pre><code class="language-json">{
+  &quot;agent-1&quot;: &quot;shared-secret-one&quot;,
+  &quot;agent-2&quot;: &quot;shared-secret-two&quot;
+}
+</code></pre>
+<p>The inline format:</p>
+<pre><code>agent-1=shared-secret-one,agent-2=shared-secret-two
+</code></pre>
+<h3 id="tuning">Tuning</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROBOTSIX_BROKER_TTL_SECONDS</code></td>
+<td>Registration TTL (int)</td>
+<td>server default (60)</td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_RATE_LIMIT</code></td>
+<td>Max requests/agent/second (float; 0 = off)</td>
+<td>unset (off)</td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_MAX_BODY_SIZE</code></td>
+<td>Max HTTP body bytes (int)</td>
+<td>server default (1 MiB)</td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_MAILBOX_GRACE_SECONDS</code></td>
+<td>Grace period (seconds) before a stale mailbox is GCed (float)</td>
+<td>unset (no grace)</td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_BROKER_DASHBOARD_ENABLED</code></td>
+<td>Enable built-in dashboard UI (<code>1</code>/<code>true</code>/<code>yes</code>)</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="audit">Audit</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROBOTSIX_BROKER_AUDIT_LOG</code></td>
+<td>Path to JSON-lines audit file</td>
+<td>stdout</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="tls-certificate-provisioning">TLS certificate provisioning</h2>
+<p>The broker requires a <strong>server certificate</strong> and <strong>private key</strong> for
+TLS. For mutual TLS (mTLS) you also need a <strong>CA bundle</strong> that can
+validate client certificates.</p>
+<h3 id="self-signed-development-testing">Self-signed (development / testing)</h3>
+<pre><code class="language-bash">mkdir -p tls
+openssl req -x509 -newkey rsa:4096 \
+  -keyout tls/server.key -out tls/server.pem \
+  -days 365 -nodes -subj &quot;/CN=localhost&quot;
+</code></pre>
+<p>Then set:</p>
+<pre><code>ROBOTSIX_BROKER_TLS_CERT=./tls/server.pem
+ROBOTSIX_BROKER_TLS_KEY=./tls/server.key
+ROBOTSIX_BROKER_ENV=development
+</code></pre>
+<h3 id="production-lets-encrypt-or-internal-pki">Production (Let's Encrypt or internal PKI)</h3>
+<p>Mount the certificate and key into the container (e.g. via Docker
+secrets or a read-only bind mount) and point the env vars at the
+mounted paths.</p>
+<hr />
+<h2 id="agent-credential-provisioning">Agent credential provisioning</h2>
+<p>Create a JSON file mapping agent identifiers to their bearer tokens:</p>
+<pre><code class="language-json">{
+  &quot;calendar-agent&quot;: &quot;s3cret-cal&quot;,
+  &quot;auto-mail&quot;: &quot;s3cret-mail&quot;
+}
+</code></pre>
+<p>Mount it into the container and set:</p>
+<pre><code>ROBOTSIX_BROKER_AGENT_TOKENS_FILE=/etc/robotsix/broker/agent-tokens.json
+</code></pre>
+<hr />
+<h2 id="production-vs-development">Production vs development</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Production (<code>ROBOTSIX_BROKER_ENV=production</code>)</th>
+<th>Development (<code>ROBOTSIX_BROKER_ENV=development</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TLS</td>
+<td><strong>Required</strong> — missing cert/key aborts startup</td>
+<td>Allowed to be absent; warning is emitted</td>
+</tr>
+<tr>
+<td>Agent auth</td>
+<td><strong>Required</strong> — at least one token pair</td>
+<td>Allowed to be absent; warning is emitted</td>
+</tr>
+<tr>
+<td>Plaintext / anonymous</td>
+<td><strong>Never reachable</strong></td>
+<td>Reachable with loud warnings</td>
+</tr>
+</tbody>
+</table>
+<p>The security invariant: <strong>in production, no plaintext or anonymous-auth
+code path is reachable</strong>. The <code>BrokerConfig</code> validator enforces this
+at startup — it raises <code>ValueError</code> (converted to a non-zero exit code
+by the entrypoint) before the server socket is created.</p>
+<hr />
+<h2 id="running-directly-without-docker">Running directly (without Docker)</h2>
+<pre><code class="language-bash"># Set env vars, then:
+python -m robotsix_agent_comm.broker
+# or
+robotsix-broker
+</code></pre>
+<hr />
+<h2 id="docker-image">Docker image</h2>
+<pre><code class="language-bash">docker build -t robotsix-broker .
+docker run --rm -p 8443:8443 \
+  -v &quot;$(pwd)/tls:/etc/robotsix/tls:ro&quot; \
+  -v &quot;$(pwd)/agent-tokens.json:/etc/robotsix/broker/agent-tokens.json:ro&quot; \
+  -e ROBOTSIX_BROKER_TLS_CERT=/etc/robotsix/tls/server.pem \
+  -e ROBOTSIX_BROKER_TLS_KEY=/etc/robotsix/tls/server.key \
+  -e ROBOTSIX_BROKER_AGENT_TOKENS_FILE=/etc/robotsix/broker/agent-tokens.json \
+  robotsix-broker
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

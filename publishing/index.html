@@ -1,0 +1,1291 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Agent communication system for the robotsix ecosystem">
+      
+      
+      
+      
+        <link rel="prev" href="../sdk/tutorial/">
+      
+      
+        <link rel="next" href="checklist/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>PyPI publishing standards - robotsix-agent-comm</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pypi-publishing-standards" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="robotsix-agent-comm" class="md-header__button md-logo" aria-label="robotsix-agent-comm" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            robotsix-agent-comm
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              PyPI publishing standards
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="robotsix-agent-comm" class="md-nav__button md-logo" aria-label="robotsix-agent-comm" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    robotsix-agent-comm
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHANGELOG.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../broker/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Broker deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SDK tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Publishing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PyPI publishing standards
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PyPI publishing standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project structure &amp; layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#required-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required metadata
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#readme-documentation-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        README &amp; documentation standards
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version-numbering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version numbering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changelog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changelog
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license-file-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License file placement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contributing guidelines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimum-test-coverage-ci-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum test coverage / CI requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automated-release-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated release pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started-from-the-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting started from the template
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-publication checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releasing to PyPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package maintenance procedures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0001-stdlib-first/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Stdlib-first, minimal dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0002-transport-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Transport architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0003-addressing-and-routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Addressing and routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0004-delivery-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Delivery semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0005-http-json-transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. HTTP+JSON transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0006-broker-server-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Broker-server architecture, security model, and deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project structure &amp; layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#required-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required metadata
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#readme-documentation-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        README &amp; documentation standards
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version-numbering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version numbering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changelog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changelog
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license-file-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License file placement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contributing guidelines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimum-test-coverage-ci-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum test coverage / CI requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automated-release-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated release pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started-from-the-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting started from the template
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="pypi-publishing-standards">PyPI publishing standards</h1>
+<p>Publication to PyPI is <strong>selective</strong>, not automatic. The robotsix
+ecosystem publishes only mature, well-documented repositories whose
+quality justifies a public release and ongoing maintenance commitment.
+Quality and long-term maintainability take priority over publishing
+every repository; a repo is published only once it meets <em>every</em>
+standard below. These standards apply fleet-wide, and
+<code>robotsix-agent-comm</code> itself serves as the reference implementation —
+each section cites the matching artifact in this repository.</p>
+<p>Use the companion <a href="checklist/">pre-publication checklist</a> as the
+verifiable gate a maintainer ticks through before publishing a repo.</p>
+<p>Once a package is published, its ongoing lifecycle (versioning policy,
+breaking changes/deprecations, security response, and retiring a
+package) lives in the
+<a href="maintenance/">package maintenance procedures</a> runbook.</p>
+<h2 id="project-structure-layout">Project structure &amp; layout</h2>
+<p>Published packages MUST use the <code>src/</code> layout: the importable package
+lives under <code>src/&lt;package&gt;/</code>, and <code>tests/</code> mirrors the package layout.
+The build backend MUST be Hatchling, and the environment MUST be managed
+with <a href="https://docs.astral.sh/uv/"><code>uv</code></a> with a committed <code>uv.lock</code> so
+installs are reproducible (<code>uv sync --frozen</code>).</p>
+<p>Reference: this repo's <code>pyproject.toml</code> declares</p>
+<pre><code class="language-toml">[build-system]
+requires = [&quot;hatchling&quot;, &quot;hatch-vcs&quot;]
+build-backend = &quot;hatchling.build&quot;
+
+[tool.hatch.build.targets.wheel]
+packages = [&quot;src/robotsix_agent_comm&quot;]
+</code></pre>
+<h2 id="required-metadata">Required metadata</h2>
+<p>The <code>pyproject.toml</code> <code>[project]</code> table MUST declare all of: <code>name</code>,
+<code>version</code>, <code>description</code>, <code>readme</code>, <code>requires-python</code> (<code>&gt;=3.12</code>),
+<code>license</code>, <code>authors</code>, <code>dependencies</code>, and <code>classifiers</code>. The
+<code>classifiers</code> list MUST include an OSI-approved license classifier
+(<code>License :: OSI Approved :: ...</code>), the supported
+<code>Programming Language :: Python :: 3.x</code> versions, <code>Typing :: Typed</code>, and
+an accurate <code>Development Status</code>.</p>
+<p>Reference: this repo's <code>[project]</code> block —</p>
+<pre><code class="language-toml">[project]
+name = &quot;robotsix-agent-comm&quot;
+dynamic = [&quot;version&quot;]
+description = &quot;Agent communication system for the robotsix ecosystem&quot;
+readme = &quot;README.md&quot;
+requires-python = &quot;&gt;=3.12&quot;
+license = { text = &quot;MIT&quot; }
+authors = [{ name = &quot;Damien Robotsix&quot;, email = &quot;damien.robotsix@gmail.com&quot; }]
+dependencies = []
+classifiers = [
+    &quot;Development Status :: 2 - Pre-Alpha&quot;,
+    &quot;Intended Audience :: Developers&quot;,
+    &quot;License :: OSI Approved :: MIT License&quot;,
+    &quot;Programming Language :: Python :: 3&quot;,
+    &quot;Programming Language :: Python :: 3.12&quot;,
+    &quot;Programming Language :: Python :: 3.13&quot;,
+    &quot;Programming Language :: Python :: 3.14&quot;,
+    &quot;Typing :: Typed&quot;,
+]
+</code></pre>
+<h2 id="readme-documentation-standards">README &amp; documentation standards</h2>
+<p>Every published repo MUST have a top-level <code>README.md</code> covering the
+project overview, current status, install/development instructions, and
+a pointer to the contributing guide. It MUST also ship a <code>docs/</code> site
+built with mkdocs + mkdocs-material + mkdocstrings, and <strong>every</strong> page
+MUST be wired into <code>mkdocs.yml</code> <code>nav</code> (this fleet uses mkdocs nav, not a
+<code>docs/modules.yaml</code>).</p>
+<p>Reference: this repo's <a href="../../README.md"><code>README.md</code></a> and <code>mkdocs.yml</code>.</p>
+<h2 id="version-numbering">Version numbering</h2>
+<p>Versions MUST follow <a href="https://semver.org/">Semantic Versioning</a>
+(<code>MAJOR.MINOR.PATCH</code>). Packages that have not stabilized their public
+API SHOULD stay pre-1.0 and signal maturity through an accurate
+<code>Development Status</code> classifier (e.g. <code>2 - Pre-Alpha</code>). The version MUST
+have a single source of truth in the git tag (hatch-vcs derives the
+version at build time).</p>
+<h2 id="changelog">Changelog</h2>
+<p>Each published repo MUST maintain a <code>CHANGELOG.md</code> in the repo root
+following <a href="https://keepachangelog.com/">Keep a Changelog</a> conventions.
+It MUST be updated on every release and MUST keep an <code>Unreleased</code>
+section between releases to accumulate pending changes.</p>
+<h2 id="license-file-placement">License file placement</h2>
+<p>A published repo MUST include a <code>LICENSE</code> file in the repo root, and its
+contents MUST match the <code>[project].license</code> declaration. The fleet
+default is MIT.</p>
+<p>Reference: this repo's <a href="../../LICENSE"><code>LICENSE</code></a> matches
+<code>license = { text = "MIT" }</code> in <code>pyproject.toml</code>.</p>
+<h2 id="contributing-guidelines">Contributing guidelines</h2>
+<p>Every published repo MUST ship a <code>CONTRIBUTING.md</code> covering the
+development setup (<code>uv sync</code>), the local check commands
+(<code>ruff check</code>, <code>ruff format --check</code>, <code>mypy</code>, <code>pytest</code>), the branch/PR
+flow, and the location of Architecture Decision Records.</p>
+<p>Reference: this repo's <a href="../../CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a>.</p>
+<h2 id="minimum-test-coverage-ci-requirements">Minimum test coverage / CI requirements</h2>
+<p>CI MUST run green on every push and pull request. The pipeline MUST run
+ruff (lint <strong>and</strong> format check), mypy in <code>strict</code> mode, and pytest with
+branch coverage enforced against a minimum threshold. The fleet default
+threshold is <strong>85%</strong>, supplied through the shared reusable workflow
+<code>damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@main</code>.
+Tests MUST set <code>filterwarnings = ["error"]</code> so warnings fail the suite.</p>
+<p>Reference: this repo's <a href="../../.github/workflows/ci.yml"><code>.github/workflows/ci.yml</code></a>
+calls the shared workflow with <code>coverage-threshold: "85"</code>, and
+<code>pyproject.toml</code> sets</p>
+<pre><code class="language-toml">[tool.pytest.ini_options]
+testpaths = [&quot;tests&quot;]
+filterwarnings = [&quot;error&quot;]
+</code></pre>
+<h2 id="automated-release-pipeline">Automated release pipeline</h2>
+<p>Published packages MUST ship a tag-triggered automated release pipeline
+that builds, validates, and publishes to PyPI on <code>vX.Y.Z</code> tags using
+<strong>PyPI Trusted Publishing (OIDC)</strong> — no PyPI token is stored as a
+secret. The workflow MUST also offer a <code>workflow_dispatch</code> TestPyPI
+dry-run path, enforce the version single-source-of-truth via a
+tag/version guard, and cut a CHANGELOG-driven GitHub Release. The full
+maintainer procedure lives in <a href="releasing/">Releasing to PyPI</a>.</p>
+<p>Reference: this repo's <a href="../../.github/workflows/publish.yml"><code>.github/workflows/publish.yml</code></a>
+publishes on <code>v*</code> tags via Trusted Publishing with a TestPyPI dry-run
+path, mirrored into the template skeleton.</p>
+<h2 id="getting-started-from-the-template">Getting started from the template</h2>
+<p>New packages SHOULD start from the copy-and-rename skeleton under
+<a href="https://github.com/robotsix/robotsix-agent-comm/tree/main/templates/python-package"><code>templates/python-package/</code></a>
+so they satisfy these standards from day one. Copy the directory, rename
+<code>package_name</code>, and replace the placeholder tokens. A cookiecutter-style
+generator is intentionally <strong>not</strong> used — it would add a tool dependency
+that conflicts with the stdlib-first ADR 0001; it remains a possible
+future option only.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

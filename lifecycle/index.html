@@ -1,0 +1,1925 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Agent communication system for the robotsix ecosystem">
+      
+      
+      
+      
+        <link rel="prev" href="../broker/deployment/">
+      
+      
+        <link rel="next" href="../design/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Lifecycle deployment - robotsix-agent-comm</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#deploying-the-lifecycle-server" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="robotsix-agent-comm" class="md-header__button md-logo" aria-label="robotsix-agent-comm" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            robotsix-agent-comm
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Lifecycle deployment
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="robotsix-agent-comm" class="md-nav__button md-logo" aria-label="robotsix-agent-comm" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    robotsix-agent-comm
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHANGELOG.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../broker/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Broker deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle deployment
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#relationship-with-the-broker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship with the broker
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lifecycle-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supervision-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supervision agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supervision-agent-health-checks-restart-and-escalation-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supervision agent: health checks, restart, and escalation policy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Supervision agent: health checks, restart, and escalation policy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-degraded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Degraded
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-restart-with-exponential-backoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Restart with exponential backoff
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-escalation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Escalation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#incident-callback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Incident callback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-http-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status HTTP endpoint
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Status HTTP endpoint">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#response-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backends
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backends">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#subprocessbackend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SubprocessBackend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mockbackend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MockBackend
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alert-callbacks-and-langfuse-tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alert callbacks and Langfuse tracing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alert callbacks and Langfuse tracing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#alerthandler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AlertHandler
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lifecycletracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LifecycleTracing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment considerations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deployment considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#relationship-with-broker-auth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship with broker auth
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SDK tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Publishing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PyPI publishing standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publishing/checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-publication checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publishing/releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releasing to PyPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publishing/maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package maintenance procedures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0001-stdlib-first/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Stdlib-first, minimal dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0002-transport-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Transport architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0003-addressing-and-routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Addressing and routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0004-delivery-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Delivery semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0005-http-json-transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. HTTP+JSON transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0006-broker-server-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Broker-server architecture, security model, and deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#relationship-with-the-broker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship with the broker
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lifecycle-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supervision-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supervision agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supervision-agent-health-checks-restart-and-escalation-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supervision agent: health checks, restart, and escalation policy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Supervision agent: health checks, restart, and escalation policy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-degraded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Degraded
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-restart-with-exponential-backoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Restart with exponential backoff
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-escalation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Escalation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#incident-callback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Incident callback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-http-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status HTTP endpoint
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Status HTTP endpoint">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#response-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backends
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backends">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#subprocessbackend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SubprocessBackend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mockbackend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MockBackend
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alert-callbacks-and-langfuse-tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alert callbacks and Langfuse tracing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alert callbacks and Langfuse tracing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#alerthandler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AlertHandler
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lifecycletracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LifecycleTracing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment considerations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deployment considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#relationship-with-broker-auth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship with broker auth
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<!-- vale on -->
+
+<h1 id="deploying-the-lifecycle-server">Deploying the lifecycle server</h1>
+<p>The <code>robotsix-agent-comm.lifecycle</code> subsystem is the <strong>central deployment
+and lifecycle management component</strong> for the robotsix ecosystem. It
+provides a brokered responder (<code>LifecycleServer</code>) that registers on the
+agent-comm broker and exposes status/lifecycle handlers, together with a
+supervision agent (<code>SupervisionAgent</code>) that continuously monitors managed
+services, auto-restarts them with exponential backoff, and escalates after
+repeated failures.</p>
+<p>See <a href="../api/#robotsix_agent_comm.lifecycle">the lifecycle API reference</a>
+for the auto-generated class and function documentation.</p>
+<hr />
+<h2 id="architecture-overview">Architecture overview</h2>
+<p>The lifecycle subsystem is composed of four layers:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LifecycleConfig</code></td>
+<td>Immutable configuration parsed from <code>ROBOTSIX_LIFECYCLE_*</code> env vars — broker identity, TLS, and Langfuse credentials.</td>
+</tr>
+<tr>
+<td><code>LifecycleServer</code></td>
+<td>A <code>BrokeredResponder</code> that registers on the agent-comm broker and serves <code>monitor</code>, <code>status</code>, and <code>lifecycle</code> request handlers with optional Langfuse tracing.</td>
+</tr>
+<tr>
+<td><code>SupervisionAgent</code></td>
+<td>A background loop that health-checks every managed service, tracks per-service state, attempts bounded restarts with exponential backoff, and escalates when the restart threshold is exceeded.</td>
+</tr>
+<tr>
+<td><code>LifecycleBackend</code></td>
+<td>Pluggable interface for start/stop/health operations. Two implementations ship: <code>SubprocessBackend</code> (Docker Compose) and <code>MockBackend</code> (test double).</td>
+</tr>
+</tbody>
+</table>
+<p>These layers are wired together by <code>build_server()</code> (in <code>service.py</code>) and
+<code>build_supervisor()</code>. The <code>python -m robotsix_agent_comm.lifecycle</code>
+entrypoint reads environment variables, constructs the config and server,
+and blocks until signalled.</p>
+<h3 id="relationship-with-the-broker">Relationship with the broker</h3>
+<p>The lifecycle server is an <strong>agent</strong> from the broker's perspective. It
+authenticates with a bearer token (configured via
+<code>ROBOTSIX_LIFECYCLE_BROKER_TOKEN</code>), registers its agent identity, and
+exposes three request kinds: <code>monitor</code> (built-in health), <code>status</code>
+(custom status), and <code>lifecycle</code> (accepts commands such as restarting a
+named service). The broker itself is documented in <a href="../broker/deployment/">the broker deployment
+guide</a> and its architecture in
+<a href="../decisions/0006-broker-server-architecture/">ADR 0006</a>.</p>
+<hr />
+<h2 id="configuration-reference">Configuration reference</h2>
+<p>Every lifecycle variable uses the <code>ROBOTSIX_LIFECYCLE_</code> prefix; every
+supervision variable uses the <code>ROBOTSIX_SUPERVISION_</code> prefix.</p>
+<h3 id="lifecycle-server">Lifecycle server</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_AGENT_ID</code></td>
+<td>Agent identity on the broker</td>
+<td><code>lifecycle-server</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_BROKER_HOST</code></td>
+<td>Broker host</td>
+<td><code>localhost</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_BROKER_PORT</code></td>
+<td>Broker port</td>
+<td><code>8443</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_BROKER_SCHEME</code></td>
+<td>Broker scheme (<code>http</code> or <code>https</code>)</td>
+<td><code>https</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_BROKER_TOKEN</code></td>
+<td>Broker bearer token</td>
+<td><em>(unset)</em></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_BROKER_TLS_CA</code></td>
+<td>Broker TLS CA bundle path</td>
+<td><em>(unset)</em></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_LANGFUSE_PUBLIC_KEY</code></td>
+<td>Langfuse public key</td>
+<td><em>(unset)</em></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_LANGFUSE_SECRET_KEY</code></td>
+<td>Langfuse secret key</td>
+<td><em>(unset)</em></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_LIFECYCLE_LANGFUSE_HOST</code></td>
+<td>Langfuse host URL</td>
+<td><em>(unset)</em></td>
+</tr>
+</tbody>
+</table>
+<p>A missing <code>ROBOTSIX_LIFECYCLE_BROKER_TOKEN</code> emits a <strong>warning</strong> at startup
+(the broker may have authentication disabled in development), but a
+production deployment should always set it.</p>
+<h3 id="supervision-agent">Supervision agent</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_POLL_INTERVAL_SECONDS</code></td>
+<td>Seconds between full poll cycles</td>
+<td><code>30.0</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_HEALTH_TIMEOUT_SECONDS</code></td>
+<td>Per-service health-check timeout</td>
+<td><code>10.0</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_MAX_RESTART_ATTEMPTS</code></td>
+<td>Max restarts before escalation</td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_BACKOFF_BASE_SECONDS</code></td>
+<td>Exponential backoff base delay</td>
+<td><code>5.0</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_BACKOFF_MAX_SECONDS</code></td>
+<td>Maximum backoff cap</td>
+<td><code>300.0</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_ESCALATION_COOLDOWN_SECONDS</code></td>
+<td>Cooldown after escalation</td>
+<td><code>600.0</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_SERVICES</code></td>
+<td>Comma/space-separated service names</td>
+<td><em>(unset)</em></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_STATUS_HOST</code></td>
+<td>Status HTTP endpoint bind host</td>
+<td><code>127.0.0.1</code></td>
+</tr>
+<tr>
+<td><code>ROBOTSIX_SUPERVISION_STATUS_PORT</code></td>
+<td>Status HTTP endpoint bind port (<code>0</code> = OS-assigned)</td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>SupervisionConfig.validate()</code> method (called automatically by
+<code>SupervisionConfig.from_env()</code>) enforces these constraints and raises
+<code>ValueError</code> on invalid values.</p>
+<hr />
+<h2 id="quickstart">Quickstart</h2>
+<p>Set the required environment variables and run:</p>
+<pre><code class="language-bash"># Set required env vars
+ROBOTSIX_LIFECYCLE_BROKER_HOST=localhost \
+ROBOTSIX_LIFECYCLE_BROKER_PORT=8443 \
+ROBOTSIX_LIFECYCLE_BROKER_TOKEN=my-token \
+ROBOTSIX_SUPERVISION_SERVICES=agent-a,agent-b \
+python -m robotsix_agent_comm.lifecycle
+</code></pre>
+<p>The lifecycle server will register on the broker, start the supervision
+poll loop, and begin serving the status HTTP endpoint on an OS-assigned
+port.</p>
+<hr />
+<h2 id="supervision-agent-health-checks-restart-and-escalation-policy">Supervision agent: health checks, restart, and escalation policy</h2>
+<p>The <code>SupervisionAgent</code> runs a background poll loop that inspects every
+service listed in <code>ROBOTSIX_SUPERVISION_SERVICES</code> once per
+<code>poll_interval_seconds</code>. Each service follows a three-step failure
+policy:</p>
+<h3 id="1-degraded">1. Degraded</h3>
+<p>The first health-check failure records a <code>DEGRADED</code> incident with a
+human-readable message. The agent attempts a restart immediately.</p>
+<h3 id="2-restart-with-exponential-backoff">2. Restart with exponential backoff</h3>
+<p>The agent calls <code>backend.stop()</code> followed by <code>backend.start()</code>. After
+each restart the backoff delay doubles, capped at <code>backoff_max_seconds</code>:</p>
+<pre><code>delay = min(base × 2^(attempt − 1), max_backoff)
+</code></pre>
+<p>where <em>base</em> is <code>ROBOTSIX_SUPERVISION_BACKOFF_BASE_SECONDS</code>, <em>attempt</em> is
+the 1-based restart count for the current failure streak, and
+<em>max_backoff</em> is <code>ROBOTSIX_SUPERVISION_BACKOFF_MAX_SECONDS</code>. The
+defaults (base 5 s, cap 300 s) produce the sequence <strong>5 s → 10 s → 20 s
+→ … → 300 s</strong>.</p>
+<p>A <code>RESTARTED</code> incident is recorded after every restart attempt
+regardless of whether <code>start()</code> succeeded.</p>
+<h3 id="3-escalation">3. Escalation</h3>
+<p>After <code>max_restart_attempts</code> consecutive restart attempts have all
+failed, the agent records an <code>ESCALATED</code> incident and stops
+auto-restarting. Polling for that service resumes after
+<code>escalation_cooldown_seconds</code> (default 10 minutes). If the service
+recovers (health check passes), the escalation state is cleared
+automatically and all counters reset.</p>
+<h3 id="incident-callback">Incident callback</h3>
+<p>Every incident is forwarded to an optional <code>on_alert</code> callback
+(<code>AlertHandler</code>). This is the integration point for wiring broker
+notifications, Langfuse traces, or external alerting systems.</p>
+<hr />
+<h2 id="status-http-endpoint">Status HTTP endpoint</h2>
+<p>The supervision agent binds a lightweight HTTP server (on
+<code>ROBOTSIX_SUPERVISION_STATUS_HOST</code>:<code>ROBOTSIX_SUPERVISION_STATUS_PORT</code>)
+that serves <code>GET /status</code>.</p>
+<h3 id="response-shape">Response shape</h3>
+<pre><code class="language-json">{
+  &quot;services&quot;: {
+    &quot;agent-a&quot;: {
+      &quot;healthy&quot;: true,
+      &quot;consecutive_failures&quot;: 0,
+      &quot;restart_count&quot;: 0,
+      &quot;escalated&quot;: false,
+      &quot;last_health_check&quot;: 1719600000.0,
+      &quot;last_failure&quot;: null,
+      &quot;last_restart&quot;: null,
+      &quot;escalation_time&quot;: null,
+      &quot;recent_incidents&quot;: []
+    }
+  },
+  &quot;running&quot;: true,
+  &quot;poll_count&quot;: 42
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>services.&lt;name&gt;.healthy</code></td>
+<td><code>bool</code></td>
+<td>Whether the latest health check passed</td>
+</tr>
+<tr>
+<td><code>services.&lt;name&gt;.consecutive_failures</code></td>
+<td><code>int</code></td>
+<td>Consecutive failed health checks</td>
+</tr>
+<tr>
+<td><code>services.&lt;name&gt;.restart_count</code></td>
+<td><code>int</code></td>
+<td>Total restart attempts for this service</td>
+</tr>
+<tr>
+<td><code>services.&lt;name&gt;.escalated</code></td>
+<td><code>bool</code></td>
+<td>Whether the service is currently escalated</td>
+</tr>
+<tr>
+<td><code>services.&lt;name&gt;.recent_incidents</code></td>
+<td><code>list</code></td>
+<td>Last 10 incidents (timestamp, kind, message, attempt)</td>
+</tr>
+<tr>
+<td><code>running</code></td>
+<td><code>bool</code></td>
+<td>Whether the supervision loop is active</td>
+</tr>
+<tr>
+<td><code>poll_count</code></td>
+<td><code>int</code></td>
+<td>Number of completed poll cycles</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="backends">Backends</h2>
+<h3 id="subprocessbackend">SubprocessBackend</h3>
+<p>The production backend shells out to <code>docker compose</code> for start, stop, and
+health operations:</p>
+<ul>
+<li><code>start()</code> runs <code>docker compose up -d &lt;service&gt;</code>. An optional <code>version</code>
+    parameter sets the <code>SERVICE_VERSION</code> environment variable so the Compose
+    file can reference it (<code>image: my-svc:${SERVICE_VERSION:-latest}</code>).</li>
+<li><code>stop()</code> runs <code>docker compose stop &lt;service&gt;</code>.</li>
+<li><code>health()</code> checks <code>docker compose ps --status running &lt;service&gt;</code> and
+    returns <code>True</code> when the service name appears in the output.</li>
+</ul>
+<p>The working directory defaults to the current directory; pass
+<code>project_dir</code> to point at a specific <code>docker-compose.yml</code>.</p>
+<h3 id="mockbackend">MockBackend</h3>
+<p>A test double that records all method calls and returns canned health
+results. Construct it with a list of booleans — each <code>health()</code> call
+consumes the next value; once the list is exhausted the <em>last</em> value is
+repeated.</p>
+<pre><code class="language-python">from robotsix_agent_comm.lifecycle import MockBackend, SupervisionConfig, build_supervisor
+
+backend = MockBackend(health_results=[True, True, False])
+config = SupervisionConfig(services=(&quot;demo-svc&quot;,), max_restart_attempts=2)
+supervisor = build_supervisor(config, backend=backend)
+</code></pre>
+<hr />
+<h2 id="alert-callbacks-and-langfuse-tracing">Alert callbacks and Langfuse tracing</h2>
+<h3 id="alerthandler">AlertHandler</h3>
+<pre><code class="language-python">from collections.abc import Callable
+from robotsix_agent_comm.lifecycle import Incident
+
+AlertHandler = Callable[[Incident], None]
+</code></pre>
+<p>Pass an <code>on_alert</code> callback to <code>build_supervisor()</code> to receive every
+incident the supervisor emits. This is the hook for wiring broker
+notifications, logging, or external alerting.</p>
+<h3 id="lifecycletracing">LifecycleTracing</h3>
+<p><code>LifecycleTracing</code> wraps the Langfuse Python SDK and operates in <strong>no-op
+mode</strong> when the SDK is not installed or when credentials
+(<code>ROBOTSIX_LIFECYCLE_LANGFUSE_PUBLIC_KEY</code> /
+<code>ROBOTSIX_LIFECYCLE_LANGFUSE_SECRET_KEY</code>) are missing. This means the
+lifecycle server <strong>gracefully degrades</strong> — tracing is transparent
+instrumentation, never a hard dependency.</p>
+<p>When enabled, every lifecycle-server request handler (<code>monitor</code>,
+<code>status</code>, <code>lifecycle</code>) is automatically wrapped in a Langfuse trace span.</p>
+<hr />
+<h2 id="deployment-considerations">Deployment considerations</h2>
+<h3 id="production">Production</h3>
+<ul>
+<li><strong>Always set <code>ROBOTSIX_LIFECYCLE_BROKER_TOKEN</code>.</strong> The config validator
+    emits a warning when it is missing, but production deployments must
+    authenticate.</li>
+<li>Use <code>ROBOTSIX_LIFECYCLE_BROKER_TLS_CA</code> when connecting to a broker that
+    uses a custom CA (e.g. an internal PKI or self-signed certificate).</li>
+<li>Set <code>ROBOTSIX_LIFECYCLE_BROKER_SCHEME=https</code> (the default) unless the
+    broker is deliberately running without TLS.</li>
+</ul>
+<h3 id="docker">Docker</h3>
+<p>The lifecycle server runs inside the same containerised environment as the
+services it supervises. The <code>SubprocessBackend</code> requires the <code>docker</code>
+binary and access to the Docker socket.</p>
+<h3 id="relationship-with-broker-auth">Relationship with broker auth</h3>
+<p>The lifecycle server authenticates to the broker with a bearer token,
+exactly like any other agent. The broker's <code>agent-tokens.json</code> must
+include an entry for the lifecycle server's <code>agent_id</code> (default
+<code>lifecycle-server</code>).</p>
+<hr />
+<h2 id="design-decisions">Design decisions</h2>
+<p>See <a href="../decisions/0006-broker-server-architecture/">ADR 0006 — Broker-server architecture, security model, and
+deployment</a> for the
+broker-side architecture that the lifecycle server relies on.</p>
+<p>The lifecycle server's public API is documented in the <a href="../api/#robotsix_agent_comm.lifecycle">API
+reference</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

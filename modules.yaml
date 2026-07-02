@@ -1,0 +1,112 @@
+# Canonical Module Taxonomy for robotsix-agent-comm
+#
+# This file is the single source of truth for "what modules exist and
+# where their files live."
+#
+# Schema: bundled with the robotsix-modules package (see
+# https://github.com/damien-robotsix/robotsix-modules).
+# Validation: pre-commit hook `validate-module-taxonomy` + CI step
+
+modules:
+  - id: package-root
+    description: >-
+      Package-level init, type marker, and smoke test shared by all
+      sub-packages.  Not a real module — groups infra-level files that
+      don't belong to any single module.
+    paths:
+      - src/robotsix_agent_comm/__init__.py
+      - src/robotsix_agent_comm/errors.py
+      - src/robotsix_agent_comm/py.typed
+      - src/robotsix_agent_comm/_logging.py
+      - src/robotsix_agent_comm/service_utils.py
+      - tests/__init__.py
+      - tests/test_logging_setup.py
+      - tests/test_smoke.py
+      - tests/conftest.py
+      - tests/helpers.py
+      - tests/test_end_to_end.py
+      - docs/index.md
+      - docs/api/index.md
+      - docs/design/index.md
+      - docs/decisions/*.md
+      - docs/publishing/*.md
+      - docs/modules.yaml
+    dependencies:
+      - protocol
+      - transport
+      - sdk
+
+  - id: protocol
+    description: >-
+      Message protocol layer for agent communication. Defines message types
+      (Request, Response, Notification, Error), serialization/deserialization,
+      and validation. The layer is stdlib-only and free of network/transport
+      concerns.
+    paths:
+      - src/robotsix_agent_comm/protocol/*.py
+      - tests/protocol/*.py
+    dependencies: []
+
+  - id: transport
+    description: >-
+      Network transport layer for agent communication. HTTP+JSON-over-stdlib
+      transport (ADR 0005) implementing the abstract transport interface
+      (ADR 0002): Endpoint descriptors, in-memory Registry, TransportServer /
+      TransportClient wire pair, RetryPolicy with exponential backoff, and
+      Router that resolves recipients and delivers with retry + timeout.
+      Consumes the protocol package.
+    paths:
+      - src/robotsix_agent_comm/transport/*.py
+      - tests/transport/*.py
+      - docs/transport/*.md
+    dependencies:
+      - protocol
+
+  - id: sdk
+    description: >-
+      High-level agent communication SDK. Composes the protocol and transport
+      public APIs into a single synchronous Agent client so a developer can
+      register, send, and receive messages in a few lines. The layer is
+      stdlib-only and consumes the lower layers unchanged. Includes usage
+      examples.
+    paths:
+      - src/robotsix_agent_comm/sdk/*.py
+      - tests/sdk/*.py
+      - docs/sdk/*.md
+      - examples/error_handling.py
+      - examples/notification_listener.py
+      - examples/request_response.py
+      - examples/README.md
+    dependencies:
+      - protocol
+      - transport
+
+  - id: broker
+    description: >-
+      Broker server for agent communication. Provides a central hub for agent
+      registration, discovery, message routing, and health monitoring. Implements
+      the full HTTP+JSON transport protocol with TLS support, bearer-token
+      authentication, rate limiting, TTL-based eviction, and audit logging.
+    paths:
+      - src/robotsix_agent_comm/broker/*.py
+      - tests/broker/*.py
+      - docs/broker/*.md
+    dependencies:
+      - protocol
+      - transport
+
+  - id: lifecycle
+    description: >-
+      Central deployment & lifecycle server. Registers on the agent-comm
+      broker as a BrokeredResponder, exposes status / lifecycle-command
+      request surfaces, and instruments operations with optional Langfuse
+      tracing.
+    paths:
+      - src/robotsix_agent_comm/lifecycle/*.py
+      - tests/lifecycle/*.py
+      - docs/lifecycle/*.md
+    dependencies:
+      - protocol
+      - transport
+      - sdk
+      - broker

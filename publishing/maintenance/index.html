@@ -1,0 +1,1348 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Agent communication system for the robotsix ecosystem">
+      
+      
+      
+      
+        <link rel="prev" href="../releasing/">
+      
+      
+        <link rel="next" href="../../decisions/0001-stdlib-first/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Package maintenance procedures - robotsix-agent-comm</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#package-maintenance-procedures" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="robotsix-agent-comm" class="md-header__button md-logo" aria-label="robotsix-agent-comm" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            robotsix-agent-comm
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Package maintenance procedures
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="robotsix-agent-comm" class="md-nav__button md-logo" aria-label="robotsix-agent-comm" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    robotsix-agent-comm
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTRIBUTING.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../broker/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Broker deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SDK tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Publishing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PyPI publishing standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-publication checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releasing to PyPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package maintenance procedures
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package maintenance procedures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#versioning-release-cadence-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versioning &amp; release cadence policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-release-checklist-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-release checklist template
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#breaking-changes-deprecations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking changes &amp; deprecations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#communication-plan-for-major-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Communication plan for major releases
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#long-term-maintenance-expectations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Long-term maintenance expectations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#handling-security-vulnerabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handling security vulnerabilities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deprecating-retiring-a-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecating / retiring a package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0001-stdlib-first/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Stdlib-first, minimal dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0002-transport-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Transport architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0003-addressing-and-routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Addressing and routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0004-delivery-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Delivery semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0005-http-json-transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. HTTP+JSON transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0006-broker-server-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Broker-server architecture, security model, and deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#versioning-release-cadence-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versioning &amp; release cadence policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-release-checklist-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-release checklist template
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#breaking-changes-deprecations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking changes &amp; deprecations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#communication-plan-for-major-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Communication plan for major releases
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#long-term-maintenance-expectations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Long-term maintenance expectations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#handling-security-vulnerabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handling security vulnerabilities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deprecating-retiring-a-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecating / retiring a package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="package-maintenance-procedures">Package maintenance procedures</h1>
+<p>This page is the maintainer runbook for the <strong>ongoing lifecycle</strong> of a
+package after it has been published to PyPI. It complements the
+companion publishing docs:</p>
+<ul>
+<li><a href="../">PyPI publishing standards</a> — the fleet-wide quality bar a
+    repo must meet before it is published.</li>
+<li><a href="../checklist/">Pre-publication checklist</a> — the one-time gate ticked
+    through before the first publish.</li>
+<li><a href="../releasing/">Releasing to PyPI</a> — the step-by-step release
+    mechanics (one-time operator setup, tag/version guard, TestPyPI
+    dry-run, <code>gh release create</code>, post-publish verification).</li>
+</ul>
+<p>This runbook does <strong>not</strong> restate those release mechanics — it
+cross-links to <code>releasing.md</code> for them and focuses on the policies that
+keep a published package healthy over time. As with the rest of this
+set, PyPI/GitHub-admin actions (yanking, archiving, publishing security
+advisories) are <strong>operator steps</strong> — documented here, performed by a
+human with the necessary access.</p>
+<h2 id="versioning-release-cadence-policy">Versioning &amp; release cadence policy</h2>
+<p>Versions follow <a href="https://semver.org/">Semantic Versioning</a>
+(<code>MAJOR.MINOR.PATCH</code>), as required by the
+<a href="../#version-numbering">Version numbering</a> section of the
+standards. Decide the bump from the nature of the change:</p>
+<ul>
+<li><strong>PATCH</strong> (<code>x.y.Z</code>) — backwards-compatible bug fixes, internal
+    refactors, doc-only corrections, dependency bumps with no API impact.</li>
+<li><strong>MINOR</strong> (<code>x.Y.0</code>) — backwards-compatible new functionality:
+    added public API, new optional parameters with defaults, new
+    deprecations (the deprecated thing still works).</li>
+<li><strong>MAJOR</strong> (<code>X.0.0</code>) — any backwards-incompatible change: removing or
+    renaming public API, changing a signature/return type, tightening
+    accepted input, or removing a previously deprecated symbol.</li>
+</ul>
+<p>There is <strong>no fixed calendar cadence</strong>: release when there is something
+worth releasing. Batch small fixes into a periodic PATCH rather than
+tagging every commit; ship MINOR features when they are documented and
+tested; reserve MAJOR for genuinely breaking work and announce it (see
+<a href="#communication-plan-for-major-releases">Communication plan for major releases</a>).</p>
+<p><strong>Version is single-source-of-truth.</strong> The only authoritative version
+is the git tag (<code>vX.Y.Z</code>); <code>hatch-vcs</code> derives the version from the tag
+at build time and <code>pyproject.toml</code> declares <code>dynamic = ["version"]</code>
+with <code>[tool.hatch.version] source = "vcs"</code>. On each release the
+accumulated <code>## [Unreleased]</code>
+entries in <a href="../../CHANGELOG.md"><code>CHANGELOG.md</code></a> are rolled up into a new
+<code>## [X.Y.Z]</code> section and a fresh empty <code>Unreleased</code> section is left
+above it. See <a href="../releasing/#per-release-steps">Releasing to PyPI</a> for
+the exact mechanics — do not duplicate them here.</p>
+<p><strong>Pre-1.0 maturity signalling.</strong> Until the public API has stabilized,
+keep the package pre-1.0 and signal maturity through an accurate
+<code>Development Status</code> classifier (e.g. <code>2 - Pre-Alpha</code>,
+<code>3 - Alpha</code>, <code>4 - Beta</code>) rather than prematurely cutting <code>1.0.0</code>.
+Bumping to <code>1.0.0</code> is a deliberate commitment that the public API is
+stable and that breaking it requires a MAJOR release.</p>
+<h2 id="per-release-checklist-template">Per-release checklist template</h2>
+<p>Paste the block below into each release PR or tracking issue and tick
+it through. This is the <strong>recurring per-release</strong> list; it is distinct
+from the one-time <a href="../checklist/">pre-publication gate</a>, and it stays
+consistent with the mechanics in <a href="../releasing/">Releasing to PyPI</a>.</p>
+<pre><code class="language-markdown">## Release vX.Y.Z
+
+- [ ] Decide the bump (PATCH / MINOR / MAJOR) per SemVer
+- [ ] Roll up `CHANGELOG.md` `[Unreleased]` into `## [X.Y.Z]`; leave a fresh empty `[Unreleased]`
+- [ ] No version bump needed — `hatch-vcs` derives the version from the git tag
+- [ ] `uv lock` clean (no unintended dependency changes)
+- [ ] Local checks green: `ruff check .`, `ruff format --check .`, `mypy .`, `pytest`
+- [ ] Dry-run to TestPyPI via `workflow_dispatch` (build + `twine check` + upload OK)
+- [ ] Tag and push `vX.Y.Z` (triggers the real PyPI publish)
+- [ ] Verify clean install from PyPI into a fresh venv and import smoke check
+- [ ] Confirm the CHANGELOG-driven GitHub Release was cut
+- [ ] For MAJOR/notable releases: announcement + migration note (see below)
+</code></pre>
+<h2 id="breaking-changes-deprecations">Breaking changes &amp; deprecations</h2>
+<p>A breaking change is any backwards-incompatible change to the public
+API and <strong>requires a MAJOR bump</strong> (pre-1.0, treat a MINOR bump as the
+breaking-change vehicle and call it out loudly in the CHANGELOG).</p>
+<p>Prefer the <strong>warn-before-remove</strong> deprecation path over abrupt removal:</p>
+<ol>
+<li>
+<p><strong>Warn.</strong> When introducing the replacement, keep the old behaviour
+    working and emit a <code>DeprecationWarning</code> from the deprecated code
+    path, pointing at the replacement:</p>
+<p>```python
+import warnings</p>
+<p>def old_api(...):
+    warnings.warn(
+        "old_api() is deprecated; use new_api() instead. "
+        "It will be removed in a future major release.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    ...
+```</p>
+</li>
+<li>
+<p><strong>Document.</strong> Record the deprecation in <code>CHANGELOG.md</code> under a
+    <code>Deprecated</code> heading, naming the symbol and its replacement.</p>
+</li>
+<li>
+<p><strong>Keep for ≥1 minor release.</strong> Leave the deprecated symbol in place
+    for at least one minor release before removing it, so downstream
+    users have a version where both the warning and the replacement
+    coexist.</p>
+</li>
+<li>
+<p><strong>Remove.</strong> Only then remove the symbol — that removal is a breaking
+    change and goes under <code>Removed</code> in the CHANGELOG with the
+    corresponding MAJOR bump.</p>
+</li>
+</ol>
+<p><strong>Interaction with <code>filterwarnings = ["error"]</code>.</strong> The test config
+(<a href="../../pyproject.toml"><code>pyproject.toml</code></a>) turns warnings into errors,
+so a freshly added <code>DeprecationWarning</code> will fail the suite unless it is
+handled. Test the deprecation explicitly rather than silencing it
+globally — assert that the warning fires and that the path still works:</p>
+<pre><code class="language-python">import pytest
+
+def test_old_api_warns():
+    with pytest.warns(DeprecationWarning):
+        old_api(...)
+</code></pre>
+<p>Internal callers should be migrated to the replacement so they do not
+themselves trip the warning-as-error config. Avoid blanket
+<code>filterwarnings</code> ignores; scope any suppression to the specific
+deprecation under test.</p>
+<h2 id="communication-plan-for-major-releases">Communication plan for major releases</h2>
+<p>Every MAJOR release — and any otherwise notable MINOR — is announced so
+downstream users are not surprised:</p>
+<ul>
+<li><strong>GitHub Release notes.</strong> The release workflow cuts a GitHub Release
+    whose notes are the extracted <code>## [X.Y.Z]</code> CHANGELOG section
+    (see <a href="../releasing/#per-release-steps">Releasing to PyPI</a>). Make sure
+    that section reads as user-facing release notes, not terse internal
+    shorthand.</li>
+<li><strong>README status update.</strong> Update the status/badge line in
+    <a href="../../README.md"><code>README.md</code></a> (and the <code>Development Status</code>
+    classifier if maturity changed) so the front door reflects the new
+    version.</li>
+<li><strong>Migration note.</strong> For breaking releases, include a short migration
+    note in the CHANGELOG <code>## [X.Y.Z]</code> section (and/or the GitHub Release)
+    that lists: what changed and why, the before/after for each affected
+    API, the deprecation timeline if applicable, and a minimal upgrade
+    example. The goal is that a user can upgrade by following the note
+    without reading the diff.</li>
+</ul>
+<h2 id="long-term-maintenance-expectations">Long-term maintenance expectations</h2>
+<p>A published package carries an ongoing maintenance commitment:</p>
+<ul>
+<li><strong>Supported Python versions.</strong> Track <code>requires-python = "&gt;=3.12"</code> and
+    keep the <code>Programming Language :: Python :: 3.x</code> classifiers in
+    <code>pyproject.toml</code> accurate. When adding support for a newer Python,
+    add its classifier and exercise it in CI; when dropping an
+    end-of-life version, that is a breaking change (bump
+    <code>requires-python</code>, drop the classifier, MAJOR/MINOR as appropriate)
+    and is announced like any other.</li>
+<li><strong>Dependency &amp; lockfile upkeep.</strong> Keep dependencies current and the
+    committed <code>uv.lock</code> reproducible. Regenerate with <code>uv lock</code> (never
+    hand-edit the lockfile) and commit the result; review dependency
+    bumps for API impact before release.</li>
+<li><strong>CI stays green.</strong> Every push and pull request must pass the shared
+    reusable workflow
+    <code>damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@main</code>
+    (ruff lint + format, <code>mypy --strict</code>, pytest with the fleet coverage
+    threshold). A red <code>main</code> blocks releasing — fix it first.</li>
+<li><strong>Issue triage cadence.</strong> Triage incoming issues and pull requests
+    promptly: acknowledge, label by severity, and either schedule a fix
+    into the next release or explain why it is out of scope. Security
+    reports follow the dedicated flow below.</li>
+</ul>
+<h2 id="handling-security-vulnerabilities">Handling security vulnerabilities</h2>
+<p>Security issues are handled privately and on an expedited timeline:</p>
+<ol>
+<li><strong>Private reporting channel.</strong> Accept reports through GitHub's
+    private vulnerability reporting (Security → "Report a vulnerability")
+    rather than public issues, so a fix can ship before disclosure.
+    Direct reporters there from the README/SECURITY policy.</li>
+<li><strong>Triage &amp; severity.</strong> Confirm the report, assess severity and
+    affected versions (CVSS-style: impact × exploitability), and
+    reproduce privately. Decide the lowest release type that ships the
+    fix safely.</li>
+<li><strong>Coordinated fix, then release.</strong> Develop the fix on a private
+    branch, then publish an <strong>expedited PATCH</strong> (or MINOR if the fix
+    needs an additive API change) through the normal
+    <a href="../releasing/#per-release-steps">release flow</a>. Do not disclose
+    details until the fixed version is on PyPI.</li>
+<li><strong>Publish a GitHub Security Advisory (GHSA).</strong> Publish the advisory
+    (and request a CVE if warranted) once the fix is released, crediting
+    the reporter. <strong>Creating/publishing the GHSA is an operator step</strong> —
+    it requires repo-admin access.</li>
+<li><strong>CHANGELOG.</strong> Note the fix in <code>CHANGELOG.md</code> under a <code>Security</code>
+    heading, referencing the advisory ID once published.</li>
+</ol>
+<h2 id="deprecating-retiring-a-package">Deprecating / retiring a package</h2>
+<p>Occasionally a published package should be sunset — e.g. it has been
+superseded, merged into another package, or is no longer maintained.</p>
+<p><strong>Criteria.</strong> Consider retirement when the package is superseded by a
+replacement, the functionality moved elsewhere, there is no maintainer
+willing to keep CI green, or the project no longer fits the fleet's
+direction.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li><strong>Cut a final release with a deprecation notice.</strong> Add a clear
+    deprecation/sunset notice at the top of <code>README.md</code> and a
+    <code>Deprecated</code> entry in <code>CHANGELOG.md</code> (point to the replacement and
+    the end-of-maintenance date), then publish that final version
+    through the normal <a href="../releasing/">release flow</a>.</li>
+<li><strong>Archive the repository.</strong> Set the GitHub repo to archived
+    (read-only) so it is clearly unmaintained. <strong>Operator step</strong>
+    (repo-admin).</li>
+<li><strong>PyPI-side actions.</strong> Optionally mark the PyPI project as
+    inactive/deprecated, or yank specific releases that are known-broken
+    (yanking hides a release from new resolutions without deleting it).
+    <strong>These are operator steps</strong> requiring PyPI account access — document
+    the intent here; a human performs them.</li>
+</ol>
+<p>Retiring a package is itself a notable event — announce it via the
+final GitHub Release notes and README, as in the
+<a href="#communication-plan-for-major-releases">communication plan</a>.</p>
+<h2 id="future-work">Future work</h2>
+<p>The copy-and-rename <a href="https://github.com/robotsix/robotsix-agent-comm/tree/main/templates/python-package"><code>templates/python-package/</code></a>
+skeleton has no <code>docs/</code> directory, so this runbook is not mirrored into
+the template today. If a future template gains a <code>docs/</code> skeleton, a
+maintenance-doc stub should be added there to match this reference
+implementation.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
