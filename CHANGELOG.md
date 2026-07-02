@@ -1,6 +1,7 @@
 ## 0.0.0 (unreleased)
 
 - Re-export `AlertHandler` from `robotsix_agent_comm.lifecycle` so consumers can type-annotate alert callbacks without importing from the private `supervision` module.
+
 - Enable `changelog_autofill` periodic workflow to auto-propose changelog
     entries from merged PRs.
 
