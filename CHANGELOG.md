@@ -1,7 +1,8 @@
 ## 0.0.0 (unreleased)
 
 - Enable `changelog_autofill` periodic workflow to auto-propose changelog
-  entries from merged PRs.
+    entries from merged PRs.
+
 - Sync docs and template to hatch-vcs versioning — replace static
     `[project].version` references with `dynamic = ["version"]` +
     `[tool.hatch.version] source = "vcs"`; remove `__version__` from the
